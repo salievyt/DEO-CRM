@@ -77,9 +77,9 @@ export default function RegisterPage() {
           <img
             src="/images/DEO_CRM_LOGO.svg"
             alt="DEO CRM"
-            width={64}
-            height={64}
-            className="h-66 w-66 rounded-lg object-contain"
+            // width={64}
+            // height={64}
+            className="h-66 w-66 rounded-lg object-contain auth-contain"
           />
 
           <p className="mt-2 text-sm text-surface-500">

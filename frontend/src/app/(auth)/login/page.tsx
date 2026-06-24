@@ -42,9 +42,13 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 to-surface-100 px-4 dark:from-surface-900 dark:to-surface-800">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-surface-900 dark:text-white">
-            DEO STUDIO CRM
-          </h1>
+          <img
+            src="/images/DEO_CRM_LOGO.svg"
+            alt="DEO CRM"
+            // width={64}
+            // height={64}
+            className="h-66 w-66 rounded-lg object-contain auth-contain"
+          />
           <p className="mt-2 text-sm text-surface-500">
             Войдите в систему управления проектами
           </p>
