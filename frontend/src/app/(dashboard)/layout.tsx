@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { AuthGuard } from "@/features/auth/AuthGuard";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -23,19 +24,20 @@ import {
   X,
   Bell,
   Search,
+  Shield,
 } from "lucide-react";
 
-const navigation = [
-  { name: "Дашборд", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Клиенты", href: "/clients", icon: Users },
-  { name: "Лиды", href: "/leads", icon: TrendingUp },
-  { name: "Проекты", href: "/projects", icon: FolderKanban },
-  { name: "Задачи", href: "/tasks", icon: CheckSquare },
-  { name: "Финансы", href: "/finance", icon: DollarSign },
-  { name: "Документы", href: "/documents", icon: FileText },
-  { name: "Мессенджер", href: "/messenger", icon: MessageSquare },
-  { name: "DEO AI", href: "/ai", icon: Bot },
-  { name: "Аналитика", href: "/analytics", icon: BarChart3 },
+const ALL_NAV_ITEMS = [
+  { name: "Дашборд", href: "/dashboard", icon: LayoutDashboard, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer"] },
+  { name: "Клиенты", href: "/clients", icon: Users, roles: ["superadmin", "owner", "project_manager", "marketer"] },
+  { name: "Лиды", href: "/leads", icon: TrendingUp, roles: ["superadmin", "owner", "project_manager", "marketer"] },
+  { name: "Проекты", href: "/projects", icon: FolderKanban, roles: ["superadmin", "owner", "project_manager", "developer", "designer"] },
+  { name: "Задачи", href: "/tasks", icon: CheckSquare, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer"] },
+  { name: "Финансы", href: "/finance", icon: DollarSign, roles: ["superadmin", "owner", "project_manager"] },
+  { name: "Документы", href: "/documents", icon: FileText, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "client"] },
+  { name: "Мессенджер", href: "/messenger", icon: MessageSquare, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "client"] },
+  { name: "DEO AI", href: "/ai", icon: Bot, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer"] },
+  { name: "Аналитика", href: "/analytics", icon: BarChart3, roles: ["superadmin", "owner", "project_manager", "marketer"] },
 ];
 
 export default function DashboardLayout({
@@ -45,9 +47,16 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+
+  // Filter navigation by user role
+  const userRole = user?.role_name?.toLowerCase() || "client";
+  const navigation = ALL_NAV_ITEMS.filter((item) =>
+    item.roles.includes(userRole)
+  );
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
+    <AuthGuard>
     <div className="flex h-screen overflow-hidden bg-surface-50 dark:bg-surface-900">
       {/* Sidebar */}
       <aside
@@ -61,11 +70,11 @@ export default function DashboardLayout({
           href="/"
           className="flex h-16 items-center gap-2 border-b border-surface-200 px-6 transition-opacity hover:opacity-80 dark:border-surface-700">
           <Image
-            src="/images/DEO_CRM_LOGO.png"
+            src="/images/DEO_CRM_LOGO.svg"
             alt="DEO CRM"
             width={64}
             height={64}
-            className="h-26 w- rounded-lg object-contain"
+            className="h-36 w-36 rounded-lg object-contain"
           />
         </Link>
 
@@ -169,5 +178,6 @@ export default function DashboardLayout({
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
     </div>
+    </AuthGuard>
   );
 }

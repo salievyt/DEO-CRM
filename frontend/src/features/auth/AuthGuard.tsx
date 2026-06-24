@@ -5,7 +5,10 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { LoadingSpinner } from "@/shared/ui/LoadingSpinner";
 
-const PUBLIC_ROUTES = ["/login", "/register", "/forgot-password"];
+const PUBLIC_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
+
+const isPublicRoute = (path: string): boolean =>
+  PUBLIC_ROUTES.some((route) => path.startsWith(route));
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, fetchUser } = useAuth();
@@ -19,10 +22,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const currentPath = pathname || "/";
     if (!isLoading) {
-      if (!isAuthenticated && !PUBLIC_ROUTES.includes(currentPath)) {
+      if (!isAuthenticated && !isPublicRoute(currentPath)) {
         router.push("/login");
       }
-      if (isAuthenticated && PUBLIC_ROUTES.includes(currentPath)) {
+      if (isAuthenticated && isPublicRoute(currentPath)) {
         router.push("/dashboard");
       }
     }
@@ -46,7 +49,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!isAuthenticated && !PUBLIC_ROUTES.includes(currentPath)) {
+  if (!isAuthenticated && !isPublicRoute(currentPath)) {
     return null;
   }
 

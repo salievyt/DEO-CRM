@@ -11,7 +11,8 @@ interface User {
   full_name: string;
   phone: string;
   avatar: string | null;
-  role: number | null;
+  role_id: number | null;
+  role_name: string | null;
   is_active: boolean;
   date_joined: string;
 }
@@ -48,6 +49,10 @@ export const useAuth = create<AuthState>((set) => ({
   },
 
   logout: () => {
+    const refresh = localStorage.getItem("refresh_token");
+    if (refresh) {
+      authApi.logout(refresh).catch(() => {});
+    }
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     set({ user: null, isAuthenticated: false });

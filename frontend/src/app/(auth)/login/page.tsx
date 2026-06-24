@@ -1,17 +1,27 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
+  useEffect(() => {
+    if (searchParams.get("registered") === "true") {
+      setSuccessMessage("Регистрация успешна! Теперь вы можете войти.");
+    } else if (searchParams.get("reset") === "true") {
+      setSuccessMessage("Пароль успешно изменён. Войдите с новым паролем.");
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,6 +81,12 @@ export default function LoginPage() {
                 required
               />
             </div>
+
+            {successMessage && (
+              <div className="rounded-lg bg-success-50 p-3 text-sm text-success-700 dark:bg-green-900/20 dark:text-green-400">
+                {successMessage}
+              </div>
+            )}
 
             {error && (
               <div className="rounded-lg bg-danger-50 p-3 text-sm text-danger-600 dark:bg-red-900/20 dark:text-red-400">
