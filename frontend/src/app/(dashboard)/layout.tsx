@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -56,14 +57,17 @@ export default function DashboardLayout({
         )}
       >
         {/* Logo */}
-        <div className="flex h-16 items-center gap-2 border-b border-surface-200 px-6 dark:border-surface-700">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">
-            D
-          </div>
-          <span className="text-lg font-semibold text-surface-900 dark:text-white">
-            DEO CRM
-          </span>
-        </div>
+        <Link
+          href="/"
+          className="flex h-16 items-center gap-2 border-b border-surface-200 px-6 transition-opacity hover:opacity-80 dark:border-surface-700">
+          <Image
+            src="/images/DEO_CRM_LOGO.png"
+            alt="DEO CRM"
+            width={64}
+            height={64}
+            className="h-26 w- rounded-lg object-contain"
+          />
+        </Link>
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
