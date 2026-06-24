@@ -15,9 +15,12 @@ class Command(BaseCommand):
 
         # Create demo users
         admin_role = Role.objects.get(name=RoleChoices.SUPERADMIN)
+        owner_role = Role.objects.get(name=RoleChoices.OWNER)
         pm_role = Role.objects.get(name=RoleChoices.PROJECT_MANAGER)
         dev_role = Role.objects.get(name=RoleChoices.DEVELOPER)
         designer_role = Role.objects.get(name=RoleChoices.DESIGNER)
+        marketer_role = Role.objects.get(name=RoleChoices.MARKETER)
+        client_role = Role.objects.get(name=RoleChoices.CLIENT)
 
         users_data = [
             {
@@ -28,6 +31,13 @@ class Command(BaseCommand):
                 "role": admin_role,
                 "is_superuser": True,
                 "is_staff": True,
+            },
+            {
+                "email": "owner@deostudio.com",
+                "password": "owner123",
+                "first_name": "Максим",
+                "last_name": "Владельцев",
+                "role": owner_role,
             },
             {
                 "email": "pm@deostudio.com",
@@ -50,6 +60,20 @@ class Command(BaseCommand):
                 "last_name": "Антонова",
                 "role": designer_role,
             },
+            {
+                "email": "marketer@deostudio.com",
+                "password": "marketer123",
+                "first_name": "Елена",
+                "last_name": "Маркетова",
+                "role": marketer_role,
+            },
+            {
+                "email": "client@deostudio.com",
+                "password": "client123",
+                "first_name": "Алексей",
+                "last_name": "Клиентов",
+                "role": client_role,
+            },
         ]
 
         for user_data in users_data:
@@ -64,10 +88,16 @@ class Command(BaseCommand):
                 user.save()
                 self.stdout.write(f"  ✅ Создан пользователь {email}")
             else:
-                self.stdout.write(f"  ℹ️  Пользователь {email} уже существует")
+                user.set_password(password)
+                user.save()
+                self.stdout.write(f"  🔄 Обновлён пароль пользователя {email}")
 
         self.stdout.write(self.style.SUCCESS("\n✅ Демо-данные успешно загружены!"))
         self.stdout.write("\n📋 Учетные данные:")
-        self.stdout.write("   Админ: admin@deostudio.com / admin123")
-        self.stdout.write("   PM:    pm@deostudio.com / pm123")
-        self.stdout.write("   Dev:   dev@deostudio.com / dev123")
+        self.stdout.write("   SuperAdmin: admin@deostudio.com / admin123")
+        self.stdout.write("   Owner:      owner@deostudio.com / owner123")
+        self.stdout.write("   PM:         pm@deostudio.com / pm123")
+        self.stdout.write("   Developer:  dev@deostudio.com / dev123")
+        self.stdout.write("   Designer:   designer@deostudio.com / designer123")
+        self.stdout.write("   Marketer:   marketer@deostudio.com / marketer123")
+        self.stdout.write("   Client:     client@deostudio.com / client123")
