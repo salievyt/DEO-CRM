@@ -23,7 +23,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-xl border border-surface-200 bg-white shadow-sm dark:border-surface-700 dark:bg-surface-800",
+        "rounded-lg border border-surface-200 bg-white shadow-sm dark:border-surface-700 dark:bg-surface-800",
         paddings[padding],
         className
       )}

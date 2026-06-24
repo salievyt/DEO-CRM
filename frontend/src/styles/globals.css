@@ -16,6 +16,12 @@
     --radius: 0.5rem;
   }
 
+  .auth-contain{
+    margin: auto;
+    width: min(100%, 28rem);
+    min-height: 64%;
+  }
+
   .dark {
     --brand: 239 84% 67%;
     --surface: 217 33% 17%;
@@ -36,6 +42,14 @@
     @apply bg-white text-surface-900 dark:bg-surface-900 dark:text-surface-50;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+
+  button,
+  a,
+  input,
+  textarea,
+  select {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-surface-900;
+  }
 }
 
 @layer components {
@@ -48,7 +62,7 @@
   }
 
   .card {
-    @apply rounded-xl border border-surface-200 bg-white p-6 shadow-sm dark:border-surface-700 dark:bg-surface-800;
+    @apply rounded-lg border border-surface-200 bg-white p-6 shadow-sm dark:border-surface-700 dark:bg-surface-800;
   }
 
   .input {

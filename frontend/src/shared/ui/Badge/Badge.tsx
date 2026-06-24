@@ -27,6 +27,7 @@ export function Badge({
   variant = "default",
   className,
   dot = false,
+  style,
 }: BadgeProps) {
   return (
     <span

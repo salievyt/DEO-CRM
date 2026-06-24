@@ -11,7 +11,14 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { useState } from "react";
-import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  Search,
+} from "lucide-react";
 import { cn } from "@/shared/utils/cn";
 
 interface TableProps<TData> {
@@ -62,24 +69,32 @@ export function DataTable<TData>({
   return (
     <div className="space-y-4">
       {searchable && (
-        <input
-          value={globalFilter ?? ""}
-          onChange={(e) => setGlobalFilter(e.target.value)}
-          placeholder={searchPlaceholder}
-          className="input max-w-sm"
-        />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
+            <input
+              value={globalFilter ?? ""}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+              placeholder={searchPlaceholder}
+              className="input pl-10"
+            />
+          </div>
+          <p className="text-sm text-surface-500">
+            Найдено: {table.getFilteredRowModel().rows.length}
+          </p>
+        </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-surface-200 dark:border-surface-700">
+      <div className="overflow-x-auto rounded-lg border border-surface-200 bg-white dark:border-surface-700 dark:bg-surface-800">
         <table className="min-w-full divide-y divide-surface-200 dark:divide-surface-700">
-          <thead className="bg-surface-50 dark:bg-surface-800/50">
+          <thead className="bg-surface-50 dark:bg-surface-800">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
                     className={cn(
-                      "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-surface-500",
+                      "whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-surface-500",
                       header.column.getCanSort() && "cursor-pointer select-none hover:text-surface-700"
                     )}
                     onClick={header.column.getToggleSortingHandler()}
@@ -106,7 +121,7 @@ export function DataTable<TData>({
               </tr>
             ))}
           </thead>
-          <tbody className="divide-y divide-surface-200 bg-white dark:divide-surface-700 dark:bg-surface-800">
+          <tbody className="divide-y divide-surface-100 bg-white dark:divide-surface-700 dark:bg-surface-800">
             {table.getRowModel().rows.length === 0 ? (
               <tr>
                 <td
@@ -121,7 +136,7 @@ export function DataTable<TData>({
                 <tr
                   key={row.id}
                   className={cn(
-                    "transition-colors",
+                    "transition-colors odd:bg-white even:bg-surface-50/50 dark:odd:bg-surface-800 dark:even:bg-surface-800/60",
                     onRowClick && "cursor-pointer hover:bg-surface-50 dark:hover:bg-surface-700/50"
                   )}
                   onClick={() => onRowClick?.(row.original)}
@@ -129,7 +144,7 @@ export function DataTable<TData>({
                   {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
-                      className="whitespace-nowrap px-4 py-3 text-sm text-surface-700 dark:text-surface-200"
+                      className="whitespace-nowrap px-4 py-3.5 text-sm text-surface-700 dark:text-surface-200"
                     >
                       {flexRender(
                         cell.column.columnDef.cell,
@@ -146,10 +161,9 @@ export function DataTable<TData>({
 
       {/* Pagination */}
       {table.getPageCount() > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-surface-500">
-            Страница {table.getState().pagination.pageIndex + 1} из{" "}
-            {table.getPageCount()}
+            Страница {table.getState().pagination.pageIndex + 1} из {table.getPageCount()}
           </p>
           <div className="flex items-center gap-2">
             <button
@@ -163,15 +177,17 @@ export function DataTable<TData>({
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
               className="btn-secondary px-2 py-1 text-xs"
+              aria-label="Предыдущая страница"
             >
-              Назад
+              <ChevronLeft className="h-4 w-4" />
             </button>
             <button
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
               className="btn-secondary px-2 py-1 text-xs"
+              aria-label="Следующая страница"
             >
-              Вперед
+              <ChevronRight className="h-4 w-4" />
             </button>
             <button
               onClick={() => table.setPageIndex(table.getPageCount() - 1)}
