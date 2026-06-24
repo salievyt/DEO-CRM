@@ -43,11 +43,25 @@ export default function RegisterPage() {
       });
       router.push("/login?registered=true");
     } catch (err: any) {
-      const detail = err?.response?.data?.detail;
+      const data = err?.response?.data;
+      // Backend wraps errors: { error: true, detail: { email: [...], password: [...] }, status_code: 400 }
+      const detail = data?.detail;
+
       if (typeof detail === "string") {
         setError(detail);
-      } else if (err?.response?.data?.email) {
-        setError(Array.isArray(err.response.data.email) ? err.response.data.email[0] : err.response.data.email);
+      } else if (detail && typeof detail === "object") {
+        // Extract first field error
+        const firstField = Object.keys(detail)[0];
+        const firstError = detail[firstField];
+        if (Array.isArray(firstError)) {
+          setError(firstError[0]);
+        } else if (typeof firstError === "string") {
+          setError(firstError);
+        } else {
+          setError("Проверьте введённые данные");
+        }
+      } else if (typeof data === "string") {
+        setError(data);
       } else {
         setError("Ошибка при регистрации. Попробуйте снова.");
       }
@@ -60,9 +74,14 @@ export default function RegisterPage() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 to-surface-100 px-4 dark:from-surface-900 dark:to-surface-800">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-surface-900 dark:text-white">
-            DEO STUDIO CRM
-          </h1>
+          <img
+            src="/images/DEO_CRM_LOGO.svg"
+            alt="DEO CRM"
+            width={64}
+            height={64}
+            className="h-66 w-66 rounded-lg object-contain"
+          />
+
           <p className="mt-2 text-sm text-surface-500">
             Создайте аккаунт для работы с системой
           </p>
