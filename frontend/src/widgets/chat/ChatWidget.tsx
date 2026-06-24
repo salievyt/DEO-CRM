@@ -9,6 +9,7 @@ import { Badge } from "@/shared/ui/Badge";
 import { LoadingSpinner } from "@/shared/ui/LoadingSpinner";
 import { cn, formatDateTime, timeAgo } from "@/shared/utils/formatters";
 import { MessageSquare, Send, Search, Paperclip } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import type { Chat, Message } from "@/entities/chat/types";
 
 interface ChatWidgetProps {
@@ -19,18 +20,19 @@ interface ChatWidgetProps {
 export function ChatWidget({ compact = false }: ChatWidgetProps) {
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState("");
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: chats, isLoading } = useQuery({
     queryKey: [QUERY_KEYS.CHATS],
     queryFn: () => messengerApi.chats.list(),
-    select: (res) => res.data?.results || res.data as Chat[],
+    select: (res): Chat[] => res.data?.results || (res.data as Chat[]),
   });
 
   const { data: messages } = useQuery({
     queryKey: [QUERY_KEYS.MESSAGES, selectedChat],
     queryFn: () => messengerApi.messages.list(selectedChat!),
-    select: (res) => res.data?.results || res.data as Message[],
+    select: (res): Message[] => res.data?.results || (res.data as Message[]),
     enabled: !!selectedChat,
     refetchInterval: 10000,
   });
@@ -169,13 +171,13 @@ export function ChatWidget({ compact = false }: ChatWidgetProps) {
                     key={msg.id}
                     className={cn(
                       "flex",
-                      msg.sender === "current-user" ? "justify-end" : "justify-start"
+                      msg.sender === user?.id ? "justify-end" : "justify-start"
                     )}
                   >
                     <div
                       className={cn(
                         "max-w-[70%] rounded-2xl px-4 py-2",
-                        msg.sender === "current-user"
+                        msg.sender === user?.id
                           ? "bg-brand-600 text-white"
                           : "bg-surface-100 text-surface-900 dark:bg-surface-700 dark:text-surface-50"
                       )}
@@ -184,7 +186,7 @@ export function ChatWidget({ compact = false }: ChatWidgetProps) {
                       <p
                         className={cn(
                           "mt-1 text-right text-xs",
-                          msg.sender === "current-user"
+                            msg.sender === user?.id
                             ? "text-brand-200"
                             : "text-surface-400"
                         )}

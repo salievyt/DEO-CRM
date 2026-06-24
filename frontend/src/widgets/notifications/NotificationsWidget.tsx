@@ -10,15 +10,7 @@ import { LoadingSpinner } from "@/shared/ui/LoadingSpinner";
 import { formatDateTime } from "@/shared/utils/formatters";
 import { cn } from "@/shared/utils/cn";
 import { Bell, CheckCheck } from "lucide-react";
-
-interface Notification {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  is_read: boolean;
-  created_at: string;
-}
+import type { Notification } from "@/entities/notification/types";
 
 export function NotificationsWidget() {
   const queryClient = useQueryClient();
@@ -26,7 +18,7 @@ export function NotificationsWidget() {
   const { data: notifications, isLoading } = useQuery({
     queryKey: ["notifications"],
     queryFn: () => analyticsApi.dashboards.list(),
-    select: (res) => res.data?.results || [] as Notification[],
+    select: (res): Notification[] => res.data?.results || [],
   });
 
   const markAllRead = useMutation({
@@ -77,7 +69,7 @@ export function NotificationsWidget() {
             key={notification.id}
             className={cn(
               "px-4 py-3 transition-colors hover:bg-surface-50 dark:hover:bg-surface-700/50",
-              !notification.is_read && "bg-brand-50/50 dark:bg-brand-900/10"
+              !notification.read && "bg-brand-50/50 dark:bg-brand-900/10"
             )}
           >
             <div className="flex items-start justify-between">
@@ -89,7 +81,7 @@ export function NotificationsWidget() {
                   {notification.message}
                 </p>
               </div>
-              {!notification.is_read && (
+              {!notification.read && (
                 <span className="ml-2 mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-brand-600" />
               )}
             </div>
