@@ -186,9 +186,13 @@ SIMPLE_JWT = {
 # CORS
 CORS_ALLOWED_ORIGINS = os.environ.get(
     "CORS_ALLOWED_ORIGINS",
-    "http://localhost:3000,http://localhost:8000",
+    "http://localhost:3000,http://localhost:3001,http://localhost:8000,http://localhost:8001",
 ).split(",")
 CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = os.environ.get(
+    "CSRF_TRUSTED_ORIGINS",
+    "http://localhost:3000,http://localhost:3001,http://localhost:8000,http://localhost:8001",
+).split(",")
 
 # Spectacular (Swagger)
 SPECTACULAR_SETTINGS = {
