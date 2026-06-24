@@ -1,0 +1,83 @@
+# DEO STUDIO CRM — .gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+*.sqlite3
+db.sqlite3
+
+# Django
+backend/media/
+backend/staticfiles/
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Node / Frontend
+node_modules/
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+next-env.d.ts
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Flutter / Mobile
+mobile/.dart_tool/
+mobile/.packages
+mobile/build/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/*.iml
+mobile/.idea/
+mobile/.vscode/
+mobile/.metadata
+mobile/ios/Pods/
+mobile/ios/.symlinks/
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/app/build/
+mobile/.env
+mobile/.env.*
+!mobile/.env.example
+
+# Docker
+docker/volumes/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+htmlcov/
+.coverage
+coverage/
+coverage.xml
+
+# Reports
+reports/

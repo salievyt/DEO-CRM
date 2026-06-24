@@ -1,0 +1,104 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
+
+export default function LoginPage() {
+  const router = useRouter();
+  const { login } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    try {
+      await login(email, password);
+      router.push("/dashboard");
+    } catch {
+      setError("Неверный email или пароль");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 to-surface-100 px-4 dark:from-surface-900 dark:to-surface-800">
+      <div className="w-full max-w-md">
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold text-surface-900 dark:text-white">
+            DEO STUDIO CRM
+          </h1>
+          <p className="mt-2 text-sm text-surface-500">
+            Войдите в систему управления проектами
+          </p>
+        </div>
+
+        <div className="card">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-surface-700 dark:text-surface-200">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input mt-1"
+                placeholder="you@company.com"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-surface-700 dark:text-surface-200">
+                Пароль
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input mt-1"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+
+            {error && (
+              <div className="rounded-lg bg-danger-50 p-3 text-sm text-danger-600 dark:bg-red-900/20 dark:text-red-400">
+                {error}
+              </div>
+            )}
+
+            <button type="submit" disabled={isLoading} className="btn-primary w-full">
+              {isLoading ? "Вход..." : "Войти"}
+            </button>
+
+            <div className="flex items-center justify-between text-sm">
+              <Link
+                href="/register"
+                className="text-brand-600 hover:text-brand-700 dark:text-brand-400"
+              >
+                Создать аккаунт
+              </Link>
+              <Link
+                href="/forgot-password"
+                className="text-surface-500 hover:text-surface-700 dark:hover:text-surface-300"
+              >
+                Забыли пароль?
+              </Link>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
