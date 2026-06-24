@@ -263,3 +263,12 @@ function AppearanceSection() {
     </Card>
   );
 }
+
+function Control(){
+  return (
+    <div>
+      <h1>Панель управления</h1>
+      <h1></h1>
+    </div>
+  )
+}

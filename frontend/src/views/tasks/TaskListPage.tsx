@@ -8,9 +8,9 @@ import {
   Columns,
   Clock,
   Play,
-  Square,
   MessageSquare,
   User,
+  CalendarDays,
 } from "lucide-react";
 import { PageHeader } from "@/shared/ui/PageHeader";
 import { Card } from "@/shared/ui/Card";
@@ -19,12 +19,10 @@ import { Badge } from "@/shared/ui/Badge";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
 import { Modal } from "@/shared/ui/Modal";
 import { Input } from "@/shared/ui/Input";
-import { Select } from "@/shared/ui/Select";
 import { LoadingSpinner } from "@/shared/ui/LoadingSpinner";
-import { EmptyState } from "@/shared/ui/EmptyState";
 import { tasksApi } from "@/shared/api/base";
 import { QUERY_KEYS } from "@/shared/constants";
-import { formatDate, timeAgo, cn } from "@/shared/utils/formatters";
+import { formatDate, cn } from "@/shared/utils/formatters";
 import type { Task, TaskKanbanColumn } from "@/entities/task/types";
 
 export function TaskListPage() {
@@ -41,7 +39,7 @@ export function TaskListPage() {
   const { data: myTasks } = useQuery({
     queryKey: [QUERY_KEYS.TASK_MY],
     queryFn: () => tasksApi.my(),
-    select: (res) => res.data?.results || res.data as Task[],
+    select: (res): Task[] => res.data?.results || (res.data as Task[]),
   });
 
   const createMutation = useMutation({
@@ -68,28 +66,32 @@ export function TaskListPage() {
         description="Управление задачами и Kanban-доска"
         actions={
           <div className="flex items-center gap-2">
-            <div className="flex rounded-lg border border-surface-200 p-0.5 dark:border-surface-700">
+            <div className="flex rounded-lg border border-surface-200 bg-white p-0.5 dark:border-surface-700 dark:bg-surface-800">
               <button
                 onClick={() => setView("kanban")}
                 className={cn(
-                  "rounded-md px-2.5 py-1.5 text-sm transition-colors",
+                  "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
                   view === "kanban"
                     ? "bg-brand-600 text-white"
-                    : "text-surface-500 hover:text-surface-700"
+                    : "text-surface-500 hover:bg-surface-50 hover:text-surface-700 dark:hover:bg-surface-700"
                 )}
+                aria-pressed={view === "kanban"}
               >
                 <Columns className="h-4 w-4" />
+                <span className="hidden sm:inline">Доска</span>
               </button>
               <button
                 onClick={() => setView("list")}
                 className={cn(
-                  "rounded-md px-2.5 py-1.5 text-sm transition-colors",
+                  "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
                   view === "list"
                     ? "bg-brand-600 text-white"
-                    : "text-surface-500 hover:text-surface-700"
+                    : "text-surface-500 hover:bg-surface-50 hover:text-surface-700 dark:hover:bg-surface-700"
                 )}
+                aria-pressed={view === "list"}
               >
                 <List className="h-4 w-4" />
+                <span className="hidden sm:inline">Список</span>
               </button>
             </div>
             <Button onClick={() => setShowCreateModal(true)}>
@@ -110,16 +112,16 @@ export function TaskListPage() {
             {myTasks.slice(0, 5).map((task) => (
               <div
                 key={task.id}
-                className="flex items-center justify-between rounded-lg border border-surface-100 p-3 dark:border-surface-700"
+                className="flex flex-col gap-2 rounded-lg border border-surface-100 p-3 dark:border-surface-700 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <StatusBadge status={task.status_name} />
-                  <span className="text-sm font-medium text-surface-900 dark:text-white">
+                  <span className="truncate text-sm font-medium text-surface-900 dark:text-white">
                     {task.title}
                   </span>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-surface-500">
-                  <span>{task.project_name}</span>
+                <div className="flex flex-wrap items-center gap-3 text-xs text-surface-500">
+                  <span className="truncate">{task.project_name}</span>
                   {task.deadline && (
                     <span>до {formatDate(task.deadline)}</span>
                   )}
@@ -134,19 +136,19 @@ export function TaskListPage() {
       {view === "kanban" && (
         <div className="flex gap-4 overflow-x-auto pb-4">
           {kanbanData?.map((column) => (
-            <div key={column.id} className="min-w-[280px] flex-shrink-0">
-              <div className="mb-3 flex items-center gap-2">
-                <div
+            <div key={column.id} className="min-w-[18rem] flex-shrink-0">
+              <div className="sticky top-0 z-10 mb-3 flex items-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 dark:border-surface-700 dark:bg-surface-800">
+                <span
                   className="h-3 w-3 rounded-full"
                   style={{ backgroundColor: column.color }}
                 />
-                <h3 className="font-medium text-surface-900 dark:text-white">
+                <h3 className="min-w-0 flex-1 truncate font-medium text-surface-900 dark:text-white">
                   {column.title}
                 </h3>
                 <Badge variant="default">{column.tasks.length}</Badge>
               </div>
 
-              <div className="space-y-2">
+              <div className="min-h-40 space-y-2 rounded-lg bg-surface-100/70 p-2 dark:bg-surface-900/40">
                 {column.tasks.length === 0 ? (
                   <p className="py-8 text-center text-sm text-surface-400">
                     Нет задач
@@ -162,6 +164,16 @@ export function TaskListPage() {
         </div>
       )}
 
+      {view === "list" && (
+        <Card padding="none">
+          <div className="divide-y divide-surface-100 dark:divide-surface-700">
+            {(kanbanData || []).flatMap((column) =>
+              column.tasks.map((task) => <TaskListItem key={task.id} task={task} />)
+            )}
+          </div>
+        </Card>
+      )}
+
       {/* Create Task Modal */}
       <Modal
         open={showCreateModal}
@@ -174,6 +186,76 @@ export function TaskListPage() {
           onCancel={() => setShowCreateModal(false)}
         />
       </Modal>
+    </div>
+  );
+}
+
+function TaskListItem({ task }: { task: Task }) {
+  const queryClient = useQueryClient();
+
+  const startTimer = useMutation({
+    mutationFn: () => tasksApi.timer.start(task.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TASKS] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TASK_KANBAN] });
+    },
+  });
+
+  return (
+    <div className="flex flex-col gap-3 p-4 transition-colors hover:bg-surface-50 dark:hover:bg-surface-700/50 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0 space-y-1">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <StatusBadge status={task.status_name} />
+          {task.priority_name && (
+            <Badge
+              variant={
+                task.priority_name === "Высокий"
+                  ? "danger"
+                  : task.priority_name === "Средний"
+                  ? "warning"
+                  : "default"
+              }
+            >
+              {task.priority_name}
+            </Badge>
+          )}
+        </div>
+        <p className="truncate text-sm font-semibold text-surface-900 dark:text-white">
+          {task.title}
+        </p>
+        <div className="flex flex-wrap items-center gap-3 text-xs text-surface-500">
+          {task.assignee_name && (
+            <span className="inline-flex items-center gap-1">
+              <User className="h-3.5 w-3.5" />
+              {task.assignee_name}
+            </span>
+          )}
+          {task.project_name && <span>{task.project_name}</span>}
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-3 text-xs text-surface-500">
+        {task.deadline && (
+          <span className="inline-flex items-center gap-1">
+            <CalendarDays className="h-3.5 w-3.5" />
+            до {formatDate(task.deadline)}
+          </span>
+        )}
+        {task.estimated_hours && (
+          <span className="inline-flex items-center gap-1">
+            <Clock className="h-3.5 w-3.5" />
+            {task.estimated_hours}ч
+          </span>
+        )}
+        <button
+          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-brand-600 hover:bg-brand-50 disabled:opacity-50 dark:text-brand-300 dark:hover:bg-brand-900/20"
+          type="button"
+          onClick={() => startTimer.mutate()}
+          disabled={startTimer.isPending}
+        >
+          <Play className="h-3.5 w-3.5" />
+          Таймер
+        </button>
+      </div>
     </div>
   );
 }

@@ -19,24 +19,26 @@ import { LoadingSpinner } from "@/shared/ui/LoadingSpinner";
 import { messengerApi } from "@/shared/api/base";
 import { QUERY_KEYS } from "@/shared/constants";
 import { formatDateTime, timeAgo, cn } from "@/shared/utils/formatters";
+import { useAuth } from "@/hooks/useAuth";
 import type { Chat, Message } from "@/entities/chat/types";
 
 export function MessengerPage() {
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState("");
+  const { user } = useAuth();
 
   const queryClient = useQueryClient();
 
   const { data: chats, isLoading } = useQuery({
     queryKey: [QUERY_KEYS.CHATS],
     queryFn: () => messengerApi.chats.list(),
-    select: (res) => res.data?.results || res.data as Chat[],
+    select: (res): Chat[] => res.data?.results || (res.data as Chat[]),
   });
 
   const { data: messages } = useQuery({
     queryKey: [QUERY_KEYS.MESSAGES, selectedChat],
     queryFn: () => messengerApi.messages.list(selectedChat!),
-    select: (res) => res.data?.results || res.data as Message[],
+    select: (res): Message[] => res.data?.results || (res.data as Message[]),
     enabled: !!selectedChat,
     refetchInterval: 5000,
   });
@@ -168,7 +170,7 @@ export function MessengerPage() {
                       key={msg.id}
                       className={cn(
                         "flex",
-                        msg.sender === "current-user"
+                        msg.sender === user?.id
                           ? "justify-end"
                           : "justify-start"
                       )}
@@ -176,7 +178,7 @@ export function MessengerPage() {
                       <div
                         className={cn(
                           "max-w-[70%] rounded-2xl px-4 py-2",
-                          msg.sender === "current-user"
+                          msg.sender === user?.id
                             ? "bg-brand-600 text-white"
                             : "bg-surface-100 text-surface-900 dark:bg-surface-700 dark:text-surface-50"
                         )}
@@ -185,7 +187,7 @@ export function MessengerPage() {
                         <p
                           className={cn(
                             "mt-1 text-right text-xs",
-                            msg.sender === "current-user"
+                            msg.sender === user?.id
                               ? "text-brand-200"
                               : "text-surface-400"
                           )}
