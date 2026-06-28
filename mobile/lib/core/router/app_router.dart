@@ -6,13 +6,16 @@ import '../../features/dashboard/view/dashboard_screen.dart';
 import '../../features/projects/view/projects_screen.dart';
 import '../../features/projects/view/project_detail_screen.dart';
 import '../../features/tasks/view/tasks_screen.dart';
+import '../../features/leads/view/leads_screen.dart';
 import '../../features/chat/view/chat_screen.dart';
+import '../../features/chat/view/chat_detail_screen.dart';
 import '../../features/finance/view/finance_screen.dart';
 import '../../features/documents/view/documents_screen.dart';
 import '../../features/analytics/view/analytics_screen.dart';
 import '../../features/settings/view/settings_screen.dart';
 import '../../features/cabinet/view/cabinet_screen.dart';
-import '../theme/app_theme.dart';
+import '../../features/ai_assistant/view/ai_screen.dart';
+import '../../entities/chat.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -51,8 +54,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const TasksScreen(),
           ),
           GoRoute(
+            path: '/leads',
+            builder: (context, state) => const LeadsScreen(),
+          ),
+          GoRoute(
             path: '/chat',
             builder: (context, state) => const ChatScreen(),
+            routes: [
+              GoRoute(
+                path: ':id',
+                builder: (context, state) {
+                  final chatId = state.pathParameters['id'] ?? '';
+                  final chat = state.extra as Chat?;
+                  return ChatDetailScreen(
+                    chatId: chatId,
+                    chatName: chat?.name ?? '',
+                  );
+                },
+              ),
+            ],
           ),
           GoRoute(
             path: '/finance',
@@ -65,6 +85,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/analytics',
             builder: (context, state) => const AnalyticsScreen(),
+          ),
+          GoRoute(
+            path: '/ai',
+            builder: (context, state) => const AIScreen(),
           ),
           GoRoute(
             path: '/settings',
@@ -108,9 +132,9 @@ class MainShell extends StatelessWidget {
             label: 'Задачи',
           ),
           NavigationDestination(
-            icon: Icon(Icons.chat_outlined),
-            selectedIcon: Icon(Icons.chat),
-            label: 'Чат',
+            icon: Icon(Icons.trending_up_outlined),
+            selectedIcon: Icon(Icons.trending_up),
+            label: 'Лиды',
           ),
           NavigationDestination(
             icon: Icon(Icons.more_horiz),
@@ -126,22 +150,17 @@ class MainShell extends StatelessWidget {
     final location = GoRouterState.of(context).uri.toString();
     if (location.startsWith('/projects')) return 1;
     if (location.startsWith('/tasks')) return 2;
-    if (location.startsWith('/chat')) return 3;
+    if (location.startsWith('/leads')) return 3;
     return 0;
   }
 
   void _onItemTapped(int index, BuildContext context) {
     switch (index) {
-      case 0:
-        context.go('/dashboard');
-      case 1:
-        context.go('/projects');
-      case 2:
-        context.go('/tasks');
-      case 3:
-        context.go('/chat');
-      case 4:
-        _showMoreMenu(context);
+      case 0: context.go('/dashboard');
+      case 1: context.go('/projects');
+      case 2: context.go('/tasks');
+      case 3: context.go('/leads');
+      case 4: _showMoreMenu(context);
     }
   }
 
@@ -156,44 +175,39 @@ class MainShell extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _MenuItem(
+              icon: Icons.chat,
+              label: 'Чат',
+              onTap: () { Navigator.pop(context); context.go('/chat'); },
+            ),
+            _MenuItem(
               icon: Icons.attach_money,
               label: 'Финансы',
-              onTap: () {
-                Navigator.pop(context);
-                context.go('/finance');
-              },
+              onTap: () { Navigator.pop(context); context.go('/finance'); },
             ),
             _MenuItem(
               icon: Icons.description,
               label: 'Документы',
-              onTap: () {
-                Navigator.pop(context);
-                context.go('/documents');
-              },
+              onTap: () { Navigator.pop(context); context.go('/documents'); },
             ),
             _MenuItem(
               icon: Icons.analytics,
               label: 'Аналитика',
-              onTap: () {
-                Navigator.pop(context);
-                context.go('/analytics');
-              },
+              onTap: () { Navigator.pop(context); context.go('/analytics'); },
+            ),
+            _MenuItem(
+              icon: Icons.auto_awesome,
+              label: 'DEO AI',
+              onTap: () { Navigator.pop(context); context.go('/ai'); },
             ),
             _MenuItem(
               icon: Icons.settings,
               label: 'Настройки',
-              onTap: () {
-                Navigator.pop(context);
-                context.go('/settings');
-              },
+              onTap: () { Navigator.pop(context); context.go('/settings'); },
             ),
             _MenuItem(
               icon: Icons.person,
               label: 'Мой кабинет',
-              onTap: () {
-                Navigator.pop(context);
-                context.go('/cabinet');
-              },
+              onTap: () { Navigator.pop(context); context.go('/cabinet'); },
             ),
           ],
         ),
@@ -207,16 +221,12 @@ class _MenuItem extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _MenuItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
+  const _MenuItem({required this.icon, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: AppColors.brand),
+      leading: Icon(icon, color: const Color(0xFF6366F1)),
       title: Text(label),
       onTap: onTap,
     );
