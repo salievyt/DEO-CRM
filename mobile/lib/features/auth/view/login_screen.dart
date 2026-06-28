@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/theme/app_theme.dart';
+import '../data/auth_providers.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -22,18 +23,31 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin() {
-    setState(() => _isLoading = true);
-    // TODO: Implement actual auth
-    Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      context.go('/dashboard');
-    });
+  Future<void> _handleLogin() async {
+    setState(() => _errorMessage = null);
+    await ref.read(authStateProvider.notifier).login(
+      _emailController.text.trim(),
+      _passwordController.text,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authStateProvider);
+
+    ref.listen(authStateProvider, (prev, next) {
+      next.whenOrNull(
+        data: (user) {
+          if (user != null) {
+            context.go('/dashboard');
+          }
+        },
+        error: (error, _) {
+          setState(() => _errorMessage = error.toString().replaceAll('Exception: ', ''));
+        },
+      );
+    });
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -42,55 +56,41 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo
                 Container(
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: AppColors.brand,
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                     borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
                   child: const Center(
-                    child: Text(
-                      'D',
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: Text('D', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.white)),
                   ),
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  'DEO STUDIO CRM',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                const Text('DEO STUDIO CRM', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                const Text(
-                  'Войдите в свою учётную запись',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: AppColors.surface500,
-                  ),
-                ),
+                const Text('Войдите в свою учётную запись', style: TextStyle(fontSize: 16, color: Color(0xFF64748B))),
                 const SizedBox(height: 48),
 
-                // Email
                 TextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),
                 ),
                 const SizedBox(height: 16),
 
-                // Password
                 TextField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
@@ -98,80 +98,51 @@ class _LoginScreenState extends State<LoginScreen> {
                     labelText: 'Пароль',
                     prefixIcon: const Icon(Icons.lock_outlined),
                     suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                      ),
-                      onPressed: () {
-                        setState(() => _obscurePassword = !_obscurePassword);
-                      },
+                      icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
                 ),
                 const SizedBox(height: 12),
 
-                // Forgot password
                 Align(
                   alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {},
-                    child: const Text('Забыли пароль?'),
-                  ),
+                  child: TextButton(onPressed: () {}, child: const Text('Забыли пароль?')),
                 ),
                 const SizedBox(height: 24),
 
-                // Login button
+                if (_errorMessage != null) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFECACA)),
+                    ),
+                    child: Text(_errorMessage!, style: const TextStyle(color: Color(0xFFEF4444), fontSize: 14)),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 SizedBox(
                   width: double.infinity,
                   height: 52,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleLogin,
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Войти',
-                            style: TextStyle(fontSize: 16),
-                          ),
+                    onPressed: authState.isLoading ? null : _handleLogin,
+                    child: authState.isLoading
+                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Text('Войти', style: TextStyle(fontSize: 16)),
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                // Social login
                 Row(
                   children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.g_mobiledata),
-                        label: const Text('Google'),
-                      ),
-                    ),
+                    Expanded(child: OutlinedButton.icon(onPressed: () {}, icon: const Icon(Icons.g_mobiledata), label: const Text('Google'))),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.apple),
-                        label: const Text('Apple'),
-                      ),
-                    ),
+                    Expanded(child: OutlinedButton.icon(onPressed: () {}, icon: const Icon(Icons.apple), label: const Text('Apple'))),
                   ],
-                ),
-                const SizedBox(height: 24),
-
-                // Biometric
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.fingerprint),
-                  iconSize: 32,
-                  tooltip: 'Войти по биометрии',
                 ),
               ],
             ),

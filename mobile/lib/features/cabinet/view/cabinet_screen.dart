@@ -1,24 +1,20 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../auth/data/auth_providers.dart';
 
-class CabinetScreen extends StatefulWidget {
+class CabinetScreen extends ConsumerWidget {
   const CabinetScreen({super.key});
 
   @override
-  State<CabinetScreen> createState() => _CabinetScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+    final user = authState.whenOrNull(data: (u) => u);
 
-class _CabinetScreenState extends State<CabinetScreen> {
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Мой кабинет'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.edit_outlined), onPressed: () {}),
         ],
       ),
       body: SingleChildScrollView(
@@ -31,47 +27,36 @@ class _CabinetScreenState extends State<CabinetScreen> {
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 48,
-                      backgroundColor: AppColors.brand,
+                      backgroundColor: const Color(0xFF6366F1),
                       child: Text(
-                        'АМ',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        user != null
+                            ? '${user.firstName.isNotEmpty ? user.firstName[0] : ''}${user.lastName.isNotEmpty ? user.lastName[0] : ''}'
+                            : 'D',
+                        style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
-                      'Администратор',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    Text(
+                      user?.fullName ?? 'Пользователь',
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'admin@deostudio.com',
-                      style: TextStyle(color: AppColors.surface500, fontSize: 14),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '+996 (700) 123-456',
-                      style: TextStyle(color: AppColors.surface500, fontSize: 14),
+                      user?.email ?? '',
+                      style: const TextStyle(color: Color(0xFF64748B), fontSize: 14),
                     ),
                     const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AppColors.brand.withValues(alpha: 0.1),
+                        color: const Color(0xFF6366F1).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text(
-                        'Администратор',
-                        style: TextStyle(
-                          color: AppColors.brand,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 13,
-                        ),
+                      child: Text(
+                        user?.roleName ?? 'Пользователь',
+                        style: const TextStyle(color: Color(0xFF6366F1), fontWeight: FontWeight.w500, fontSize: 13),
                       ),
                     ),
                   ],
@@ -83,72 +68,25 @@ class _CabinetScreenState extends State<CabinetScreen> {
             // Stats
             Row(
               children: [
-                Expanded(
-                  child: _CabinetStatCard(
-                    icon: Icons.folder,
-                    label: 'Проекты',
-                    value: '12',
-                    color: AppColors.brand,
-                  ),
-                ),
+                Expanded(child: _CabinetStatCard(icon: Icons.folder, label: 'Проекты', value: '—', color: const Color(0xFF6366F1))),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: _CabinetStatCard(
-                    icon: Icons.checklist,
-                    label: 'Задачи',
-                    value: '48',
-                    color: AppColors.success,
-                  ),
-                ),
+                Expanded(child: _CabinetStatCard(icon: Icons.checklist, label: 'Задачи', value: '—', color: const Color(0xFF22C55E))),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: _CabinetStatCard(
-                    icon: Icons.star,
-                    label: 'Рейтинг',
-                    value: '4.8',
-                    color: AppColors.warning,
-                  ),
-                ),
+                Expanded(child: _CabinetStatCard(icon: Icons.star, label: 'Роль', value: user?.roleName ?? '—', color: const Color(0xFFF59E0B))),
               ],
             ),
             const SizedBox(height: 24),
 
-            // Info sections
-            const Text(
-              'Личная информация',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            const Text('Личная информация', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             Card(
               child: Column(
                 children: [
-                  _InfoRow(label: 'Должность', value: 'Ведущий разработчик'),
+                  _InfoRow(label: 'Email', value: user?.email ?? '—'),
                   const Divider(height: 1, indent: 16, endIndent: 16),
-                  _InfoRow(label: 'Отдел', value: 'Разработка'),
+                  _InfoRow(label: 'Имя', value: user?.fullName ?? '—'),
                   const Divider(height: 1, indent: 16, endIndent: 16),
-                  _InfoRow(label: 'Дата рождения', value: '15.03.1992'),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  _InfoRow(label: 'Телефон', value: '+996 (700) 123-456'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            const Text(
-              'Рабочая статистика',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Card(
-              child: Column(
-                children: [
-                  _InfoRow(label: 'Завершённые проекты', value: '24'),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  _InfoRow(label: 'Выполненные задачи', value: '187'),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  _InfoRow(label: 'Клиентов привлёк', value: '15'),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  _InfoRow(label: 'В системе', value: '2 года 4 месяца'),
+                  _InfoRow(label: 'Телефон', value: user?.phone ?? '—'),
                 ],
               ),
             ),
@@ -165,12 +103,7 @@ class _CabinetStatCard extends StatelessWidget {
   final String value;
   final Color color;
 
-  const _CabinetStatCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
+  const _CabinetStatCard({required this.icon, required this.label, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -181,14 +114,8 @@ class _CabinetStatCard extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 24),
             const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              label,
-              style: const TextStyle(color: AppColors.surface500, fontSize: 11),
-            ),
+            Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
           ],
         ),
       ),
@@ -209,7 +136,7 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.surface500, fontSize: 14)),
+          Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 14)),
           Text(value, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
         ],
       ),
