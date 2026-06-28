@@ -223,29 +223,97 @@ export function AnalyticsPage() {
             Распределение по этапам
           </h3>
           {sales?.stages && sales.stages.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={sales.stages}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
-                  }
-                  outerRadius={100}
-                  dataKey="count"
-                >
-                  {sales.stages.map((_: any, index: number) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
+            <div className="space-y-4">
+              <div className="relative">
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={sales.stages}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={70}
+                      outerRadius={110}
+                      paddingAngle={3}
+                      dataKey="count"
+                      strokeWidth={0}
+                      animationBegin={0}
+                      animationDuration={800}
+                      animationEasing="ease-out"
+                    >
+                      {sales.stages.map((_: any, index: number) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                          stroke={COLORS[index % COLORS.length]}
+                          style={{ filter: "none" }}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+                        const d = payload[0].payload;
+                        const total = sales.stages.reduce(
+                          (s: number, st: any) => s + st.count, 0
+                        );
+                        const pct = total > 0 ? ((d.count / total) * 100).toFixed(1) : "0";
+                        return (
+                          <div className="rounded-xl border border-surface-200 bg-white/95 px-3 py-2.5 shadow-lg backdrop-blur-sm dark:border-surface-700 dark:bg-surface-800/95">
+                            <div className="flex items-center gap-2">
+                              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: payload[0].color }} />
+                              <span className="text-sm font-medium text-surface-900 dark:text-white">{d.name}</span>
+                            </div>
+                            <div className="mt-1 flex items-center gap-3 text-xs text-surface-500">
+                              <span className="font-semibold text-surface-900 dark:text-white">{d.count}</span>
+                              <span>лидов</span>
+                              <span className="text-surface-300">·</span>
+                              <span className="font-medium">{pct}%</span>
+                            </div>
+                          </div>
+                        );
+                      }}
                     />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+                    <text x="50%" y="46%" textAnchor="middle" className="fill-surface-900 text-xl font-bold dark:fill-white">
+                      {sales.stages.reduce((s: number, st: any) => s + st.count, 0)}
+                    </text>
+                    <text x="50%" y="58%" textAnchor="middle" className="fill-surface-400 text-[11px]">
+                      всего лидов
+                    </text>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Legend */}
+              <div className="grid grid-cols-2 gap-2">
+                {sales.stages.map((stage: any, index: number) => {
+                  const total = sales.stages.reduce((s: number, st: any) => s + st.count, 0);
+                  const pct = total > 0 ? ((stage.count / total) * 100).toFixed(1) : "0";
+                  return (
+                    <div
+                      key={stage.name || index}
+                      className="flex items-center gap-2.5 rounded-lg border border-surface-100 bg-white px-3 py-2.5 transition-all hover:shadow-sm dark:border-surface-700 dark:bg-surface-800"
+                    >
+                      <span
+                        className="h-3 w-3 flex-shrink-0 rounded-sm"
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-surface-900 dark:text-white">{stage.name}</p>
+                        <div className="flex items-center gap-1.5 text-xs text-surface-400">
+                          <span className="font-semibold">{stage.count}</span>
+                          <span>·</span>
+                          <span>{pct}%</span>
+                        </div>
+                      </div>
+                      <div
+                        className="h-8 w-1 rounded-full"
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           ) : (
             <div className="flex h-[300px] items-center justify-center text-sm text-surface-400">
               Нет данных
