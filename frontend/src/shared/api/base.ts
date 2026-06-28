@@ -221,6 +221,8 @@ export const analyticsApi = {
   summary: () => api.get("/analytics/metrics/summary/"),
   sales: () => api.get("/analytics/metrics/sales/"),
   tasks: () => api.get("/analytics/metrics/tasks/"),
+  workload: (params?: Record<string, unknown>) =>
+    api.get("/analytics/metrics/workload/", { params }),
   reports: {
     generate: (data: Record<string, unknown>) => api.post("/analytics/reports/generate/", data),
   },

@@ -8,4 +8,5 @@ urlpatterns = [
     path("metrics/sales/", views.SalesMetricsView.as_view(), name="metrics-sales"),
     path("metrics/tasks/", views.TaskMetricsView.as_view(), name="metrics-tasks"),
     path("reports/generate/", views.ReportGenerateView.as_view(), name="report-generate"),
+    path("metrics/workload/", views.WorkloadMetricsView.as_view(), name="metrics-workload"),
 ]
