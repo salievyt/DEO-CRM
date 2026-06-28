@@ -1,114 +1,79 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/api/documents_api.dart';
+import '../../../entities/document.dart';
 
-class DocumentsScreen extends StatefulWidget {
+final _documentsListProvider = FutureProvider.autoDispose<List<Document>>((ref) async {
+  return await ref.read(documentsApiProvider).list();
+});
+
+class DocumentsScreen extends ConsumerWidget {
   const DocumentsScreen({super.key});
 
   @override
-  State<DocumentsScreen> createState() => _DocumentsScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final docsAsync = ref.watch(_documentsListProvider);
 
-class _DocumentsScreenState extends State<DocumentsScreen> {
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Документы'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.upload_file),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.upload_file), onPressed: () {}),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Categories
-            SizedBox(
-              height: 100,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
+      body: docsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => const Center(child: Text('Ошибка загрузки')),
+        data: (docs) {
+          if (docs.isEmpty) {
+            return const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _CategoryCard(icon: Icons.picture_as_pdf, label: 'PDF', count: 12, color: AppColors.danger),
-                  const SizedBox(width: 12),
-                  _CategoryCard(icon: Icons.description, label: 'DOCX', count: 8, color: AppColors.info),
-                  const SizedBox(width: 12),
-                  _CategoryCard(icon: Icons.table_chart, label: 'XLSX', count: 5, color: AppColors.success),
-                  const SizedBox(width: 12),
-                  _CategoryCard(icon: Icons.image, label: 'Изображения', count: 23, color: AppColors.warning),
-                  const SizedBox(width: 12),
-                  _CategoryCard(icon: Icons.folder, label: 'Архивы', count: 4, color: AppColors.surface500),
+                  Icon(Icons.description_outlined, size: 64, color: Color(0xFFCBD5E1)),
+                  SizedBox(height: 16),
+                  Text('Нет документов', style: TextStyle(color: Color(0xFF64748B))),
                 ],
               ),
-            ),
-            const SizedBox(height: 24),
-
-            // Recent files
-            const Text(
-              'Недавние файлы',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-
-            ..._files.map(
-              (f) => _FileCard(file: f),
-            ),
-          ],
-        ),
+            );
+          }
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: docs.length,
+            itemBuilder: (context, index) => _DocumentCard(doc: docs[index]),
+          );
+        },
       ),
     );
   }
 }
 
-class _CategoryCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final int count;
-  final Color color;
+class _DocumentCard extends StatelessWidget {
+  final Document doc;
 
-  const _CategoryCard({
-    required this.icon,
-    required this.label,
-    required this.count,
-    required this.color,
-  });
+  const _DocumentCard({required this.doc});
 
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: SizedBox(
-        width: 100,
-        child: InkWell(
-          onTap: () {},
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: color, size: 28),
-                const SizedBox(height: 6),
-                Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
-                Text('$count', style: const TextStyle(fontSize: 11, color: AppColors.surface400)),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  IconData _getIcon(String? type) {
+    final name = (type ?? '').toLowerCase();
+    if (name.contains('pdf')) return Icons.picture_as_pdf;
+    if (name.contains('doc')) return Icons.description;
+    if (name.contains('xls') || name.contains('sheet')) return Icons.table_chart;
+    if (name.contains('png') || name.contains('jpg') || name.contains('image')) return Icons.image;
+    return Icons.insert_drive_file;
   }
-}
 
-class _FileCard extends StatelessWidget {
-  final _FileItem file;
-
-  const _FileCard({required this.file});
+  Color _getColor(String? type) {
+    final name = (type ?? '').toLowerCase();
+    if (name.contains('pdf') || doc.fileName.endsWith('.pdf')) return const Color(0xFFEF4444);
+    if (name.contains('doc') || doc.fileName.endsWith('.docx')) return const Color(0xFF3B82F6);
+    if (name.contains('xls') || doc.fileName.endsWith('.xlsx')) return const Color(0xFF22C55E);
+    if (name.contains('png') || doc.fileName.endsWith('.jpg')) return const Color(0xFFF59E0B);
+    return const Color(0xFF64748B);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final iconColor = _getColor(doc.mimeType);
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
@@ -121,21 +86,21 @@ class _FileCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: file.color.withValues(alpha: 0.1),
+                  color: iconColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(file.icon, color: file.color, size: 22),
+                child: Icon(_getIcon(doc.mimeType), color: iconColor, size: 22),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(file.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                    Text(doc.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                     const SizedBox(height: 2),
                     Text(
-                      '${file.size} · ${file.date}',
-                      style: const TextStyle(color: AppColors.surface500, fontSize: 12),
+                      '${doc.formattedSize} · ${doc.createdAt.day}.${doc.createdAt.month}.${doc.createdAt.year}',
+                      style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
                     ),
                   ],
                 ),
@@ -143,7 +108,7 @@ class _FileCard extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.more_vert, size: 20),
                 onPressed: () {},
-                color: AppColors.surface400,
+                color: const Color(0xFF94A3B8),
               ),
             ],
           ),
@@ -152,28 +117,3 @@ class _FileCard extends StatelessWidget {
     );
   }
 }
-
-class _FileItem {
-  final String name;
-  final String size;
-  final String date;
-  final IconData icon;
-  final Color color;
-
-  const _FileItem({
-    required this.name,
-    required this.size,
-    required this.date,
-    required this.icon,
-    required this.color,
-  });
-}
-
-final _files = [
-  _FileItem(name: 'Договор DEO CRM.pdf', size: '2.4 MB', date: '12 июн', icon: Icons.picture_as_pdf, color: AppColors.danger),
-  _FileItem(name: 'Коммерческое предложение.docx', size: '1.1 MB', date: '11 июн', icon: Icons.description, color: AppColors.info),
-  _FileItem(name: 'Смета проекта.xlsx', size: '856 KB', date: '10 июн', icon: Icons.table_chart, color: AppColors.success),
-  _FileItem(name: 'Логотип финальный.png', size: '3.2 MB', date: '09 июн', icon: Icons.image, color: AppColors.warning),
-  _FileItem(name: 'Презентация.pdf', size: '5.7 MB', date: '08 июн', icon: Icons.picture_as_pdf, color: AppColors.danger),
-  _FileItem(name: 'Техническое задание.docx', size: '980 KB', date: '07 июн', icon: Icons.description, color: AppColors.info),
-];
