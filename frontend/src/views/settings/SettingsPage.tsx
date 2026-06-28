@@ -10,6 +10,8 @@ import {
   Languages,
   Save,
   Camera,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { PageHeader } from "@/shared/ui/PageHeader";
 import { Card } from "@/shared/ui/Card";
@@ -18,6 +20,8 @@ import { Input } from "@/shared/ui/Input";
 import { Tabs } from "@/shared/ui/Tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { authApi } from "@/shared/api/base";
+import { useSettingsStore } from "@/shared/store/settingsStore";
+import type { Language } from "@/shared/store/settingsStore";
 
 export function SettingsPage() {
   const { user } = useAuth();
@@ -54,9 +58,27 @@ function ProfileSection({ user }: { user: any }) {
     email: user?.email || "",
     phone: user?.phone || "",
   });
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const mutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => authApi.updateProfile(data),
+    onSuccess: () => {
+      setSuccessMessage("Профиль успешно обновлён");
+      setErrorMessage("");
+    },
+    onError: (err: any) => {
+      const detail = err?.response?.data?.detail;
+      if (typeof detail === "string") {
+        setErrorMessage(detail);
+      } else if (err?.response?.data) {
+        const msgs = Object.values(err.response.data).flat().join(". ");
+        setErrorMessage(msgs || "Ошибка при сохранении");
+      } else {
+        setErrorMessage("Ошибка при сохранении. Попробуйте снова.");
+      }
+      setSuccessMessage("");
+    },
   });
 
   return (
@@ -96,6 +118,25 @@ function ProfileSection({ user }: { user: any }) {
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
             />
           </div>
+
+          {successMessage && (
+            <div className="animate-fade-in rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-600 dark:border-green-800 dark:bg-green-900/30 dark:text-green-400">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                {successMessage}
+              </div>
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="animate-fade-in rounded-xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-600 dark:border-red-800 dark:bg-red-900/30 dark:text-red-400">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                {errorMessage}
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end">
             <Button
               onClick={() => mutation.mutate(form)}
@@ -117,11 +158,45 @@ function SecuritySection() {
     new_password: "",
     confirm_password: "",
   });
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const changePasswordMutation = useMutation({
     mutationFn: () =>
       authApi.changePassword(passwords.old_password, passwords.new_password),
+    onSuccess: () => {
+      setSuccessMessage("Пароль успешно изменён");
+      setErrorMessage("");
+      setPasswords({ old_password: "", new_password: "", confirm_password: "" });
+    },
+    onError: (err: any) => {
+      const detail = err?.response?.data?.detail || err?.response?.data?.error;
+      if (typeof detail === "string") {
+        setErrorMessage(detail);
+      } else {
+        setErrorMessage("Ошибка при смене пароля. Проверьте правильность текущего пароля.");
+      }
+      setSuccessMessage("");
+    },
   });
+
+  const handleChangePassword = () => {
+    setErrorMessage("");
+    setSuccessMessage("");
+    if (!passwords.old_password || !passwords.new_password) {
+      setErrorMessage("Заполните все поля");
+      return;
+    }
+    if (passwords.new_password.length < 8) {
+      setErrorMessage("Новый пароль должен содержать минимум 8 символов");
+      return;
+    }
+    if (passwords.new_password !== passwords.confirm_password) {
+      setErrorMessage("Пароли не совпадают");
+      return;
+    }
+    changePasswordMutation.mutate();
+  };
 
   return (
     <Card className="space-y-6">
@@ -156,9 +231,28 @@ function SecuritySection() {
               }
             />
           </div>
+
+          {successMessage && (
+            <div className="animate-fade-in rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-600 dark:border-green-800 dark:bg-green-900/30 dark:text-green-400">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                {successMessage}
+              </div>
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="animate-fade-in rounded-xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-600 dark:border-red-800 dark:bg-red-900/30 dark:text-red-400">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                {errorMessage}
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end">
             <Button
-              onClick={() => changePasswordMutation.mutate()}
+              onClick={handleChangePassword}
               loading={changePasswordMutation.isPending}
             >
               <Shield className="h-4 w-4" />
@@ -187,18 +281,28 @@ function SecuritySection() {
 }
 
 function NotificationsSection() {
+  const [prefs, setPrefs] = useState<Record<string, boolean>>({
+    task_assigned: true,
+    comment_added: true,
+    project_updated: true,
+    deadline_reminder: true,
+    message_received: true,
+  });
+
+  const items = [
+    { key: "task_assigned", label: "Новые задачи", desc: "Уведомления о новых задачах" },
+    { key: "comment_added", label: "Комментарии", desc: "Уведомления о комментариях" },
+    { key: "project_updated", label: "Изменения проектов", desc: "Уведомления об изменениях в проектах" },
+    { key: "deadline_reminder", label: "Дедлайны", desc: "Напоминания о приближающихся сроках" },
+    { key: "message_received", label: "Новые сообщения", desc: "Уведомления о новых сообщениях" },
+  ];
+
   return (
     <Card>
       <div className="space-y-4">
-        {[
-          { label: "Новые задачи", desc: "Уведомления о новых задачах" },
-          { label: "Комментарии", desc: "Уведомления о комментариях" },
-          { label: "Изменения проектов", desc: "Уведомления об изменениях в проектах" },
-          { label: "Дедлайны", desc: "Напоминания о приближающихся сроках" },
-          { label: "Новые сообщения", desc: "Уведомления о новых сообщениях" },
-        ].map((item) => (
+        {items.map((item) => (
           <div
-            key={item.label}
+            key={item.key}
             className="flex items-center justify-between rounded-lg border border-surface-200 p-4 dark:border-surface-700"
           >
             <div>
@@ -208,7 +312,14 @@ function NotificationsSection() {
               <p className="text-xs text-surface-500">{item.desc}</p>
             </div>
             <label className="relative inline-flex cursor-pointer items-center">
-              <input type="checkbox" defaultChecked className="peer sr-only" />
+              <input
+                type="checkbox"
+                checked={prefs[item.key]}
+                onChange={() =>
+                  setPrefs({ ...prefs, [item.key]: !prefs[item.key] })
+                }
+                className="peer sr-only"
+              />
               <div className="h-6 w-11 rounded-full bg-surface-300 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-surface-600" />
             </label>
           </div>
@@ -219,6 +330,14 @@ function NotificationsSection() {
 }
 
 function AppearanceSection() {
+  const { theme, language, setTheme, setLanguage } = useSettingsStore();
+
+  const isDark = theme === "dark";
+
+  const handleThemeToggle = () => {
+    setTheme(isDark ? "light" : "dark");
+  };
+
   return (
     <Card className="space-y-6">
       <div className="flex items-center justify-between">
@@ -234,7 +353,12 @@ function AppearanceSection() {
           </div>
         </div>
         <label className="relative inline-flex cursor-pointer items-center">
-          <input type="checkbox" className="peer sr-only" />
+          <input
+            type="checkbox"
+            checked={isDark}
+            onChange={handleThemeToggle}
+            className="peer sr-only"
+          />
           <div className="h-6 w-11 rounded-full bg-surface-300 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-surface-600" />
         </label>
       </div>
@@ -249,11 +373,15 @@ function AppearanceSection() {
               Язык интерфейса
             </p>
             <p className="text-xs text-surface-500">
-              Русский (основной)
+              Выберите язык интерфейса
             </p>
           </div>
         </div>
-        <select className="input w-40">
+        <select
+          className="input w-40"
+          value={language}
+          onChange={(e) => setLanguage(e.target.value as Language)}
+        >
           <option value="ru">Русский</option>
           <option value="ky">Кыргызский</option>
           <option value="en">English</option>
@@ -262,13 +390,4 @@ function AppearanceSection() {
       </div>
     </Card>
   );
-}
-
-function Control(){
-  return (
-    <div>
-      <h1>Панель управления</h1>
-      <h1></h1>
-    </div>
-  )
 }

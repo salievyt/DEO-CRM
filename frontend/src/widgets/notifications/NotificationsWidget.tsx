@@ -1,8 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
-import { analyticsApi } from "@/shared/api/base";
+import { notificationsApi } from "@/shared/api/base";
 import { QUERY_KEYS } from "@/shared/constants";
 import { Card } from "@/shared/ui/Card";
 import { Badge } from "@/shared/ui/Badge";
@@ -16,15 +15,16 @@ export function NotificationsWidget() {
   const queryClient = useQueryClient();
 
   const { data: notifications, isLoading } = useQuery({
-    queryKey: ["notifications"],
-    queryFn: () => analyticsApi.dashboards.list(),
-    select: (res): Notification[] => res.data?.results || [],
+    queryKey: [QUERY_KEYS.NOTIFICATIONS],
+    queryFn: () => notificationsApi.list(),
+    select: (res): Notification[] => res.data?.results || (res.data as Notification[]) || [],
   });
 
   const markAllRead = useMutation({
-    mutationFn: () => analyticsApi.dashboards.create({ action: "mark_all_read" }),
+    mutationFn: () => notificationsApi.markAllRead(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.NOTIFICATIONS] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.UNREAD_NOTIFICATIONS] });
     },
   });
 

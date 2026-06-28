@@ -249,3 +249,9 @@ export const aiApi = {
   history: () => api.get("/ai/history/"),
   templates: () => api.get("/ai/templates/"),
 };
+
+export const notificationsApi = {
+  list: () => api.get("/notifications/"),
+  markAllRead: () => api.post("/notifications/mark-all-read/"),
+  unreadCount: () => api.get("/notifications/unread-count/"),
+};

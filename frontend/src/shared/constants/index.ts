@@ -61,4 +61,8 @@ export const QUERY_KEYS = {
   // AI
   AI_HISTORY: "ai-history",
   AI_TEMPLATES: "ai-templates",
+
+  // Notifications
+  NOTIFICATIONS: "notifications",
+  UNREAD_NOTIFICATIONS: "unread-notifications",
 };
