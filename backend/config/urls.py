@@ -17,6 +17,7 @@ api_patterns = [
     path("analytics/", include("apps.analytics.urls")),
     path("cabinet/", include("apps.cabinet.urls")),
     path("ai/", include("apps.ai_assistant.urls")),
+    path("notifications/", include("apps.notifications.urls")),
 ]
 
 urlpatterns = [
