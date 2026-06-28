@@ -253,7 +253,17 @@ export const aiApi = {
 };
 
 export const notificationsApi = {
-  list: () => api.get("/notifications/"),
+  list: (params?: Record<string, unknown>) =>
+    api.get("/notifications/", { params }),
   markAllRead: () => api.post("/notifications/mark-all-read/"),
   unreadCount: () => api.get("/notifications/unread-count/"),
+  preferences: {
+    get: () => api.get("/notifications/preferences/"),
+    update: (data: Record<string, unknown>) =>
+      api.patch("/notifications/preferences/", data),
+  },
+  archive: (data: Record<string, unknown>) =>
+    api.post("/notifications/archive/", data),
+  archiveAll: () => api.post("/notifications/archive-all/"),
+  archiveOne: (id: string) => api.post(`/notifications/${id}/archive/`),
 };

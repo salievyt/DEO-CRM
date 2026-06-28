@@ -65,4 +65,5 @@ export const QUERY_KEYS = {
   // Notifications
   NOTIFICATIONS: "notifications",
   UNREAD_NOTIFICATIONS: "unread-notifications",
+  NOTIFICATION_PREFS: "notification-prefs",
 };

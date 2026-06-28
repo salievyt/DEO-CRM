@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   User,
   Shield,
@@ -12,6 +12,10 @@ import {
   Camera,
   CheckCircle2,
   AlertCircle,
+  Moon,
+  Archive,
+  Clock,
+  Mail,
 } from "lucide-react";
 import { PageHeader } from "@/shared/ui/PageHeader";
 import { Card } from "@/shared/ui/Card";
@@ -19,7 +23,8 @@ import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 import { Tabs } from "@/shared/ui/Tabs";
 import { useAuth } from "@/hooks/useAuth";
-import { authApi } from "@/shared/api/base";
+import { authApi, notificationsApi } from "@/shared/api/base";
+import { QUERY_KEYS } from "@/shared/constants";
 import { useSettingsStore } from "@/shared/store/settingsStore";
 import type { Language } from "@/shared/store/settingsStore";
 
@@ -281,15 +286,66 @@ function SecuritySection() {
 }
 
 function NotificationsSection() {
-  const [prefs, setPrefs] = useState<Record<string, boolean>>({
-    task_assigned: true,
-    comment_added: true,
-    project_updated: true,
-    deadline_reminder: true,
-    message_received: true,
+  const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  const { data: prefsData, isLoading: prefsLoading } = useQuery({
+    queryKey: [QUERY_KEYS.NOTIFICATION_PREFS],
+    queryFn: () => notificationsApi.preferences.get(),
+    select: (res) => res.data,
   });
 
-  const items = [
+  const [form, setForm] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    if (prefsData) {
+      setForm({
+        task_assigned: prefsData.task_assigned ?? true,
+        comment_added: prefsData.comment_added ?? true,
+        project_updated: prefsData.project_updated ?? true,
+        deadline_reminder: prefsData.deadline_reminder ?? true,
+        message_received: prefsData.message_received ?? true,
+        quiet_hours_enabled: prefsData.quiet_hours_enabled ?? false,
+        quiet_hours_start: prefsData.quiet_hours_start || "22:00",
+        quiet_hours_end: prefsData.quiet_hours_end || "08:00",
+        digest_enabled: prefsData.digest_enabled ?? false,
+        digest_frequency: prefsData.digest_frequency || "daily",
+        auto_archive_read_days: prefsData.auto_archive_read_days ?? 7,
+        auto_archive_unread_days: prefsData.auto_archive_unread_days ?? 30,
+      });
+    }
+  }, [prefsData]);
+
+  const saveMutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) =>
+      notificationsApi.preferences.update(data),
+    onSuccess: () => {
+      setSaved(true);
+      setSaveError("");
+      setTimeout(() => setSaved(false), 3000);
+    },
+    onError: (err: any) => {
+      const detail = err?.response?.data?.detail;
+      if (typeof detail === "string") {
+        setSaveError(detail);
+      } else {
+        setSaveError("Ошибка при сохранении настроек");
+      }
+    },
+  });
+
+  const updateToggle = (key: string) => {
+    setForm((prev: Record<string, any>) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const updateField = (key: string, value: any) => {
+    setForm((prev: Record<string, any>) => ({ ...prev, [key]: value }));
+  };
+
+  const channelItems = [
     { key: "task_assigned", label: "Новые задачи", desc: "Уведомления о новых задачах" },
     { key: "comment_added", label: "Комментарии", desc: "Уведомления о комментариях" },
     { key: "project_updated", label: "Изменения проектов", desc: "Уведомления об изменениях в проектах" },
@@ -297,35 +353,245 @@ function NotificationsSection() {
     { key: "message_received", label: "Новые сообщения", desc: "Уведомления о новых сообщениях" },
   ];
 
+  if (prefsLoading) {
+    return (
+      <Card>
+        <div className="flex items-center justify-center py-8">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
+        </div>
+      </Card>
+    );
+  }
+
+  const ToggleSwitch = ({
+    checked,
+    onChange,
+  }: {
+    checked: boolean;
+    onChange: () => void;
+  }) => (
+    <label className="relative inline-flex cursor-pointer items-center">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        className="peer sr-only"
+      />
+      <div className="h-6 w-11 rounded-full bg-surface-300 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-surface-600" />
+    </label>
+  );
+
   return (
-    <Card>
-      <div className="space-y-4">
-        {items.map((item) => (
-          <div
-            key={item.key}
-            className="flex items-center justify-between rounded-lg border border-surface-200 p-4 dark:border-surface-700"
-          >
+    <div className="space-y-6">
+      {/* Channel Toggles */}
+      <Card>
+        <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-surface-700 dark:text-surface-200">
+          <Bell className="h-4 w-4" />
+          Каналы уведомлений
+        </h3>
+        <div className="space-y-3">
+          {channelItems.map((item) => (
+            <div
+              key={item.key}
+              className="flex items-center justify-between rounded-lg border border-surface-200 p-4 dark:border-surface-700"
+            >
+              <div>
+                <p className="text-sm font-medium text-surface-900 dark:text-white">
+                  {item.label}
+                </p>
+                <p className="text-xs text-surface-500">{item.desc}</p>
+              </div>
+              <ToggleSwitch
+                checked={form[item.key] ?? true}
+                onChange={() => updateToggle(item.key)}
+              />
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Quiet Hours */}
+      <Card>
+        <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-surface-700 dark:text-surface-200">
+          <Moon className="h-4 w-4" />
+          Тихие часы
+        </h3>
+        <p className="mb-4 text-xs text-surface-500">
+          В указанное время некритичные уведомления не будут показываться
+        </p>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between rounded-lg border border-surface-200 p-4 dark:border-surface-700">
+            <div className="flex items-center gap-3">
+              <Clock className="h-5 w-5 text-surface-400" />
+              <div>
+                <p className="text-sm font-medium text-surface-900 dark:text-white">
+                  Включить тихие часы
+                </p>
+              </div>
+            </div>
+            <ToggleSwitch
+              checked={form.quiet_hours_enabled ?? false}
+              onChange={() => updateToggle("quiet_hours_enabled")}
+            />
+          </div>
+
+          {form.quiet_hours_enabled && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-surface-600 dark:text-surface-300">
+                  Начало
+                </label>
+                <input
+                  type="time"
+                  value={form.quiet_hours_start || "22:00"}
+                  onChange={(e) =>
+                    updateField("quiet_hours_start", e.target.value)
+                  }
+                  className="input"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-surface-600 dark:text-surface-300">
+                  Конец
+                </label>
+                <input
+                  type="time"
+                  value={form.quiet_hours_end || "08:00"}
+                  onChange={(e) =>
+                    updateField("quiet_hours_end", e.target.value)
+                  }
+                  className="input"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* Digest */}
+      <Card>
+        <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-surface-700 dark:text-surface-200">
+          <Mail className="h-4 w-4" />
+          Дайджест
+        </h3>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between rounded-lg border border-surface-200 p-4 dark:border-surface-700">
             <div>
               <p className="text-sm font-medium text-surface-900 dark:text-white">
-                {item.label}
+                Собирать уведомления в дайджест
               </p>
-              <p className="text-xs text-surface-500">{item.desc}</p>
+              <p className="text-xs text-surface-500">
+                Вместо мгновенных уведомлений — периодическая сводка
+              </p>
             </div>
-            <label className="relative inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                checked={prefs[item.key]}
-                onChange={() =>
-                  setPrefs({ ...prefs, [item.key]: !prefs[item.key] })
-                }
-                className="peer sr-only"
-              />
-              <div className="h-6 w-11 rounded-full bg-surface-300 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-surface-600" />
-            </label>
+            <ToggleSwitch
+              checked={form.digest_enabled ?? false}
+              onChange={() => updateToggle("digest_enabled")}
+            />
           </div>
-        ))}
+
+          {form.digest_enabled && (
+            <div className="flex items-center gap-3">
+              <label className="text-xs font-medium text-surface-600 dark:text-surface-300">
+                Частота:
+              </label>
+              <select
+                className="input w-40"
+                value={form.digest_frequency || "daily"}
+                onChange={(e) =>
+                  updateField("digest_frequency", e.target.value)
+                }
+              >
+                <option value="daily">Раз в день</option>
+                <option value="weekly">Раз в неделю</option>
+              </select>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* Auto-Archive */}
+      <Card>
+        <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-surface-700 dark:text-surface-200">
+          <Archive className="h-4 w-4" />
+          Автоархивация
+        </h3>
+        <p className="mb-4 text-xs text-surface-500">
+          Настройте автоматическую архивацию старых уведомлений
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-surface-600 dark:text-surface-300">
+              Архивировать прочитанные через (дней)
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                min="0"
+                max="365"
+                value={form.auto_archive_read_days ?? 7}
+                onChange={(e) =>
+                  updateField(
+                    "auto_archive_read_days",
+                    parseInt(e.target.value) || 0
+                  )
+                }
+                className="input"
+              />
+              <p className="mt-1 text-[10px] text-surface-400">
+                0 = не архивировать автоматически
+              </p>
+            </div>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-surface-600 dark:text-surface-300">
+              Архивировать непрочитанные через (дней)
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                min="0"
+                max="365"
+                value={form.auto_archive_unread_days ?? 30}
+                onChange={(e) =>
+                  updateField(
+                    "auto_archive_unread_days",
+                    parseInt(e.target.value) || 0
+                  )
+                }
+                className="input"
+              />
+              <p className="mt-1 text-[10px] text-surface-400">
+                0 = не архивировать автоматически
+              </p>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Save Feedback */}
+      <div className="flex items-center justify-end gap-3">
+        {saved && (
+          <div className="flex items-center gap-1.5 text-sm text-success-600 animate-fade-in">
+            <CheckCircle2 className="h-4 w-4" />
+            Настройки сохранены
+          </div>
+        )}
+        {saveError && (
+          <div className="flex items-center gap-1.5 text-sm text-danger-600 animate-fade-in">
+            <AlertCircle className="h-4 w-4" />
+            {saveError}
+          </div>
+        )}
+        <Button
+          onClick={() => saveMutation.mutate(form)}
+          loading={saveMutation.isPending}
+        >
+          <Save className="h-4 w-4" />
+          Сохранить настройки
+        </Button>
       </div>
-    </Card>
+    </div>
   );
 }
 
