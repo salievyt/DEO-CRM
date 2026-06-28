@@ -1,0 +1,80 @@
+/* Overlay */
+.overlay {
+  @apply fixed inset-0 z-50 flex items-center justify-center;
+}
+.backdrop {
+  @apply absolute inset-0 bg-black/40 backdrop-blur-sm;
+  animation: backdropIn 0.2s ease-out;
+}
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Panel */
+.panel {
+  @apply relative w-full rounded-2xl border border-surface-200/80 bg-white p-6 shadow-modal 
+         dark:border-surface-700/80 dark:bg-surface-800;
+  animation: panelIn 0.25s ease-out;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+@keyframes panelIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Sizes */
+.sizeSm {
+  @apply max-w-sm;
+}
+.sizeMd {
+  @apply max-w-md;
+}
+.sizeLg {
+  @apply max-w-lg;
+}
+.sizeXl {
+  @apply max-w-xl;
+}
+.sizeFull {
+  @apply max-w-4xl;
+}
+.sizeSmMobile {
+  @apply mx-4;
+}
+
+/* Header */
+.header {
+  @apply mb-5;
+}
+.titleRow {
+  @apply flex items-center justify-between;
+}
+.title {
+  @apply text-lg font-semibold text-surface-900 dark:text-white;
+}
+.description {
+  @apply mt-1 text-sm text-surface-500;
+}
+
+/* Close button */
+.closeBtn {
+  @apply rounded-lg p-1.5 text-surface-400 transition-colors 
+         hover:bg-surface-100 hover:text-surface-600 
+         dark:hover:bg-surface-700 dark:hover:text-surface-300;
+}
+
+/* Scrollbar inside modal */
+.panel::-webkit-scrollbar {
+  width: 4px;
+}
+.panel::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-surface-300 dark:bg-surface-600;
+}

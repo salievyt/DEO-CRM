@@ -1,0 +1,48 @@
+.base {
+  @apply rounded-xl border border-surface-200 bg-white shadow-sm transition-all duration-200 
+         dark:border-surface-700 dark:bg-surface-800;
+}
+
+/* Padding variants */
+.paddingNone {
+  @apply p-0;
+}
+.paddingSm {
+  @apply p-4;
+}
+.paddingMd {
+  @apply p-6;
+}
+.paddingLg {
+  @apply p-8;
+}
+
+/* Interactive hover */
+.interactive {
+  @apply cursor-pointer;
+}
+.interactive:hover {
+  @apply -translate-y-0.5 shadow-elevated border-brand-200/50 dark:border-brand-700/50;
+}
+
+/* Glass variant */
+.glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  @apply border-white/20 shadow-glass;
+}
+:global(.dark) .glass {
+  background: rgba(15, 23, 42, 0.72);
+  border-color: rgba(51, 65, 85, 0.5);
+}
+
+/* Inner gradient accent */
+.accentTop {
+  @apply relative overflow-hidden;
+}
+.accentTop::before {
+  content: "";
+  @apply absolute left-0 right-0 top-0 h-0.5;
+  background: linear-gradient(90deg, transparent, #6366f1, transparent);
+}

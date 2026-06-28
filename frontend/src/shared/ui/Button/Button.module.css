@@ -1,0 +1,73 @@
+.base {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-150 ease-out
+         focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50;
+}
+
+/* Sizes */
+.sizeSm {
+  @apply px-2.5 py-1.5 text-xs rounded-md;
+}
+.sizeMd {
+  @apply px-4 py-2.5 text-sm;
+}
+.sizeLg {
+  @apply px-6 py-3 text-base;
+}
+
+/* Variants */
+.primary {
+  @apply bg-brand-600 text-white shadow-sm hover:bg-brand-700 hover:shadow-md active:bg-brand-800;
+}
+.primary:hover {
+  transform: translateY(-1px);
+}
+.primary:active {
+  transform: translateY(0);
+}
+
+.secondary {
+  @apply border border-surface-300 bg-white text-surface-700 shadow-sm 
+         hover:border-surface-400 hover:bg-surface-50 hover:shadow-md
+         dark:border-surface-600 dark:bg-surface-800 dark:text-surface-200 
+         dark:hover:border-surface-500 dark:hover:bg-surface-700;
+}
+.secondary:hover {
+  transform: translateY(-1px);
+}
+.secondary:active {
+  transform: translateY(0);
+}
+
+.danger {
+  @apply bg-danger-600 text-white shadow-sm hover:bg-danger-700 hover:shadow-md;
+}
+.danger:hover {
+  transform: translateY(-1px);
+}
+
+.ghost {
+  @apply text-surface-600 hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-700;
+}
+
+.outline {
+  @apply border border-brand-600 text-brand-600 hover:bg-brand-50 
+         dark:border-brand-400 dark:text-brand-400 dark:hover:bg-brand-950/30;
+}
+
+.gradient {
+  @apply text-white shadow-sm hover:shadow-md;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+}
+.gradient:hover {
+  transform: translateY(-1px);
+}
+
+/* Full width */
+.fullWidth {
+  @apply w-full;
+}
+
+/* Spinner animation */
+.spinner {
+  @apply h-4 w-4 animate-spin;
+}
