@@ -1,0 +1,52 @@
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [main]
+  # Allow manual trigger from GitHub Actions tab
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_ENVIRONMENT: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: curl -fsSL https://railway.com/install.sh | sh
+
+      - name: Deploy to Railway
+        run: |
+          echo "🚀 Deploying DEO CRM to Railway..."
+          ~/.railway/bin/railway up --detach
+
+      - name: Wait for deployment
+        run: |
+          echo "⏳ Waiting 30 seconds for services to start..."
+          sleep 30
+
+      - name: Run database migrations
+        run: |
+          echo "🗃️  Applying database migrations..."
+          ~/.railway/bin/railway run python manage.py migrate --settings=config.settings.production
+
+      - name: Collect static files
+        run: |
+          echo "📁 Collecting static files..."
+          ~/.railway/bin/railway run python manage.py collectstatic --noinput --settings=config.settings.production
+
+      - name: Verify deployment
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo "   Check Railway dashboard: https://railway.app/dashboard"
