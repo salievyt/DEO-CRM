@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
@@ -11,6 +11,7 @@ import {
   MessageSquare,
   User,
   CalendarDays,
+  GripVertical,
 } from "lucide-react";
 import { PageHeader } from "@/shared/ui/PageHeader";
 import { Card } from "@/shared/ui/Card";
@@ -20,6 +21,8 @@ import { StatusBadge } from "@/shared/ui/StatusBadge";
 import { Modal } from "@/shared/ui/Modal";
 import { Input } from "@/shared/ui/Input";
 import { LoadingSpinner } from "@/shared/ui/LoadingSpinner";
+import { ProjectSearchSelect } from "@/shared/ui/ProjectSearchSelect";
+import { UserSearchSelect } from "@/shared/ui/UserSearchSelect";
 import { tasksApi } from "@/shared/api/base";
 import { QUERY_KEYS } from "@/shared/constants";
 import { formatDate, cn } from "@/shared/utils/formatters";
@@ -28,7 +31,62 @@ import type { Task, TaskKanbanColumn } from "@/entities/task/types";
 export function TaskListPage() {
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const dragTaskRef = useRef<{ id: string; fromStage: string } | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const autoScrollAnimRef = useRef<number | null>(null);
+  const mouseXRef = useRef(0);
   const queryClient = useQueryClient();
+
+  // Auto-scroll kanban during drag
+  useEffect(() => {
+    const tick = () => {
+      const el = scrollContainerRef.current;
+      if (!el || dragTaskRef.current === null) {
+        autoScrollAnimRef.current = null;
+        return;
+      }
+
+      const rect = el.getBoundingClientRect();
+      const x = mouseXRef.current;
+      const speed = 12;
+      const threshold = 80;
+
+      if (x < rect.left + threshold) {
+        const factor = Math.max(0.3, 1 - (x - rect.left) / threshold);
+        el.scrollLeft -= Math.round(speed * factor);
+        autoScrollAnimRef.current = requestAnimationFrame(tick);
+      } else if (x > rect.right - threshold) {
+        const factor = Math.max(0.3, (x - (rect.right - threshold)) / threshold);
+        el.scrollLeft += Math.round(speed * factor);
+        autoScrollAnimRef.current = requestAnimationFrame(tick);
+      } else {
+        autoScrollAnimRef.current = null;
+      }
+    };
+
+    const onDragOver = (e: DragEvent) => {
+      mouseXRef.current = e.clientX;
+      if (dragTaskRef.current !== null && autoScrollAnimRef.current === null) {
+        autoScrollAnimRef.current = requestAnimationFrame(tick);
+      }
+    };
+
+    const onDragEnd = () => {
+      dragTaskRef.current = null;
+    };
+
+    document.addEventListener("dragover", onDragOver);
+    document.addEventListener("dragend", onDragEnd);
+
+    return () => {
+      document.removeEventListener("dragover", onDragOver);
+      document.removeEventListener("dragend", onDragEnd);
+      if (autoScrollAnimRef.current !== null) {
+        cancelAnimationFrame(autoScrollAnimRef.current);
+      }
+    };
+  }, []);
 
   const { data: kanbanData, isLoading } = useQuery({
     queryKey: [QUERY_KEYS.TASK_KANBAN],
@@ -41,6 +99,40 @@ export function TaskListPage() {
     queryFn: () => tasksApi.my(),
     select: (res): Task[] => res.data?.results || (res.data as Task[]),
   });
+
+  const moveMutation = useMutation({
+    mutationFn: ({ taskId, statusId }: { taskId: string; statusId: string }) =>
+      tasksApi.changeStatus(taskId, statusId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TASKS] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TASK_KANBAN] });
+    },
+  });
+
+  // Drag & Drop handlers
+  const handleDragStart = useCallback((taskId: string, fromStage: string) => {
+    dragTaskRef.current = { id: taskId, fromStage };
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, statusId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverColumn(statusId);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverColumn(null);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, toStatus: string) => {
+    e.preventDefault();
+    setDragOverColumn(null);
+    const task = dragTaskRef.current;
+    if (!task) return;
+    if (task.fromStage === toStatus) return;
+    moveMutation.mutate({ taskId: task.id, statusId: toStatus });
+    dragTaskRef.current = null;
+  }, [moveMutation]);
 
   const createMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => tasksApi.create(data),
@@ -134,33 +226,52 @@ export function TaskListPage() {
 
       {/* Kanban Board */}
       {view === "kanban" && (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {kanbanData?.map((column) => (
-            <div key={column.id} className="min-w-[18rem] flex-shrink-0">
-              <div className="sticky top-0 z-10 mb-3 flex items-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 dark:border-surface-700 dark:bg-surface-800">
-                <span
-                  className="h-3 w-3 rounded-full"
-                  style={{ backgroundColor: column.color }}
-                />
-                <h3 className="min-w-0 flex-1 truncate font-medium text-surface-900 dark:text-white">
-                  {column.title}
-                </h3>
-                <Badge variant="default">{column.tasks.length}</Badge>
-              </div>
-
-              <div className="min-h-40 space-y-2 rounded-lg bg-surface-100/70 p-2 dark:bg-surface-900/40">
-                {column.tasks.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-surface-400">
-                    Нет задач
-                  </p>
-                ) : (
-                  column.tasks.map((task) => (
-                    <TaskCard key={task.id} task={task} />
-                  ))
+        <div ref={scrollContainerRef} className="flex gap-4 overflow-x-auto pb-4">
+          {kanbanData?.map((column) => {
+            const isDragOver = dragOverColumn === column.id;
+            return (
+              <div
+                key={column.id}
+                className={cn(
+                  "min-w-[18rem] flex-shrink-0 transition-all",
+                  isDragOver && "rounded-xl bg-brand-50/50 ring-2 ring-brand-300 dark:bg-brand-900/20 dark:ring-brand-700"
                 )}
+                onDragOver={(e) => handleDragOver(e, column.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, column.id)}
+              >
+                <div className="sticky top-0 z-10 mb-3 flex items-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 dark:border-surface-700 dark:bg-surface-800">
+                  <span
+                    className="h-3 w-3 rounded-full"
+                    style={{ backgroundColor: column.color }}
+                  />
+                  <h3 className="min-w-0 flex-1 truncate font-medium text-surface-900 dark:text-white">
+                    {column.title}
+                  </h3>
+                  <Badge variant="default">{column.tasks.length}</Badge>
+                </div>
+
+                <div className="min-h-40 space-y-2 rounded-lg bg-surface-100/70 p-2 dark:bg-surface-900/40">
+                  {column.tasks.length === 0 ? (
+                    <div className="flex min-h-[100px] items-center justify-center rounded-lg border-2 border-dashed border-surface-200 dark:border-surface-700">
+                      <p className="text-sm text-surface-400">
+                        Перетащите задачу сюда
+                      </p>
+                    </div>
+                  ) : (
+                    column.tasks.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        stageId={column.id}
+                        onDragStart={handleDragStart}
+                      />
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -260,7 +371,15 @@ function TaskListItem({ task }: { task: Task }) {
   );
 }
 
-function TaskCard({ task }: { task: Task }) {
+function TaskCard({
+  task,
+  stageId,
+  onDragStart,
+}: {
+  task: Task;
+  stageId: string;
+  onDragStart: (taskId: string, stageId: string) => void;
+}) {
   const queryClient = useQueryClient();
 
   const startTimer = useMutation({
@@ -271,11 +390,18 @@ function TaskCard({ task }: { task: Task }) {
   });
 
   return (
-    <div className="rounded-lg border border-surface-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md dark:border-surface-700 dark:bg-surface-800">
+    <div
+      draggable
+      onDragStart={() => onDragStart(task.id, stageId)}
+      className="group/card cursor-grab rounded-lg border border-surface-200 bg-white p-3 shadow-sm transition-all hover:shadow-md active:cursor-grabbing active:opacity-60 dark:border-surface-700 dark:bg-surface-800"
+    >
       <div className="flex items-start justify-between">
-        <p className="text-sm font-medium text-surface-900 dark:text-white">
-          {task.title}
-        </p>
+        <div className="flex items-start gap-2 min-w-0 flex-1">
+          <GripVertical className="mt-0.5 h-4 w-4 flex-shrink-0 text-surface-300 opacity-0 transition-opacity group-hover/card:opacity-100 dark:text-surface-600" />
+          <p className="text-sm font-medium text-surface-900 dark:text-white">
+            {task.title}
+          </p>
+        </div>
         {task.priority_name && (
           <Badge
             variant={
@@ -374,18 +500,14 @@ function TaskForm({
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          label="ID проекта"
+        <ProjectSearchSelect
           value={form.project}
-          onChange={(e) => setForm({ ...form, project: e.target.value })}
-          hint="UUID проекта"
+          onChange={(id) => setForm({ ...form, project: id })}
           required
         />
-        <Input
-          label="ID исполнителя"
+        <UserSearchSelect
           value={form.assignee}
-          onChange={(e) => setForm({ ...form, assignee: e.target.value })}
-          hint="UUID пользователя"
+          onChange={(id) => setForm({ ...form, assignee: id })}
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">

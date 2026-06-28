@@ -8,6 +8,8 @@ import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 import { Select } from "@/shared/ui/Select";
 import { Modal } from "@/shared/ui/Modal";
+import { ProjectSearchSelect } from "@/shared/ui/ProjectSearchSelect";
+import { UserSearchSelect } from "@/shared/ui/UserSearchSelect";
 
 interface CreateTaskModalProps {
   open: boolean;
@@ -65,18 +67,14 @@ export function CreateTaskModal({ open, onClose }: CreateTaskModalProps) {
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input
-            label="ID проекта"
+          <ProjectSearchSelect
             value={form.project}
-            onChange={(e) => setForm({ ...form, project: e.target.value })}
-            hint="UUID проекта"
+            onChange={(id) => setForm({ ...form, project: id })}
             required
           />
-          <Input
-            label="ID исполнителя"
+          <UserSearchSelect
             value={form.assignee}
-            onChange={(e) => setForm({ ...form, assignee: e.target.value })}
-            hint="UUID пользователя"
+            onChange={(id) => setForm({ ...form, assignee: id })}
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
