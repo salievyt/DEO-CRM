@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, List, Columns } from "lucide-react";
+import { Plus, List, Columns, Edit3, GripVertical } from "lucide-react";
 import { PageHeader } from "@/shared/ui/PageHeader";
 import { Card } from "@/shared/ui/Card";
 import { Button } from "@/shared/ui/Button";
@@ -20,13 +20,104 @@ import type { Lead, LeadKanbanColumn } from "@/entities/lead/types";
 export function LeadListPage() {
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const dragLeadRef = useRef<{ id: string; fromStage: string } | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const autoScrollAnimRef = useRef<number | null>(null);
+  const mouseXRef = useRef(0);
   const queryClient = useQueryClient();
+
+  // Auto-scroll kanban during drag
+  useEffect(() => {
+    const tick = () => {
+      const el = scrollContainerRef.current;
+      if (!el || dragLeadRef.current === null) {
+        autoScrollAnimRef.current = null;
+        return;
+      }
+
+      const rect = el.getBoundingClientRect();
+      const x = mouseXRef.current;
+      const speed = 12;
+      const threshold = 80;
+
+      if (x < rect.left + threshold) {
+        const factor = Math.max(0.3, 1 - (x - rect.left) / threshold);
+        el.scrollLeft -= Math.round(speed * factor);
+        autoScrollAnimRef.current = requestAnimationFrame(tick);
+      } else if (x > rect.right - threshold) {
+        const factor = Math.max(0.3, (x - (rect.right - threshold)) / threshold);
+        el.scrollLeft += Math.round(speed * factor);
+        autoScrollAnimRef.current = requestAnimationFrame(tick);
+      } else {
+        autoScrollAnimRef.current = null;
+      }
+    };
+
+    const onDragOver = (e: DragEvent) => {
+      mouseXRef.current = e.clientX;
+      if (dragLeadRef.current !== null && autoScrollAnimRef.current === null) {
+        autoScrollAnimRef.current = requestAnimationFrame(tick);
+      }
+    };
+
+    const onDragEnd = () => {
+      dragLeadRef.current = null;
+    };
+
+    document.addEventListener("dragover", onDragOver);
+    document.addEventListener("dragend", onDragEnd);
+
+    return () => {
+      document.removeEventListener("dragover", onDragOver);
+      document.removeEventListener("dragend", onDragEnd);
+      if (autoScrollAnimRef.current !== null) {
+        cancelAnimationFrame(autoScrollAnimRef.current);
+      }
+    };
+  }, []);
 
   const { data: kanbanData, isLoading: kanbanLoading } = useQuery({
     queryKey: [QUERY_KEYS.LEAD_KANBAN],
     queryFn: () => leadsApi.kanban(),
     select: (res) => res.data as LeadKanbanColumn[],
   });
+
+  const moveMutation = useMutation({
+    mutationFn: ({ leadId, stageId }: { leadId: string; stageId: string }) =>
+      leadsApi.move(leadId, stageId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LEAD_KANBAN] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LEADS] });
+    },
+  });
+
+  // Drag & Drop handlers
+  const handleDragStart = useCallback((leadId: string, fromStage: string) => {
+    dragLeadRef.current = { id: leadId, fromStage };
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, stageId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverColumn(stageId);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverColumn(null);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, toStage: string) => {
+    e.preventDefault();
+    setDragOverColumn(null);
+    const lead = dragLeadRef.current;
+    if (!lead) return;
+    if (lead.fromStage === toStage) return; // same column, no move needed
+    moveMutation.mutate({ leadId: lead.id, stageId: toStage });
+    dragLeadRef.current = null;
+  }, [moveMutation]);
 
   const { data: statsData } = useQuery({
     queryKey: [QUERY_KEYS.LEADS, "stats"],
@@ -40,6 +131,17 @@ export function LeadListPage() {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LEADS] });
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LEAD_KANBAN] });
       setShowCreateModal(false);
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      leadsApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LEADS] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LEAD_KANBAN] });
+      setShowEditModal(false);
+      setEditingLead(null);
     },
   });
 
@@ -116,33 +218,56 @@ export function LeadListPage() {
 
       {/* Kanban Board */}
       {view === "kanban" && (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {kanbanData?.map((column) => (
-            <div key={column.id} className="min-w-[300px] flex-shrink-0">
-              <div className="mb-3 flex items-center gap-2">
-                <div
-                  className="h-3 w-3 rounded-full"
-                  style={{ backgroundColor: column.color }}
-                />
-                <h3 className="font-medium text-surface-900 dark:text-white">
-                  {column.title}
-                </h3>
-                <Badge variant="default">{column.leads.length}</Badge>
-              </div>
-
-              <div className="space-y-2">
-                {(column.leads || []).length === 0 ? (
-                  <p className="py-8 text-center text-sm text-surface-400">
-                    Нет лидов
-                  </p>
-                ) : (
-                  column.leads.map((lead) => (
-                    <LeadCard key={lead.id} lead={lead} />
-                  ))
+        <div ref={scrollContainerRef} className="flex gap-4 overflow-x-auto pb-4">
+          {kanbanData?.map((column) => {
+            const isDragOver = dragOverColumn === column.id;
+            return (
+              <div
+                key={column.id}
+                className={cn(
+                  "min-w-[300px] flex-shrink-0 rounded-xl transition-all",
+                  isDragOver && "bg-brand-50/50 ring-2 ring-brand-300 dark:bg-brand-900/20 dark:ring-brand-700"
                 )}
+                onDragOver={(e) => handleDragOver(e, column.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, column.id)}
+              >
+                <div className="mb-3 flex items-center gap-2 px-3 pt-3">
+                  <div
+                    className="h-3 w-3 rounded-full"
+                    style={{ backgroundColor: column.color }}
+                  />
+                  <h3 className="font-medium text-surface-900 dark:text-white">
+                    {column.title}
+                  </h3>
+                  <Badge variant="default">{column.leads.length}</Badge>
+                </div>
+
+                <div className="space-y-2 px-3 pb-3">
+                  {(column.leads || []).length === 0 ? (
+                    <div className="flex min-h-[100px] items-center justify-center rounded-lg border-2 border-dashed border-surface-200 dark:border-surface-700">
+                      <p className="text-sm text-surface-400">
+                        Перетащите лид сюда
+                      </p>
+                    </div>
+                  ) : (
+                    column.leads.map((lead) => (
+                      <LeadCard
+                        key={lead.id}
+                        lead={lead}
+                        stageId={column.id}
+                        onDragStart={handleDragStart}
+                        onEdit={() => {
+                          setEditingLead(lead);
+                          setShowEditModal(true);
+                        }}
+                      />
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -212,27 +337,84 @@ export function LeadListPage() {
           })) || []}
         />
       </Modal>
+
+      {/* Edit Lead Modal */}
+      <Modal
+        open={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingLead(null);
+        }}
+        title={`Редактировать: ${editingLead?.contact_name || ""}`}
+      >
+        {editingLead && (
+          <LeadForm
+            initial={editingLead}
+            onSubmit={(data) =>
+              updateMutation.mutate({ id: editingLead.id, data })
+            }
+            onCancel={() => {
+              setShowEditModal(false);
+              setEditingLead(null);
+            }}
+            stages={kanbanData?.map((c) => ({
+              value: c.id,
+              label: c.title,
+            })) || []}
+            submitLabel="Сохранить"
+          />
+        )}
+      </Modal>
     </div>
   );
 }
 
-function LeadCard({ lead }: { lead: Lead }) {
+function LeadCard({
+  lead,
+  stageId,
+  onDragStart,
+  onEdit,
+}: {
+  lead: Lead;
+  stageId: string;
+  onDragStart: (leadId: string, stageId: string) => void;
+  onEdit: () => void;
+}) {
   return (
-    <div className="rounded-lg border border-surface-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md dark:border-surface-700 dark:bg-surface-800">
+    <div
+      draggable
+      onDragStart={() => onDragStart(lead.id, stageId)}
+      className="group/card cursor-grab rounded-lg border border-surface-200 bg-white p-3 shadow-sm transition-all hover:shadow-md active:cursor-grabbing active:opacity-60 dark:border-surface-700 dark:bg-surface-800"
+    >
       <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium text-surface-900 dark:text-white">
-            {lead.contact_name}
-          </p>
-          {lead.company_name && (
-            <p className="text-xs text-surface-500">{lead.company_name}</p>
-          )}
+        <div className="flex items-start gap-2 min-w-0 flex-1">
+          <GripVertical className="mt-0.5 h-4 w-4 flex-shrink-0 text-surface-300 opacity-0 transition-opacity group-hover/card:opacity-100 dark:text-surface-600" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-surface-900 dark:text-white truncate">
+              {lead.contact_name}
+            </p>
+            {lead.company_name && (
+              <p className="text-xs text-surface-500 truncate">{lead.company_name}</p>
+            )}
+          </div>
         </div>
-        {lead.budget && (
-          <span className="text-xs font-medium text-success-600">
-            {formatCurrency(lead.budget)}
-          </span>
-        )}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {lead.budget && (
+            <span className="text-xs font-medium text-success-600">
+              {formatCurrency(lead.budget)}
+            </span>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="rounded-md p-1 text-surface-400 opacity-0 transition-all hover:bg-surface-100 hover:text-brand-600 group-hover/card:opacity-100 dark:hover:bg-surface-700"
+            title="Редактировать"
+          >
+            <Edit3 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
       <div className="mt-2 flex items-center gap-2">
         <span className="text-xs text-surface-500">{lead.phone}</span>
@@ -249,6 +431,15 @@ function LeadCard({ lead }: { lead: Lead }) {
         <span className="rounded bg-surface-100 px-1.5 py-0.5 text-xs text-surface-600 dark:bg-surface-700 dark:text-surface-300">
           {lead.source}
         </span>
+        <span
+          className="rounded px-1.5 py-0.5 text-xs"
+          style={{
+            backgroundColor: lead.stage_color + "20",
+            color: lead.stage_color,
+          }}
+        >
+          {lead.stage_name}
+        </span>
       </div>
     </div>
   );
@@ -258,20 +449,24 @@ function LeadForm({
   onSubmit,
   onCancel,
   stages,
+  initial,
+  submitLabel = "Создать",
 }: {
   onSubmit: (data: Record<string, unknown>) => void;
   onCancel: () => void;
   stages: { value: string; label: string }[];
+  initial?: Lead;
+  submitLabel?: string;
 }) {
   const [form, setForm] = useState({
-    contact_name: "",
-    company_name: "",
-    phone: "",
-    email: "",
-    source: "other",
-    current_stage: stages[0]?.value || "",
-    budget: "",
-    notes: "",
+    contact_name: initial?.contact_name || "",
+    company_name: initial?.company_name || "",
+    phone: initial?.phone || "",
+    email: initial?.email || "",
+    source: initial?.source || "other",
+    current_stage: initial?.current_stage || stages[0]?.value || "",
+    budget: initial?.budget != null ? String(initial.budget) : "",
+    notes: initial?.notes || "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -353,7 +548,7 @@ function LeadForm({
         <Button variant="secondary" type="button" onClick={onCancel}>
           Отмена
         </Button>
-        <Button type="submit">Создать</Button>
+        <Button type="submit">{submitLabel}</Button>
       </div>
     </form>
   );
