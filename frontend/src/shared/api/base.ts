@@ -239,6 +239,22 @@ export const cabinetApi = {
     list: () => api.get("/cabinet/messages/"),
     send: (content: string) => api.post("/cabinet/messages/", { content }),
   },
+  // Client Portal 2.0
+  milestones: {
+    approve: (projectId: string, milestoneId: string) =>
+      api.post(`/cabinet/projects/${projectId}/milestones/${milestoneId}/approve/`),
+    reject: (projectId: string, milestoneId: string, reason: string) =>
+      api.post(`/cabinet/projects/${projectId}/milestones/${milestoneId}/reject/`, { reason }),
+  },
+  feedback: {
+    create: (projectId: string, data: Record<string, unknown>) =>
+      api.post(`/cabinet/projects/${projectId}/feedback/`, data),
+  },
+  shareLink: {
+    get: (projectId: string) => api.get(`/cabinet/projects/${projectId}/share-link/`),
+    create: (projectId: string) => api.post(`/cabinet/projects/${projectId}/share-link/`),
+  },
+  sharedProject: (token: string) => api.get(`/cabinet/shared/${token}/`),
 };
 
 export const aiApi = {
@@ -250,6 +266,22 @@ export const aiApi = {
   generateEstimate: (data: Record<string, unknown>) => api.post("/ai/generate/estimate/", data),
   history: () => api.get("/ai/history/"),
   templates: () => api.get("/ai/templates/"),
+  // A/B Testing
+  abTest: {
+    campaigns: {
+      list: () => api.get("/ai/ab-testing/campaigns/"),
+      get: (id: string) => api.get(`/ai/ab-testing/campaigns/${id}/`),
+      create: (data: Record<string, unknown>) => api.post("/ai/ab-testing/campaigns/", data),
+      update: (id: string, data: Record<string, unknown>) => api.patch(`/ai/ab-testing/campaigns/${id}/`, data),
+      delete: (id: string) => api.delete(`/ai/ab-testing/campaigns/${id}/`),
+    },
+    stats: () => api.get("/ai/ab-testing/stats/"),
+    generate: (data: Record<string, unknown>) => api.post("/ai/ab-testing/generate/", data),
+    track: (variantId: string, data: Record<string, unknown>) =>
+      api.post(`/ai/ab-testing/variants/${variantId}/track/`, data),
+    conversions: (variantId: string) =>
+      api.get(`/ai/ab-testing/variants/${variantId}/conversions/`),
+  },
 };
 
 export const notificationsApi = {

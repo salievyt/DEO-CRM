@@ -31,6 +31,8 @@ import {
   CalendarDays,
   ShieldCheck,
   CheckCheck,
+  FlaskConical,
+  UserCircle,
 } from "lucide-react";
 import type { Notification } from "@/entities/notification/types";
 
@@ -45,7 +47,9 @@ const ALL_NAV_ITEMS = [
   { name: "Документы", href: "/documents", icon: FileText, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "client"] },
   { name: "Мессенджер", href: "/messenger", icon: MessageSquare, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "client"] },
   { name: "DEO AI", href: "/ai", icon: Bot, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer"] },
+  { name: "A/B Тесты", href: "/ai/ab-testing", icon: FlaskConical, roles: ["superadmin", "owner", "project_manager"] },
   { name: "Аналитика", href: "/analytics", icon: BarChart3, roles: ["superadmin", "owner", "project_manager", "marketer"] },
+  { name: "Кабинет", href: "/cabinet", icon: UserCircle, roles: ["superadmin", "owner", "project_manager", "client"] },
   { name: "HeatMap Studio", href: "/analytics/heatmap", icon: BarChart3, roles: ["superadmin", "owner", "project_manager"] },
   { name: "Админ", href: "/admin", icon: ShieldCheck, roles: ["superadmin", "owner"] },
 ];
