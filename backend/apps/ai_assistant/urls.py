@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 
 from . import views
 
@@ -11,4 +11,5 @@ urlpatterns = [
     path("generate/estimate/", views.AIGenerateView.as_view(), {"prompt_type": "estimate"}, name="ai-generate-estimate"),
     path("history/", views.AIHistoryView.as_view(), name="ai-history"),
     path("templates/", views.AITemplateListView.as_view(), name="ai-templates"),
+    path("", include("apps.ai_assistant.ab_urls")),
 ]
