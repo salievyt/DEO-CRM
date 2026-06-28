@@ -211,6 +211,15 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "Europe/Moscow"
 
+# Celery Beat Schedule
+CELERY_BEAT_SCHEDULE = {
+    "auto-archive-notifications": {
+        "task": "apps.notifications.tasks.auto_archive_notifications",
+        "schedule": timedelta(hours=1),
+        "options": {"expires": 3600},
+    },
+}
+
 # S3 / MinIO
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID", "")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "")

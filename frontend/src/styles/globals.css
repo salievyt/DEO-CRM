@@ -15,6 +15,10 @@
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+@keyframes staggerItem {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
 
 /* ============================================================
    1. BASE
@@ -177,6 +181,10 @@
 
   .hover-lift { @apply transition-all duration-200; }
   .hover-lift:hover { transform: translateY(-2px); @apply shadow-lg; }
+
+  .animate-stagger-in {
+    animation: staggerItem 0.3s ease-out both;
+  }
 }
 
 /* ============================================================
