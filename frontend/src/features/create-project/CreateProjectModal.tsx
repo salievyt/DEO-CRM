@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { projectsApi } from "@/shared/api/base";
+import { projectsApi, clientsApi } from "@/shared/api/base";
 import { QUERY_KEYS } from "@/shared/constants";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 import { Select } from "@/shared/ui/Select";
 import { Modal } from "@/shared/ui/Modal";
-import { LoadingSpinner } from "@/shared/ui/LoadingSpinner";
+import { ClientSearchSelect } from "@/shared/ui/ClientSearchSelect";
+import type { Client } from "@/entities/client/types";
 
 interface CreateProjectModalProps {
   open: boolean;
@@ -31,18 +32,23 @@ export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
     queryKey: [QUERY_KEYS.PROJECT_STATUSES],
     queryFn: () => projectsApi.statuses(),
     select: (res) => res.data?.results || res.data || [],
-    enabled: open,
   });
 
   const { data: serviceTypes } = useQuery({
     queryKey: [QUERY_KEYS.SERVICE_TYPES],
     queryFn: () => projectsApi.serviceTypes(),
     select: (res) => res.data?.results || res.data || [],
-    enabled: open,
+  });
+
+  const { data: clientsData } = useQuery({
+    queryKey: [QUERY_KEYS.CLIENTS],
+    queryFn: () => clientsApi.list(),
+    select: (res) => (res.data?.results || []) as Client[],
   });
 
   const statusList: { id: string; name: string }[] = Array.isArray(statuses) ? statuses : [];
   const serviceList: { id: string; name: string }[] = Array.isArray(serviceTypes) ? serviceTypes : [];
+  const clients: Client[] = clientsData || [];
 
   const mutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => projectsApi.create(data),
@@ -55,11 +61,15 @@ export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.client || !form.name.trim()) return;
     mutation.mutate({
       ...form,
       budget: form.budget ? Number(form.budget) : undefined,
+      status: form.status || statusList[0]?.id,
     });
   };
+
+  const isValid = form.name.trim() && form.client;
 
   return (
     <Modal open={open} onClose={onClose} title="Новый проект" size="lg">
@@ -68,14 +78,14 @@ export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
           label="Название проекта"
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
+          placeholder="Например: Разработка сайта"
           required
         />
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input
-            label="ID клиента"
+          <ClientSearchSelect
+            clients={clients}
             value={form.client}
-            onChange={(e) => setForm({ ...form, client: e.target.value })}
-            hint="UUID клиента"
+            onChange={(id) => setForm({ ...form, client: id })}
           />
           <Select
             label="Тип услуги"
@@ -97,6 +107,7 @@ export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
             type="number"
             value={form.budget}
             onChange={(e) => setForm({ ...form, budget: e.target.value })}
+            placeholder="0"
           />
         </div>
         <Input
@@ -114,13 +125,14 @@ export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             rows={3}
             className="input mt-1"
+            placeholder="Краткое описание проекта"
           />
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="secondary" type="button" onClick={onClose}>
             Отмена
           </Button>
-          <Button type="submit" loading={mutation.isPending}>
+          <Button type="submit" loading={mutation.isPending} disabled={!isValid}>
             Создать проект
           </Button>
         </div>

@@ -12,10 +12,12 @@ import { Input } from "@/shared/ui/Input";
 import { Select } from "@/shared/ui/Select";
 import { LoadingSpinner } from "@/shared/ui/LoadingSpinner";
 import { EmptyState } from "@/shared/ui/EmptyState";
-import { projectsApi } from "@/shared/api/base";
+import { ClientSearchSelect } from "@/shared/ui/ClientSearchSelect";
+import { projectsApi, clientsApi } from "@/shared/api/base";
 import { QUERY_KEYS } from "@/shared/constants";
 import { formatCurrency, formatDate } from "@/shared/utils/formatters";
 import type { Project } from "@/entities/project/types";
+import type { Client } from "@/entities/client/types";
 
 export function ProjectListPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -45,7 +47,15 @@ export function ProjectListPage() {
     select: (res) => res.data?.results || res.data,
   });
 
+  // Загружаем клиентов заранее, до открытия модалки
+  const { data: clientsData } = useQuery({
+    queryKey: [QUERY_KEYS.CLIENTS],
+    queryFn: () => clientsApi.list(),
+    select: (res) => (res.data?.results || []) as Client[],
+  });
+
   const projects: Project[] = data?.results ?? [];
+  const clients: Client[] = clientsData || [];
 
   const createMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => projectsApi.create(data),
@@ -155,6 +165,7 @@ export function ProjectListPage() {
           onCancel={() => setShowCreateModal(false)}
           statuses={statuses || []}
           serviceTypes={serviceTypes || []}
+          clients={clients}
         />
       </Modal>
     </div>
@@ -164,7 +175,7 @@ export function ProjectListPage() {
 function ProjectCard({ project }: { project: Project }) {
   return (
     <a href={`/projects/${project.id}`} className="block">
-      <Card className="transition-all hover:shadow-md">
+      <Card className="transition-all hover:shadow-md card-hover">
         <div className="flex items-start justify-between">
           <div>
             <h3 className="font-semibold text-surface-900 dark:text-white">
@@ -174,8 +185,6 @@ function ProjectCard({ project }: { project: Project }) {
           </div>
           <StatusBadge status={project.status_name} />
         </div>
-
-        {/* Progress bar */}
         <div className="mt-4">
           <div className="flex items-center justify-between text-xs text-surface-500">
             <span>Прогресс</span>
@@ -188,16 +197,10 @@ function ProjectCard({ project }: { project: Project }) {
             />
           </div>
         </div>
-
         <div className="mt-4 flex items-center justify-between text-sm text-surface-500">
-          {project.budget && (
-            <span>{formatCurrency(project.budget)}</span>
-          )}
-          {project.deadline && (
-            <span>До {formatDate(project.deadline)}</span>
-          )}
+          {project.budget && <span>{formatCurrency(project.budget)}</span>}
+          {project.deadline && <span>До {formatDate(project.deadline)}</span>}
         </div>
-
         <div className="mt-3 flex items-center gap-3 text-xs text-surface-400">
           <span>Команда: {project.team_count}</span>
           <span>·</span>
@@ -213,11 +216,13 @@ function ProjectForm({
   onCancel,
   statuses,
   serviceTypes,
+  clients,
 }: {
   onSubmit: (data: Record<string, unknown>) => void;
   onCancel: () => void;
   statuses: { id: string; name: string }[];
   serviceTypes: { id: string; name: string }[];
+  clients: Client[];
 }) {
   const [form, setForm] = useState({
     name: "",
@@ -231,11 +236,14 @@ function ProjectForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.client) return;
     onSubmit({
       ...form,
       budget: form.budget ? Number(form.budget) : undefined,
     });
   };
+
+  const isValid = form.name.trim() && form.client;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -243,14 +251,14 @@ function ProjectForm({
         label="Название проекта"
         value={form.name}
         onChange={(e) => setForm({ ...form, name: e.target.value })}
+        placeholder="Например: Разработка сайта"
         required
       />
       <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          label="ID клиента"
+        <ClientSearchSelect
+          clients={clients}
           value={form.client}
-          onChange={(e) => setForm({ ...form, client: e.target.value })}
-          hint="UUID клиента"
+          onChange={(id) => setForm({ ...form, client: id })}
         />
         <Select
           label="Тип услуги"
@@ -278,6 +286,7 @@ function ProjectForm({
           type="number"
           value={form.budget}
           onChange={(e) => setForm({ ...form, budget: e.target.value })}
+          placeholder="0"
         />
       </div>
       <Input
@@ -295,13 +304,16 @@ function ProjectForm({
           onChange={(e) => setForm({ ...form, description: e.target.value })}
           rows={3}
           className="input mt-1"
+          placeholder="Краткое описание проекта"
         />
       </div>
       <div className="flex justify-end gap-2 pt-2">
         <Button variant="secondary" type="button" onClick={onCancel}>
           Отмена
         </Button>
-        <Button type="submit">Создать проект</Button>
+        <Button type="submit" disabled={!isValid}>
+          Создать проект
+        </Button>
       </div>
     </form>
   );
