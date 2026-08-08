@@ -6,6 +6,7 @@ User = get_user_model()
 class UserModelTest(TestCase):
     def test_create_user(self):
         user = User.objects.create_user(
+            username="testuser",
             email="test@example.com",
             password="testpass123",
             first_name="Test",
