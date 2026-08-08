@@ -16,56 +16,145 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='AnalyticsDashboard',
+            name="AnalyticsDashboard",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('name', models.CharField(max_length=255, verbose_name='Название')),
-                ('config', models.JSONField(blank=True, default=dict, verbose_name='Конфигурация')),
-                ('is_public', models.BooleanField(default=False, verbose_name='Публичный')),
-                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Создан')),
-                ('updated_at', models.DateTimeField(auto_now=True, verbose_name='Обновлен')),
-                ('owner', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='dashboards', to=settings.AUTH_USER_MODEL, verbose_name='Владелец')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
+                ("name", models.CharField(max_length=255, verbose_name="Название")),
+                ("config", models.JSONField(blank=True, default=dict, verbose_name="Конфигурация")),
+                ("is_public", models.BooleanField(default=False, verbose_name="Публичный")),
+                ("created_at", models.DateTimeField(auto_now_add=True, verbose_name="Создан")),
+                ("updated_at", models.DateTimeField(auto_now=True, verbose_name="Обновлен")),
+                (
+                    "owner",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="dashboards",
+                        to=settings.AUTH_USER_MODEL,
+                        verbose_name="Владелец",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Дашборд',
-                'verbose_name_plural': 'Дашборды',
+                "verbose_name": "Дашборд",
+                "verbose_name_plural": "Дашборды",
             },
         ),
         migrations.CreateModel(
-            name='AnalyticsMetric',
+            name="AnalyticsMetric",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('name', models.CharField(max_length=255, verbose_name='Название')),
-                ('metric_key', models.CharField(max_length=100, unique=True, verbose_name='Ключ метрики')),
-                ('category', models.CharField(choices=[('sales', 'Продажи'), ('finance', 'Финансы'), ('projects', 'Проекты'), ('tasks', 'Задачи'), ('clients', 'Клиенты')], max_length=50, verbose_name='Категория')),
-                ('value', models.DecimalField(decimal_places=2, max_digits=15, verbose_name='Значение')),
-                ('period_date', models.DateField(verbose_name='Дата периода')),
-                ('period_type', models.CharField(choices=[('day', 'День'), ('week', 'Неделя'), ('month', 'Месяц'), ('quarter', 'Квартал'), ('year', 'Год')], max_length=20, verbose_name='Тип периода')),
-                ('breakdown', models.JSONField(blank=True, default=dict, verbose_name='Детали')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
+                ("name", models.CharField(max_length=255, verbose_name="Название")),
+                (
+                    "metric_key",
+                    models.CharField(max_length=100, unique=True, verbose_name="Ключ метрики"),
+                ),
+                (
+                    "category",
+                    models.CharField(
+                        choices=[
+                            ("sales", "Продажи"),
+                            ("finance", "Финансы"),
+                            ("projects", "Проекты"),
+                            ("tasks", "Задачи"),
+                            ("clients", "Клиенты"),
+                        ],
+                        max_length=50,
+                        verbose_name="Категория",
+                    ),
+                ),
+                (
+                    "value",
+                    models.DecimalField(decimal_places=2, max_digits=15, verbose_name="Значение"),
+                ),
+                ("period_date", models.DateField(verbose_name="Дата периода")),
+                (
+                    "period_type",
+                    models.CharField(
+                        choices=[
+                            ("day", "День"),
+                            ("week", "Неделя"),
+                            ("month", "Месяц"),
+                            ("quarter", "Квартал"),
+                            ("year", "Год"),
+                        ],
+                        max_length=20,
+                        verbose_name="Тип периода",
+                    ),
+                ),
+                ("breakdown", models.JSONField(blank=True, default=dict, verbose_name="Детали")),
             ],
             options={
-                'verbose_name': 'Метрика',
-                'verbose_name_plural': 'Метрики',
-                'indexes': [models.Index(fields=['metric_key', 'period_date'], name='analytics_a_metric__e4c159_idx'), models.Index(fields=['category'], name='analytics_a_categor_924817_idx')],
+                "verbose_name": "Метрика",
+                "verbose_name_plural": "Метрики",
+                "indexes": [
+                    models.Index(
+                        fields=["metric_key", "period_date"], name="analytics_a_metric__e4c159_idx"
+                    ),
+                    models.Index(fields=["category"], name="analytics_a_categor_924817_idx"),
+                ],
             },
         ),
         migrations.CreateModel(
-            name='Report',
+            name="Report",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('title', models.CharField(max_length=255, verbose_name='Название')),
-                ('type', models.CharField(choices=[('financial', 'Финансовый'), ('project', 'По проектам'), ('sales', 'По продажам'), ('performance', 'По производительности'), ('custom', 'Кастомный')], max_length=50, verbose_name='Тип')),
-                ('filters', models.JSONField(blank=True, default=dict, verbose_name='Фильтры')),
-                ('data', models.JSONField(blank=True, default=dict, verbose_name='Данные')),
-                ('format', models.CharField(choices=[('pdf', 'PDF'), ('xlsx', 'Excel'), ('csv', 'CSV')], default='pdf', max_length=10, verbose_name='Формат')),
-                ('file_url', models.URLField(blank=True, verbose_name='URL файла')),
-                ('generated_at', models.DateTimeField(auto_now_add=True, verbose_name='Создан')),
-                ('generated_by', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL, verbose_name='Сгенерировал')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
+                ("title", models.CharField(max_length=255, verbose_name="Название")),
+                (
+                    "type",
+                    models.CharField(
+                        choices=[
+                            ("financial", "Финансовый"),
+                            ("project", "По проектам"),
+                            ("sales", "По продажам"),
+                            ("performance", "По производительности"),
+                            ("custom", "Кастомный"),
+                        ],
+                        max_length=50,
+                        verbose_name="Тип",
+                    ),
+                ),
+                ("filters", models.JSONField(blank=True, default=dict, verbose_name="Фильтры")),
+                ("data", models.JSONField(blank=True, default=dict, verbose_name="Данные")),
+                (
+                    "format",
+                    models.CharField(
+                        choices=[("pdf", "PDF"), ("xlsx", "Excel"), ("csv", "CSV")],
+                        default="pdf",
+                        max_length=10,
+                        verbose_name="Формат",
+                    ),
+                ),
+                ("file_url", models.URLField(blank=True, verbose_name="URL файла")),
+                ("generated_at", models.DateTimeField(auto_now_add=True, verbose_name="Создан")),
+                (
+                    "generated_by",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to=settings.AUTH_USER_MODEL,
+                        verbose_name="Сгенерировал",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Отчет',
-                'verbose_name_plural': 'Отчеты',
-                'ordering': ['-generated_at'],
+                "verbose_name": "Отчет",
+                "verbose_name_plural": "Отчеты",
+                "ordering": ["-generated_at"],
             },
         ),
     ]

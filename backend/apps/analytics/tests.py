@@ -1,3 +1,4 @@
-from django.test import TestCase
+"""Business Analytics tests live in ``apps/analytics/tests/`` (pytest).
 
-# TODO: Define tests for this app
+Run: pytest apps/analytics/tests
+"""
