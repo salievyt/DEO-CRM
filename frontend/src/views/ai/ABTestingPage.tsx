@@ -327,7 +327,8 @@ function CampaignsTab({
 }) {
   const { data: campaigns, isLoading } = useQuery({
     queryKey: ["ab-campaigns"],
-    queryFn: () => aiApi.abTest.campaigns.list().then((r) => r.data?.results || r.data as ABCampaign[]),
+    queryFn: (): Promise<ABCampaign[]> =>
+      aiApi.abTest.campaigns.list().then((r) => (r.data?.results || r.data) as ABCampaign[]),
   });
 
   if (isLoading) {
