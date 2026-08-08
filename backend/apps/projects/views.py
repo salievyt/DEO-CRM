@@ -38,6 +38,10 @@ class ProjectListCreateView(generics.ListCreateAPIView):
         member = self.request.query_params.get("team_member")
         if member:
             qs = qs.filter(team__user_id=member)
+        # Filter by client
+        client = self.request.query_params.get("client")
+        if client:
+            qs = qs.filter(client_id=client)
         return qs
 
     def perform_create(self, serializer):

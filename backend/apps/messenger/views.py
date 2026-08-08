@@ -22,9 +22,13 @@ class ChatListCreateView(generics.ListCreateAPIView):
         return ChatListSerializer
 
     def get_queryset(self):
-        return Chat.objects.filter(
+        qs = Chat.objects.filter(
             participants__user=self.request.user
         ).prefetch_related("participants__user").order_by("-updated_at")
+        client = self.request.query_params.get("client")
+        if client:
+            qs = qs.filter(participants__client_id=client)
+        return qs
 
 
 class ChatDetailView(generics.RetrieveAPIView):

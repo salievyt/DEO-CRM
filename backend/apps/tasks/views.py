@@ -40,10 +40,13 @@ class TaskListCreateView(generics.ListCreateAPIView):
         ).all()
         project = self.request.query_params.get("project")
         assignee = self.request.query_params.get("assignee")
+        client = self.request.query_params.get("client")
         if project:
             qs = qs.filter(project_id=project)
         if assignee:
             qs = qs.filter(assignee_id=assignee)
+        if client:
+            qs = qs.filter(project__client_id=client)
         # Client sees only their project tasks
         if self.request.user.role == "client":
             qs = qs.filter(project__client__user=self.request.user)
