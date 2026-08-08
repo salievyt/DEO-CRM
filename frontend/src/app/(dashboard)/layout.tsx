@@ -41,6 +41,8 @@ import {
   MessageCircle,
   Sparkles,
   Shield,
+  Package,
+  Handshake,
 } from "lucide-react";
 import type { Notification } from "@/entities/notification/types";
 import type { Task } from "@/entities/task/types";
@@ -79,6 +81,14 @@ const NAV_CATEGORIES = [
     ],
   },
   {
+    name: "Каталог и сделки",
+    icon: Package,
+    items: [
+      { name: "Каталог", href: "/catalog", icon: Package, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
+      { name: "Сделки", href: "/deals", icon: Handshake, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
+    ],
+  },
+  {
     name: "Финансы и документы",
     icon: Landmark,
     items: [
@@ -100,6 +110,7 @@ const NAV_CATEGORIES = [
       { name: "DEO AI", href: "/ai", icon: Bot, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer"] },
       { name: "A/B Тесты", href: "/ai/ab-testing", icon: FlaskConical, roles: ["superadmin", "owner", "project_manager"] },
       { name: "Аналитика", href: "/analytics", icon: BarChart3, roles: ["superadmin", "owner", "project_manager", "marketer"] },
+      { name: "Business Analytics", href: "/analytics/business", icon: BarChart3, roles: ["superadmin", "owner", "project_manager", "marketer"] },
       { name: "HeatMap Studio", href: "/analytics/heatmap", icon: BarChart3, roles: ["superadmin", "owner", "project_manager"] },
     ],
   },
