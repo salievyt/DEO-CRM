@@ -18,6 +18,13 @@ api_patterns = [
     path("cabinet/", include("apps.cabinet.urls")),
     path("ai/", include("apps.ai_assistant.urls")),
     path("notifications/", include("apps.notifications.urls")),
+    path("reminders/", include("apps.reminders.urls")),
+    path("catalog/", include("apps.catalog.urls")),
+    path("deals/", include("apps.deals.urls")),
+    path("messaging/", include("apps.messaging.urls")),
+    path("webhooks/", include("apps.messaging.webhooks.urls")),
+    path("mentorship/", include("apps.mentorship.urls")),
+    path("structure/", include("apps.structure.urls")),
 ]
 
 urlpatterns = [

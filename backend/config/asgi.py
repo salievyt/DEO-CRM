@@ -9,6 +9,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.production")
 
 django_asgi_app = get_asgi_application()
 
+import apps.messaging.routing  # noqa: E402
 import apps.messenger.routing  # noqa: E402
 
 application = ProtocolTypeRouter({
@@ -16,6 +17,7 @@ application = ProtocolTypeRouter({
     "websocket": AuthMiddlewareStack(
         URLRouter(
             apps.messenger.routing.websocket_urlpatterns
+            + apps.messaging.routing.websocket_urlpatterns
         )
     ),
 })

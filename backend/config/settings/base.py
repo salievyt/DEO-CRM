@@ -3,6 +3,8 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from celery.schedules import crontab
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "insecure-dev-key-change-in-production")
@@ -50,6 +52,12 @@ LOCAL_APPS = [
     "apps.cabinet",
     "apps.ai_assistant",
     "apps.notifications",
+    "apps.reminders",
+    "apps.catalog",
+    "apps.deals",
+    "apps.messaging",
+    "apps.mentorship",
+    "apps.structure",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -203,6 +211,19 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
 }
 
+# Business Analytics
+ANALYTICS = {
+    # Funnel stage classification thresholds (percent)
+    "WON_PROBABILITY": 100,
+    "LOST_PROBABILITY": 0,
+    "QUALIFIED_MIN_PROBABILITY": 50,
+    "DEAL_MIN_PROBABILITY": 50,
+    # TTL for cached metric breakdowns (seconds)
+    "CACHE_TTL_SECONDS": 900,
+    # Days of daily snapshots refreshed by the periodic task
+    "SNAPSHOT_DAYS": 400,
+}
+
 # Celery
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/1")
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
@@ -217,6 +238,27 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.notifications.tasks.auto_archive_notifications",
         "schedule": timedelta(hours=1),
         "options": {"expires": 3600},
+    },
+    "process-business-reminders": {
+        "task": "apps.reminders.tasks.process_reminders",
+        "schedule": timedelta(minutes=30),
+        "options": {"expires": 1800},
+    },
+    "expire-orphaned-reminders": {
+        "task": "apps.reminders.tasks.expire_orphaned_reminder_records",
+        "schedule": timedelta(hours=1),
+        "options": {"expires": 3600},
+    },
+    # Business analytics: nightly snapshot rebuild + cache pre-warm
+    "refresh-business-analytics-snapshot": {
+        "task": "apps.analytics.tasks.refresh_business_analytics_snapshot",
+        "schedule": crontab(hour=2, minute=30),
+        "options": {"expires": 3600 * 6},
+    },
+    "prewarm-business-analytics-cache": {
+        "task": "apps.analytics.tasks.prewarm_business_analytics_cache",
+        "schedule": crontab(hour=3, minute=0),
+        "options": {"expires": 3600 * 6},
     },
 }
 
