@@ -10,7 +10,9 @@ urlpatterns = [
         views.InvoiceMarkPaidView.as_view(),
         name="invoice-mark-paid",
     ),
-    path("payments/", views.PaymentCreateView.as_view(), name="payment-create"),
+    path("payments/", views.PaymentListCreateView.as_view(), name="payment-list"),
+    path("products/", views.ProductListCreateView.as_view(), name="product-list"),
+    path("products/<uuid:pk>/", views.ProductDetailView.as_view(), name="product-detail"),
     path("expenses/", views.ExpenseListCreateView.as_view(), name="expense-list"),
     path(
         "expense-categories/",

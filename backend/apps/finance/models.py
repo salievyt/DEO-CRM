@@ -54,6 +54,7 @@ class Invoice(models.Model):
         indexes = [
             models.Index(fields=["status"]),
             models.Index(fields=["client", "status"]),
+            models.Index(fields=["status", "paid_at"]),
         ]
 
     def __str__(self):
@@ -162,6 +163,75 @@ class Expense(models.Model):
 
     def __str__(self):
         return f"{self.category} - {self.amount} ₽ ({self.expense_date})"
+
+
+class Product(models.Model):
+    """Products/services catalog."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255, verbose_name="Название")
+    description = models.TextField(blank=True, verbose_name="Описание")
+    price = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        verbose_name="Цена"
+    )
+    is_active = models.BooleanField(default=True, verbose_name="Активен")
+    created_by = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True,
+        verbose_name="Создал"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создан")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Обновлен")
+
+    class Meta:
+        verbose_name = "Товар"
+        verbose_name_plural = "Товары"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class ClientPurchase(models.Model):
+    """Purchases of products by a client."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    client = models.ForeignKey(
+        "clients.Client", on_delete=models.CASCADE, related_name="purchases",
+        verbose_name="Клиент"
+    )
+    product = models.ForeignKey(
+        Product, on_delete=models.PROTECT, related_name="purchases",
+        verbose_name="Товар"
+    )
+    invoice = models.ForeignKey(
+        Invoice, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="purchases", verbose_name="Счет"
+    )
+    quantity = models.DecimalField(
+        max_digits=10, decimal_places=2, default=1, verbose_name="Количество"
+    )
+    unit_price = models.DecimalField(
+        max_digits=12, decimal_places=2, verbose_name="Цена за единицу"
+    )
+    purchased_at = models.DateTimeField(auto_now_add=True, verbose_name="Куплено")
+    created_by = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True,
+        verbose_name="Создал"
+    )
+
+    class Meta:
+        verbose_name = "Покупка"
+        verbose_name_plural = "Покупки"
+        ordering = ["-purchased_at"]
+        indexes = [
+            models.Index(fields=["client", "purchased_at"]),
+        ]
+
+    @property
+    def total_price(self):
+        return self.quantity * self.unit_price
+
+    def __str__(self):
+        return f"{self.product} x{self.quantity}"
 
 
 class Salary(models.Model):

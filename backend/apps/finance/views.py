@@ -8,7 +8,9 @@ from rest_framework.response import Response
 
 from common.permissions import IsAdmin, IsOwner
 
-from .models import Expense, ExpenseCategory, Invoice, Payment, Salary
+from .models import (
+    Expense, ExpenseCategory, Invoice, Payment, Product, Salary
+)
 from .serializers import (
     ExpenseCategorySerializer,
     ExpenseSerializer,
@@ -16,8 +18,28 @@ from .serializers import (
     InvoiceDetailSerializer,
     InvoiceListSerializer,
     PaymentSerializer,
+    ProductSerializer,
     SalarySerializer,
 )
+
+
+class ProductListCreateView(generics.ListCreateAPIView):
+    """List or create catalog products."""
+    permission_classes = [IsAuthenticated]
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    filterset_fields = ["is_active"]
+    search_fields = ["name"]
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+
+class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Retrieve, update or delete a catalog product."""
+    permission_classes = [IsAuthenticated]
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
 
 
 class InvoiceListCreateView(generics.ListCreateAPIView):
@@ -65,10 +87,21 @@ class InvoiceMarkPaidView(views.APIView):
         return Response(InvoiceDetailSerializer(invoice).data)
 
 
-class PaymentCreateView(generics.CreateAPIView):
-    """Register a payment."""
+class PaymentListCreateView(generics.ListCreateAPIView):
+    """List or register payments."""
     permission_classes = [IsAuthenticated, IsOwner]
     serializer_class = PaymentSerializer
+    filterset_fields = ["method"]
+
+    def get_queryset(self):
+        qs = Payment.objects.select_related("invoice").all()
+        client = self.request.query_params.get("client")
+        invoice = self.request.query_params.get("invoice")
+        if client:
+            qs = qs.filter(invoice__client_id=client)
+        if invoice:
+            qs = qs.filter(invoice_id=invoice)
+        return qs
 
     def perform_create(self, serializer):
         payment = serializer.save()
