@@ -1,7 +1,12 @@
 from django.contrib import admin
 
 from .ab_testing import ABTestCampaign, ABTestConversion, CampaignVariant
-from .models import AIRequest, AIPromptTemplate
+from .models import AIRequest, AIPromptTemplate, AISettings
+
+
+@admin.register(AISettings)
+class AISettingsAdmin(admin.ModelAdmin):
+    list_display = ["api_url", "model", "enabled", "updated_at"]
 
 
 @admin.register(AIPromptTemplate)
