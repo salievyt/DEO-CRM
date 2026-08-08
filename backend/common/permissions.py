@@ -58,6 +58,31 @@ class IsStaff(BasePermission):
         )
 
 
+class IsAnalyticsAdmin(BasePermission):
+    """Company-wide analytics: superadmin and owner only."""
+
+    def has_permission(self, request, view):
+        return (
+            request.user.is_authenticated
+            and request.user.role is not None
+            and request.user.role.name in ("superadmin", "owner")
+        )
+
+
+class IsAnalyticsViewer(BasePermission):
+    """Any staff member may view analytics, but only their own data.
+
+    Non-admins are automatically scoped to their own records by the views.
+    """
+
+    def has_permission(self, request, view):
+        return (
+            request.user.is_authenticated
+            and request.user.role is not None
+            and request.user.role.name != "client"
+        )
+
+
 class IsOwnerOrAdmin(BasePermission):
     """Object-level permission: only owner or admin can edit."""
 
