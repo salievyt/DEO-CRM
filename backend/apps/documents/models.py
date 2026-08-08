@@ -37,6 +37,10 @@ class Document(models.Model):
         "projects.Project", on_delete=models.CASCADE, null=True, blank=True,
         related_name="documents", verbose_name="Проект"
     )
+    deal = models.ForeignKey(
+        "deals.Deal", on_delete=models.CASCADE, null=True, blank=True,
+        related_name="documents", verbose_name="Сделка"
+    )
     title = models.CharField(max_length=255, verbose_name="Название")
     file = models.FileField(
         upload_to="documents/%Y/%m/", verbose_name="Файл"
