@@ -37,6 +37,10 @@ class Client(models.Model):
     )
     notes = models.TextField(blank=True, verbose_name="Заметки")
     is_active = models.BooleanField(default=True, verbose_name="Активен")
+    status = models.ForeignKey(
+        "clients.ClientStatus", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="clients", verbose_name="Статус"
+    )
     created_by = models.ForeignKey(
         "accounts.User", on_delete=models.SET_NULL, null=True,
         related_name="created_clients", verbose_name="Создал"
@@ -52,6 +56,8 @@ class Client(models.Model):
             models.Index(fields=["email"]),
             models.Index(fields=["phone"]),
             models.Index(fields=["created_by"]),
+            models.Index(fields=["source"]),
+            models.Index(fields=["created_at"]),
         ]
 
     def __str__(self):
@@ -137,3 +143,20 @@ class ClientInteraction(models.Model):
 
     def __str__(self):
         return f"{self.get_type_display()} - {self.client} - {self.created_at:%d.%m.%Y}"
+
+
+class ClientStatus(models.Model):
+    """Configurable client statuses."""
+    name = models.CharField(max_length=100, unique=True, verbose_name="Название")
+    color = models.CharField(max_length=7, default="#6366f1", verbose_name="Цвет")
+    order = models.IntegerField(default=0, verbose_name="Порядок")
+    is_system = models.BooleanField(default=False, verbose_name="Системный")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создан")
+
+    class Meta:
+        verbose_name = "Статус клиента"
+        verbose_name_plural = "Статусы клиентов"
+        ordering = ["order"]
+
+    def __str__(self):
+        return self.name
