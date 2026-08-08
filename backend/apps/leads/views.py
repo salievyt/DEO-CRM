@@ -116,10 +116,13 @@ class LeadListCreateView(generics.ListCreateAPIView):
         ).all()
         stage = self.request.query_params.get("stage")
         assigned = self.request.query_params.get("assigned_to")
+        client = self.request.query_params.get("client")
         if stage:
             qs = qs.filter(current_stage_id=stage)
         if assigned:
             qs = qs.filter(assigned_to_id=assigned)
+        if client:
+            qs = qs.filter(client_id=client)
         return qs
 
     def perform_create(self, serializer):

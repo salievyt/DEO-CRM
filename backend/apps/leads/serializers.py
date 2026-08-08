@@ -63,6 +63,7 @@ class LeadDetailSerializer(serializers.ModelSerializer):
             "email", "telegram", "source", "budget", "current_stage",
             "stage_name", "assigned_to", "assigned_to_name",
             "created_by", "created_by_name", "notes", "is_active",
+            "next_action", "next_action_at",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
@@ -74,7 +75,7 @@ class LeadCreateSerializer(serializers.ModelSerializer):
         fields = [
             "client", "contact_name", "company_name", "phone", "email",
             "telegram", "source", "budget", "current_stage",
-            "assigned_to", "notes",
+            "assigned_to", "notes", "next_action", "next_action_at",
         ]
 
 

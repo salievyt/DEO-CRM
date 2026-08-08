@@ -62,6 +62,12 @@ class Lead(models.Model):
         related_name="created_leads", verbose_name="Создал"
     )
     notes = models.TextField(blank=True, verbose_name="Заметки")
+    next_action = models.CharField(
+        max_length=255, blank=True, verbose_name="Следующее действие"
+    )
+    next_action_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="Когда следующее действие"
+    )
     is_active = models.BooleanField(default=True, verbose_name="Активен")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создан")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Обновлен")
@@ -73,6 +79,8 @@ class Lead(models.Model):
         indexes = [
             models.Index(fields=["current_stage", "is_active"]),
             models.Index(fields=["assigned_to"]),
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["source", "created_at"]),
         ]
 
     def __str__(self):
