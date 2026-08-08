@@ -53,6 +53,12 @@ export const QUERY_KEYS = {
   MESSAGES: "messages",
   UNREAD_COUNT: "unread-count",
 
+  // Inbox
+  INBOX_CONVERSATIONS: "inbox-conversations",
+  INBOX_UNREAD: "inbox-unread",
+  INBOX_MESSAGES: "inbox-messages",
+  INBOX_CAN_SEND: "inbox-can-send",
+
   // Analytics
   SUMMARY_METRICS: "summary-metrics",
   SALES_METRICS: "sales-metrics",
@@ -61,9 +67,20 @@ export const QUERY_KEYS = {
   // AI
   AI_HISTORY: "ai-history",
   AI_TEMPLATES: "ai-templates",
+  AI_SETTINGS: "ai-settings",
 
   // Notifications
   NOTIFICATIONS: "notifications",
   UNREAD_NOTIFICATIONS: "unread-notifications",
   NOTIFICATION_PREFS: "notification-prefs",
+
+  // Catalog
+  CATALOG: "catalog",
+  CATALOG_ITEM: "catalog-item",
+  CATALOG_CATEGORIES: "catalog-categories",
+
+  // Deals
+  DEALS: "deals",
+  DEAL: "deal",
+  DEAL_LEADS_AVAILABLE: "deal-leads-available",
 };

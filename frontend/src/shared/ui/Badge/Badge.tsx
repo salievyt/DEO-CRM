@@ -1,6 +1,6 @@
 import { cn } from "@/shared/utils/cn";
 
-type BadgeVariant = "default" | "success" | "warning" | "danger" | "info";
+type BadgeVariant = "default" | "success" | "warning" | "danger" | "info" | "outline";
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -20,6 +20,8 @@ const variants: Record<BadgeVariant, string> = {
   danger:
     "bg-danger-50 text-danger-600 dark:bg-red-900/20 dark:text-red-400",
   info: "bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-400",
+  outline:
+    "border border-surface-200 text-surface-600 dark:border-surface-700 dark:text-surface-300",
 };
 
 export function Badge({

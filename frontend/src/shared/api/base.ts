@@ -96,6 +96,27 @@ export const clientsApi = {
     api.delete(`/clients/${clientId}/tags/${tagId}/`),
 };
 
+export const client360Api = {
+  overview: (clientId: string) => api.get(`/clients/${clientId}/360/`),
+  activity: (clientId: string, params?: Record<string, unknown>) =>
+    api.get(`/clients/${clientId}/activity/`, { params }),
+};
+
+export const clientStatusApi = {
+  list: () => api.get("/clients/statuses/"),
+  create: (data: Record<string, unknown>) => api.post("/clients/statuses/", data),
+  update: (id: number, data: Record<string, unknown>) =>
+    api.patch(`/clients/statuses/${id}/`, data),
+  delete: (id: number) => api.delete(`/clients/statuses/${id}/`),
+};
+
+export const clientPurchasesApi = {
+  list: (clientId: string, params?: Record<string, unknown>) =>
+    api.get(`/clients/${clientId}/purchases/`, { params }),
+  create: (clientId: string, data: Record<string, unknown>) =>
+    api.post(`/clients/${clientId}/purchases/`, data),
+};
+
 export const leadsApi = {
   list: (params?: Record<string, unknown>) => api.get("/leads/", { params }),
   kanban: () => api.get("/leads/kanban/"),
@@ -166,7 +187,15 @@ export const financeApi = {
     markPaid: (id: string) => api.post(`/finance/invoices/${id}/mark-paid/`),
   },
   payments: {
+    list: (params?: Record<string, unknown>) => api.get("/finance/payments/", { params }),
     create: (data: Record<string, unknown>) => api.post("/finance/payments/", data),
+  },
+  products: {
+    list: (params?: Record<string, unknown>) => api.get("/finance/products/", { params }),
+    get: (id: string) => api.get(`/finance/products/${id}/`),
+    create: (data: Record<string, unknown>) => api.post("/finance/products/", data),
+    update: (id: string, data: Record<string, unknown>) => api.patch(`/finance/products/${id}/`, data),
+    delete: (id: string) => api.delete(`/finance/products/${id}/`),
   },
   expenses: {
     list: (params?: Record<string, unknown>) => api.get("/finance/expenses/", { params }),
@@ -200,7 +229,7 @@ export const documentsApi = {
 
 export const messengerApi = {
   chats: {
-    list: () => api.get("/messenger/chats/"),
+    list: (params?: Record<string, unknown>) => api.get("/messenger/chats/", { params }),
     get: (id: string) => api.get(`/messenger/chats/${id}/`),
     create: (data: Record<string, unknown>) => api.post("/messenger/chats/", data),
   },
@@ -226,6 +255,81 @@ export const analyticsApi = {
   reports: {
     generate: (data: Record<string, unknown>) => api.post("/analytics/reports/generate/", data),
   },
+  // ---- Business Analytics ----
+  business: {
+    summary: (params?: Record<string, unknown>) =>
+      api.get("/analytics/business/summary/", { params }),
+    revenue: (params?: Record<string, unknown>) =>
+      api.get("/analytics/business/revenue/", { params }),
+    funnel: (params?: Record<string, unknown>) =>
+      api.get("/analytics/business/funnel/", { params }),
+    managers: (params?: Record<string, unknown>) =>
+      api.get("/analytics/business/managers/", { params }),
+    sources: (params?: Record<string, unknown>) =>
+      api.get("/analytics/business/sources/", { params }),
+    ltv: (params?: Record<string, unknown>) =>
+      api.get("/analytics/business/ltv/", { params }),
+    churn: (params?: Record<string, unknown>) =>
+      api.get("/analytics/business/churn/", { params }),
+    retention: (params?: Record<string, unknown>) =>
+      api.get("/analytics/business/retention/", { params }),
+    config: () => api.get("/analytics/business/config/"),
+    acquisitionCosts: {
+      list: (params?: Record<string, unknown>) =>
+        api.get("/analytics/business/acquisition-costs/", { params }),
+      create: (data: Record<string, unknown>) =>
+        api.post("/analytics/business/acquisition-costs/", data),
+      update: (id: number, data: Record<string, unknown>) =>
+        api.patch(`/analytics/business/acquisition-costs/${id}/`, data),
+      delete: (id: number) => api.delete(`/analytics/business/acquisition-costs/${id}/`),
+    },
+    exportFile: (format: "csv" | "pdf", params?: Record<string, unknown>) =>
+      api.get("/analytics/business/export/", {
+        params: { ...params, export: format },
+        responseType: "blob",
+      }),
+  },
+};
+
+export const catalogApi = {
+  items: {
+    list: (params?: Record<string, unknown>) => api.get("/catalog/items/", { params }),
+    get: (id: string) => api.get(`/catalog/items/${id}/`),
+    create: (data: Record<string, unknown>) => api.post("/catalog/items/", data),
+    update: (id: string, data: Record<string, unknown>) => api.patch(`/catalog/items/${id}/`, data),
+    delete: (id: string) => api.delete(`/catalog/items/${id}/`),
+    restock: (id: string, data: Record<string, unknown>) =>
+      api.post(`/catalog/items/${id}/restock/`, data),
+  },
+  categories: {
+    list: () => api.get("/catalog/categories/"),
+    create: (data: Record<string, unknown>) => api.post("/catalog/categories/", data),
+  },
+  bulk: (data: Record<string, unknown>) => api.post("/catalog/bulk/", data),
+  exportCsv: (params?: Record<string, unknown>) =>
+    api.get("/catalog/export/", { params, responseType: "blob" }),
+  importCsv: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return api.post("/catalog/import/", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+};
+
+export const dealsApi = {
+  list: (params?: Record<string, unknown>) => api.get("/deals/", { params }),
+  get: (id: string) => api.get(`/deals/${id}/`),
+  convert: (data: Record<string, unknown>) => api.post("/deals/", data),
+  update: (id: string, data: Record<string, unknown>) => api.patch(`/deals/${id}/`, data),
+  delete: (id: string) => api.delete(`/deals/${id}/`),
+  changeStatus: (id: string, status: string) =>
+    api.post(`/deals/${id}/status/`, { status }),
+  addPayment: (id: string, data: Record<string, unknown>) =>
+    api.post(`/deals/${id}/payments/`, data),
+  attachDocument: (id: string, documentId: string) =>
+    api.post(`/deals/${id}/attach-document/`, { document_id: documentId }),
+  leadsAvailable: () => api.get("/deals/leads-available/"),
 };
 
 export const cabinetApi = {
@@ -266,6 +370,11 @@ export const aiApi = {
   generateEstimate: (data: Record<string, unknown>) => api.post("/ai/generate/estimate/", data),
   history: () => api.get("/ai/history/"),
   templates: () => api.get("/ai/templates/"),
+  settings: {
+    get: () => api.get("/ai/settings/"),
+    update: (data: Record<string, unknown>) => api.put("/ai/settings/", data),
+    test: (data?: Record<string, unknown>) => api.post("/ai/settings/test/", data || {}),
+  },
   // A/B Testing
   abTest: {
     campaigns: {
@@ -281,6 +390,126 @@ export const aiApi = {
       api.post(`/ai/ab-testing/variants/${variantId}/track/`, data),
     conversions: (variantId: string) =>
       api.get(`/ai/ab-testing/variants/${variantId}/conversions/`),
+  },
+};
+
+export const crmApi = {
+  leads: {
+    // TODO: dedicated forecast endpoint on backend (currently falls back to lead stats)
+    forecast: () => api.get("/leads/stats/"),
+    // TODO: dedicated activity feed endpoint on backend
+    activities: (params?: Record<string, unknown>) => api.get("/leads/", { params }),
+    // TODO: dedicated follow-up endpoint on backend (overdue/today/upcoming)
+    followup: (params?: Record<string, unknown>) => api.get("/tasks/", { params }),
+    // TODO: dedicated CSV import endpoint on backend
+    importCsv: (formData: FormData) =>
+      api.post("/leads/import/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      }),
+  },
+};
+
+export const messagingApi = {
+  conversations: {
+    list: (params?: Record<string, unknown>) =>
+      api.get("/messaging/conversations/", { params }),
+    get: (id: string) => api.get(`/messaging/conversations/${id}/`),
+    create: (data: Record<string, unknown>) => api.post("/messaging/conversations/", data),
+    fromLead: (leadId: string) =>
+      api.post("/messaging/conversations/from-lead/", { lead_id: leadId }),
+    read: (id: string) => api.post(`/messaging/conversations/${id}/read/`),
+    close: (id: string) => api.post(`/messaging/conversations/${id}/close/`),
+    reopen: (id: string) => api.post(`/messaging/conversations/${id}/reopen/`),
+    assign: (id: string, userId: string) =>
+      api.post(`/messaging/conversations/${id}/assign/`, { user_id: userId }),
+    canSend: (id: string) => api.get(`/messaging/conversations/${id}/can-send/`),
+  },
+  messages: {
+    list: (conversationId: string, params?: Record<string, unknown>) =>
+      api.get(`/messaging/conversations/${conversationId}/messages/`, { params }),
+    send: (conversationId: string, data: Record<string, unknown> | FormData) =>
+      api.post(`/messaging/conversations/${conversationId}/messages/`, data),
+  },
+  media: (messageId: string) =>
+    api.get(`/messaging/messages/${messageId}/media/`, { responseType: "blob" }),
+  unread: () => api.get("/messaging/unread/"),
+};
+
+export const employeeProfileApi = {
+  get: (userId: string) => api.get(`/auth/users/${userId}/profile/`),
+  update: (userId: string, data: Record<string, unknown>) =>
+    api.patch(`/auth/users/${userId}/profile/`, data),
+  stats: (userId: string) => api.get(`/auth/users/${userId}/stats/`),
+  certificates: {
+    add: (userId: string, data: Record<string, unknown> | FormData) =>
+      api.post(`/auth/users/${userId}/certificates/`, data),
+    delete: (userId: string, certificateId: string) =>
+      api.delete(`/auth/users/${userId}/certificates/${certificateId}/`),
+  },
+};
+
+export const mentorshipApi = {
+  pairs: {
+    list: (params?: Record<string, unknown>) => api.get("/mentorship/pairs/", { params }),
+    get: (id: string) => api.get(`/mentorship/pairs/${id}/`),
+    create: (data: Record<string, unknown>) => api.post("/mentorship/pairs/", data),
+    update: (id: string, data: Record<string, unknown>) =>
+      api.patch(`/mentorship/pairs/${id}/`, data),
+    delete: (id: string) => api.delete(`/mentorship/pairs/${id}/`),
+    dashboard: () => api.get("/mentorship/pairs/dashboard/"),
+    assignChecklist: (id: string, checklistId: string) =>
+      api.post(`/mentorship/pairs/${id}/assign_checklist/`, { checklist_id: checklistId }),
+  },
+  tasks: {
+    list: (params?: Record<string, unknown>) => api.get("/mentorship/tasks/", { params }),
+    get: (id: string) => api.get(`/mentorship/tasks/${id}/`),
+    create: (data: Record<string, unknown>) => api.post("/mentorship/tasks/", data),
+    update: (id: string, data: Record<string, unknown>) =>
+      api.patch(`/mentorship/tasks/${id}/`, data),
+    delete: (id: string) => api.delete(`/mentorship/tasks/${id}/`),
+  },
+  checklists: {
+    list: (params?: Record<string, unknown>) => api.get("/mentorship/checklists/", { params }),
+    get: (id: string) => api.get(`/mentorship/checklists/${id}/`),
+    create: (data: Record<string, unknown>) => api.post("/mentorship/checklists/", data),
+    update: (id: string, data: Record<string, unknown>) =>
+      api.patch(`/mentorship/checklists/${id}/`, data),
+    delete: (id: string) => api.delete(`/mentorship/checklists/${id}/`),
+  },
+  checklistProgress: {
+    list: (params?: Record<string, unknown>) =>
+      api.get("/mentorship/checklist-progress/", { params }),
+    get: (id: string) => api.get(`/mentorship/checklist-progress/${id}/`),
+    completeItem: (id: string, data: Record<string, unknown>) =>
+      api.post(`/mentorship/checklist-progress/${id}/complete_item/`, data),
+  },
+  evaluations: {
+    list: (params?: Record<string, unknown>) => api.get("/mentorship/evaluations/", { params }),
+    get: (id: string) => api.get(`/mentorship/evaluations/${id}/`),
+    create: (data: Record<string, unknown>) => api.post("/mentorship/evaluations/", data),
+    update: (id: string, data: Record<string, unknown>) =>
+      api.patch(`/mentorship/evaluations/${id}/`, data),
+    delete: (id: string) => api.delete(`/mentorship/evaluations/${id}/`),
+  },
+};
+
+export const structureApi = {
+  teams: {
+    list: (params?: Record<string, unknown>) => api.get("/structure/teams/", { params }),
+    get: (id: string) => api.get(`/structure/teams/${id}/`),
+    create: (data: Record<string, unknown>) => api.post("/structure/teams/", data),
+    update: (id: string, data: Record<string, unknown>) =>
+      api.patch(`/structure/teams/${id}/`, data),
+    delete: (id: string) => api.delete(`/structure/teams/${id}/`),
+    tree: () => api.get("/structure/teams/tree/"),
+    stats: () => api.get("/structure/teams/stats/"),
+  },
+  memberships: {
+    list: (params?: Record<string, unknown>) => api.get("/structure/memberships/", { params }),
+    create: (data: Record<string, unknown>) => api.post("/structure/memberships/", data),
+    update: (id: string, data: Record<string, unknown>) =>
+      api.patch(`/structure/memberships/${id}/`, data),
+    delete: (id: string) => api.delete(`/structure/memberships/${id}/`),
   },
 };
 

@@ -6,5 +6,8 @@ export interface Notification {
   project_id?: string;
   task_id?: string;
   read: boolean;
+  archived?: boolean;
+  urgency?: "critical" | "important" | "normal" | string;
+  type_display?: string;
   created_at: string;
 }
