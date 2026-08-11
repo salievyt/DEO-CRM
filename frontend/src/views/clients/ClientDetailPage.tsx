@@ -316,11 +316,13 @@ export function ClientDetailPage() {
 
             <div className="mt-6 space-y-3">
               <a
-                href={`tel:${client.phone}`}
-                className="flex items-center gap-2 text-sm text-surface-600 hover:text-brand-600 dark:text-surface-300"
+                href={`/calls?client_id=${id}`}
+                title="Журнал звонков клиента"
+                className="group flex items-center gap-2 text-sm text-surface-600 hover:text-brand-600 dark:text-surface-300"
               >
                 <Phone className="h-4 w-4 text-surface-400" />
-                {client.phone}
+                <span className="font-mono">{client.phone}</span>
+                <PhoneCall className="ml-auto h-3.5 w-3.5 text-surface-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-surface-500" />
               </a>
               {client.email && (
                 <a
@@ -389,6 +391,12 @@ export function ClientDetailPage() {
                 <Button variant="secondary" size="sm" fullWidth>
                   <PhoneCall className="h-4 w-4" />
                   Позвонить
+                </Button>
+              </a>
+              <a href={`/calls?client_id=${id}`}>
+                <Button variant="secondary" size="sm" fullWidth>
+                  <Phone className="h-4 w-4" />
+                  Звонки
                 </Button>
               </a>
               <a
