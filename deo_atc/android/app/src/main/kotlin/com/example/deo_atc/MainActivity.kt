@@ -1,0 +1,5 @@
+package com.example.deo_atc
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()
