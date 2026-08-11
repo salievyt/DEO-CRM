@@ -53,8 +53,24 @@ export interface ExpenseCategory {
   description: string;
 }
 
+export interface Income {
+  id: string;
+  client: string | null;
+  client_name: string | null;
+  project: string | null;
+  project_name: string | null;
+  amount: number;
+  description: string;
+  method: string;
+  method_display: string;
+  income_date: string;
+  created_at: string;
+}
+
 export interface FinancialSummary {
   revenue: number;
+  income: number;
+  total_income: number;
   expenses: number;
   profit: number;
   outstanding: number;

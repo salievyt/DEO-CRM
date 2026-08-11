@@ -23,12 +23,18 @@ import { EmptyState } from "@/shared/ui/EmptyState";
 import { financeApi } from "@/shared/api/base";
 import { QUERY_KEYS } from "@/shared/constants";
 import { formatCurrency, formatDate, timeAgo, cn } from "@/shared/utils/formatters";
-import type { Invoice, FinancialSummary, ProfitByProject } from "@/entities/invoice/types";
+import type {
+  Invoice,
+  Income,
+  FinancialSummary,
+  ProfitByProject,
+} from "@/entities/invoice/types";
 
 export function FinancePage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showIncomeModal, setShowIncomeModal] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
@@ -49,6 +55,12 @@ export function FinancePage() {
     select: (res) => res.data?.results as any[],
   });
 
+  const { data: incomes } = useQuery({
+    queryKey: [QUERY_KEYS.INCOMES],
+    queryFn: () => financeApi.incomes.list(),
+    select: (res) => res.data?.results as Income[],
+  });
+
   const [showProfitModal, setShowProfitModal] = useState(false);
   const { data: profitByProject } = useQuery({
     queryKey: [QUERY_KEYS.PROFIT_BY_PROJECT],
@@ -60,6 +72,7 @@ export function FinancePage() {
   const tabs = [
     { value: "overview", label: "Обзор" },
     { value: "invoices", label: "Счета" },
+    { value: "incomes", label: "Доходы" },
     { value: "expenses", label: "Расходы" },
     { value: "profit", label: "Прибыль по проектам" },
   ];
@@ -71,6 +84,10 @@ export function FinancePage() {
         description="Управление финансами компании"
         actions={
           <div className="flex items-center gap-2">
+            <Button variant="secondary" onClick={() => setShowIncomeModal(true)}>
+              <Plus className="h-4 w-4" />
+              Доход
+            </Button>
             <Button variant="secondary" onClick={() => setShowExpenseModal(true)}>
               <Plus className="h-4 w-4" />
               Расход
@@ -92,9 +109,9 @@ export function FinancePage() {
               <span className="text-sm font-medium">Доход</span>
             </div>
             <p className="mt-2 text-2xl font-bold text-surface-900 dark:text-white">
-              {formatCurrency(summary.revenue)}
+              {formatCurrency(summary.total_income)}
             </p>
-            <p className="text-xs text-surface-500">за текущий месяц</p>
+            <p className="text-xs text-surface-500">счета и доходы за месяц</p>
           </Card>
           <Card>
             <div className="flex items-center gap-2 text-danger-600">
@@ -174,6 +191,53 @@ export function FinancePage() {
                     </span>
                     <span className="text-sm text-surface-400">
                       {formatDate(invoice.issued_date)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {activeTab === "incomes" && (
+        <Card padding="none">
+          {(!incomes || incomes.length === 0) ? (
+            <div className="p-6">
+              <EmptyState
+                title="Нет доходов"
+                description="Добавьте первый доход — например, поступление без счёта"
+                action={
+                  <Button onClick={() => setShowIncomeModal(true)}>
+                    <Plus className="h-4 w-4" />
+                    Добавить доход
+                  </Button>
+                }
+              />
+            </div>
+          ) : (
+            <div className="divide-y divide-surface-200 dark:divide-surface-700">
+              {incomes.map((income) => (
+                <div
+                  key={income.id}
+                  className="flex items-center justify-between px-6 py-4"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-surface-900 dark:text-white">
+                      {income.description}
+                    </p>
+                    <p className="truncate text-sm text-surface-500">
+                      {income.method_display}
+                      {income.client_name && ` · ${income.client_name}`}
+                      {income.project_name && ` · ${income.project_name}`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="font-medium text-success-600">
+                      +{formatCurrency(income.amount)}
+                    </span>
+                    <span className="text-sm text-surface-400">
+                      {formatDate(income.income_date)}
                     </span>
                   </div>
                 </div>
@@ -280,6 +344,15 @@ export function FinancePage() {
         <InvoiceForm onCancel={() => setShowInvoiceModal(false)} />
       </Modal>
 
+      {/* Create Income Modal */}
+      <Modal
+        open={showIncomeModal}
+        onClose={() => setShowIncomeModal(false)}
+        title="Новый доход"
+      >
+        <IncomeForm onCancel={() => setShowIncomeModal(false)} />
+      </Modal>
+
       {/* Create Expense Modal */}
       <Modal
         open={showExpenseModal}
@@ -372,6 +445,138 @@ function InvoiceForm({ onCancel }: { onCancel: () => void }) {
         </Button>
         <Button type="submit" loading={mutation.isPending}>
           Создать счет
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+const INCOME_METHODS = [
+  { value: "bank_transfer", label: "Банковский перевод" },
+  { value: "cash", label: "Наличные" },
+  { value: "card", label: "Карта" },
+  { value: "crypto", label: "Криптовалюта" },
+];
+
+function IncomeForm({ onCancel }: { onCancel: () => void }) {
+  const queryClient = useQueryClient();
+  const today = new Date();
+  const localToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const [form, setForm] = useState({
+    amount: "",
+    description: "",
+    method: "bank_transfer",
+    income_date: localToday,
+    client: "",
+    project: "",
+  });
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) => financeApi.incomes.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INCOMES] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.FINANCE_SUMMARY] });
+      onCancel();
+    },
+    onError: (err: unknown) => {
+      const data = (err as { response?: { data?: { detail?: string } } })?.response?.data;
+      const detail = data?.detail;
+      const message =
+        typeof detail === "string" && detail
+          ? detail
+          : "Не удалось добавить доход. Проверьте сумму, дату и корректность ID клиента/проекта.";
+      setFormError(message);
+    },
+  });
+
+  const update = (patch: Partial<typeof form>) => {
+    setForm((prev) => ({ ...prev, ...patch }));
+    setFormError(null);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    mutation.mutate({
+      ...form,
+      amount: Number(form.amount),
+      client: form.client || undefined,
+      project: form.project || undefined,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {formError && (
+        <p className="rounded-lg border border-danger-200 bg-danger-50 px-3 py-2 text-sm text-danger-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+          {formError}
+        </p>
+      )}
+      <div>
+        <label className="mb-1 block text-sm font-medium text-surface-700 dark:text-surface-200">
+          Описание
+        </label>
+        <textarea
+          value={form.description}
+          onChange={(e) => update({ description: e.target.value })}
+          rows={2}
+          placeholder="Например: доплата за услугу, предоплата"
+          className="input"
+          required
+        />
+      </div>
+      <Input
+        label="Сумма"
+        type="number"
+        min="0"
+        step="0.01"
+        value={form.amount}
+        onChange={(e) => update({ amount: e.target.value })}
+        required
+      />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-surface-700 dark:text-surface-200">
+            Способ оплаты
+          </label>
+          <select
+            value={form.method}
+            onChange={(e) => update({ method: e.target.value })}
+            className="input"
+          >
+            {INCOME_METHODS.map((method) => (
+              <option key={method.value} value={method.value}>
+                {method.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <Input
+          label="Дата дохода"
+          type="date"
+          value={form.income_date}
+          onChange={(e) => update({ income_date: e.target.value })}
+          required
+        />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Input
+          label="ID клиента (опционально)"
+          value={form.client}
+          onChange={(e) => update({ client: e.target.value })}
+        />
+        <Input
+          label="ID проекта (опционально)"
+          value={form.project}
+          onChange={(e) => update({ project: e.target.value })}
+        />
+      </div>
+      <div className="flex justify-end gap-2 pt-2">
+        <Button variant="secondary" type="button" onClick={onCancel}>
+          Отмена
+        </Button>
+        <Button type="submit" loading={mutation.isPending}>
+          Добавить доход
         </Button>
       </div>
     </form>
