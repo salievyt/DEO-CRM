@@ -117,6 +117,13 @@ export function CalendarPage() {
   }, [events, visibleDate]);
 
   const todayKey = toDateKey(new Date());
+
+  // Only future events (from today onward) belong in the sidebar list.
+  // Past events remain visible on the calendar grid itself.
+  const upcomingEvents = events.filter(
+    (event) => toDateKey(new Date(event.date)) >= todayKey
+  );
+
   const selectedMonthLabel = `${monthNames[visibleDate.getMonth()]} ${visibleDate.getFullYear()}`;
   const monthEvents = events.filter((event) => {
     const eventDate = new Date(event.date);
@@ -263,7 +270,7 @@ export function CalendarPage() {
             </div>
 
             <div className="mt-4 space-y-3">
-              {events.slice(0, 6).map((event) => (
+              {upcomingEvents.slice(0, 6).map((event) => (
                 <div
                   key={`${event.type}-side-${event.id}`}
                   className="rounded-lg border border-surface-200 p-3 dark:border-surface-700"
@@ -288,7 +295,7 @@ export function CalendarPage() {
                 </div>
               ))}
 
-              {events.length === 0 && (
+              {upcomingEvents.length === 0 && (
                 <div className="rounded-lg border border-dashed border-surface-200 p-6 text-center text-sm text-surface-500 dark:border-surface-700">
                   Событий пока нет
                 </div>

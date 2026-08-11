@@ -35,7 +35,11 @@ export default function DashboardPage() {
     }[],
   });
 
-  const recentProjects = (projects || []).slice(0, 5);
+  const TERMINAL_STATUSES = ["Завершён", "Отменён", "На паузе"];
+  const activeProjects = (projects || []).filter(
+    (p) => !TERMINAL_STATUSES.includes(p.status_name)
+  );
+  const recentProjects = activeProjects.slice(0, 5);
 
   if (isLoading) {
     return (
@@ -76,7 +80,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-surface-900 dark:text-white">
-          Доброе утро, {user?.first_name || "Пользователь"} 👋
+          Доброго времени суток, {user?.first_name || "Пользователь"} 👋
         </h1>
         <p className="mt-1 text-sm text-surface-500">
           Вот что происходит в вашей студии сегодня
