@@ -4,6 +4,7 @@ from .views.accounts import (
     WhatsAppAccountCreateView,
     WhatsAppAccountDetailView,
     WhatsAppAccountListView,
+    WhatsAppAccountTestView,
 )
 from .views.telegram_accounts import (
     TelegramAccountCreateView,
@@ -48,6 +49,8 @@ urlpatterns = [
     path("whatsapp/accounts/", WhatsAppAccountListView.as_view(), name="messaging-whatsapp-account-list"),
     path("whatsapp/accounts/create/", WhatsAppAccountCreateView.as_view(), name="messaging-whatsapp-account-create"),
     path("whatsapp/accounts/<uuid:pk>/", WhatsAppAccountDetailView.as_view(), name="messaging-whatsapp-account-detail"),
+    path("whatsapp/accounts/test/", WhatsAppAccountTestView.as_view(), name="messaging-whatsapp-account-test"),
+    path("whatsapp/accounts/<uuid:pk>/test/", WhatsAppAccountTestView.as_view(), name="messaging-whatsapp-account-test-one"),
     path("whatsapp/templates/", WhatsAppTemplateListView.as_view(), name="messaging-whatsapp-templates"),
     path("telegram/accounts/", TelegramAccountListView.as_view(), name="messaging-telegram-account-list"),
     path("telegram/accounts/create/", TelegramAccountCreateView.as_view(), name="messaging-telegram-account-create"),

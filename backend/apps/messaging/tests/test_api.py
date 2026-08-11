@@ -14,7 +14,12 @@ CONVERSATIONS_URL = reverse("messaging-conversation-list")
 UNREAD_URL = reverse("messaging-unread")
 ACCOUNTS_URL = reverse("messaging-whatsapp-account-list")
 ACCOUNTS_CREATE_URL = reverse("messaging-whatsapp-account-create")
+ACCOUNTS_TEST_URL = reverse("messaging-whatsapp-account-test")
 TEMPLATES_URL = reverse("messaging-whatsapp-templates")
+
+
+def account_test_url(pk):
+    return reverse("messaging-whatsapp-account-test-one", kwargs={"pk": pk})
 
 
 def messages_url(conversation):
@@ -298,6 +303,74 @@ class TestAccounts:
         account = WhatsAppAccount.objects.get(pk=response.data["id"])
         assert account.access_token == "tok-123"
         assert account.access_token_encrypted != "tok-123"
+
+
+@pytest.mark.django_db
+class TestAccountTesting:
+    OK_RESULT = {
+        "ok": True,
+        "token_valid": True,
+        "phone_checked": True,
+        "display_phone_number": "+7 900 000-00-00",
+        "verified_name": "DEO Studio",
+        "quality_rating": "GREEN",
+        "expires_at": 0,
+    }
+
+    def test_draft_requires_token(self, api_client, admin_user):
+        api_client.force_authenticate(admin_user)
+        response = api_client.post(ACCOUNTS_TEST_URL, {}, format="json")
+        assert response.status_code == 400
+
+    def test_draft_valid(self, api_client, admin_user):
+        api_client.force_authenticate(admin_user)
+        with mock.patch("apps.messaging.views.accounts.WhatsAppService") as svc_cls:
+            svc_cls.return_value.test_connection.return_value = self.OK_RESULT
+            response = api_client.post(ACCOUNTS_TEST_URL, {
+                "name": "Черновик",
+                "business_account_id": "111222333",
+                "phone_number_id": "444555666",
+                "display_phone_number": "+7 900 000-00-00",
+                "access_token": "draft-token-1",
+            }, format="json")
+        assert response.status_code == 200
+        assert response.data["ok"] is True
+        assert WhatsAppAccount.objects.count() == 0  # nothing saved
+        # the service received the draft with the plain token (not env fallback)
+        draft = svc_cls.call_args[0][0]
+        assert draft.access_token == "draft-token-1"
+
+    def test_saved_account(self, api_client, admin_user, whatsapp_account):
+        api_client.force_authenticate(admin_user)
+        with mock.patch("apps.messaging.views.accounts.WhatsAppService") as svc_cls:
+            svc_cls.return_value.test_connection.return_value = self.OK_RESULT
+            response = api_client.post(account_test_url(whatsapp_account.id))
+        assert response.status_code == 200
+        assert response.data["ok"] is True
+        assert svc_cls.call_args[0][0].id == whatsapp_account.id
+
+    def test_failure_is_structured(self, api_client, admin_user, whatsapp_account):
+        api_client.force_authenticate(admin_user)
+        with mock.patch("apps.messaging.views.accounts.WhatsAppService") as svc_cls:
+            svc_cls.return_value.test_connection.return_value = {
+                "ok": False, "token_valid": False, "phone_checked": False,
+                "error": "Неверный или истёкший токен WhatsApp. Проверьте настройки аккаунта.",
+            }
+            response = api_client.post(account_test_url(whatsapp_account.id))
+        assert response.status_code == 200
+        assert response.data["ok"] is False
+        assert "токен" in response.data["error"].lower()
+
+    def test_staff_forbidden_saved_account(self, api_client, staff_user, whatsapp_account):
+        api_client.force_authenticate(staff_user)
+        response = api_client.post(account_test_url(whatsapp_account.id))
+        assert response.status_code == 403
+
+    def test_missing_account_404(self, api_client, admin_user):
+        import uuid
+
+        api_client.force_authenticate(admin_user)
+        assert api_client.post(account_test_url(uuid.uuid4())).status_code == 404
 
 
 @pytest.mark.django_db

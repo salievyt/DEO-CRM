@@ -259,6 +259,66 @@ class WhatsAppService(BaseMessagingService):
         }
         self._request("POST", self._messages_url, payload=payload)
 
+    # ------------------------------------------------------ connection test
+    def test_connection(self) -> dict:
+        """Validate the access token and phone number access against Graph API.
+
+        Returns a structured result dict; never raises for API failures — the
+        caller gets ``ok`` + a human-readable ``error`` instead.
+        """
+        result: dict = {"ok": False, "token_valid": False, "phone_checked": False}
+
+        # 1) Validate the token itself via /debug_token.
+        try:
+            token = self._token
+        except InvalidTokenError as exc:
+            result["error"] = str(exc)
+            return result
+
+        try:
+            debug = self._request(
+                "GET", f"{self._base_url}/debug_token",
+                params={"input_token": token}, timeout=10,
+            )
+            data = debug.get("data", {}) or {}
+            result["token_valid"] = bool(data.get("is_valid"))
+            result["token_type"] = data.get("type")
+            result["expires_at"] = data.get("expires_at")
+            result["scopes"] = data.get("scopes", [])
+            if not result["token_valid"]:
+                result["error"] = "Токен недействителен или истёк. Сгенерируйте новый permanent token в Meta."
+                return result
+        except InvalidTokenError as exc:
+            result["error"] = str(exc)
+            return result
+        except MessagingServiceError as exc:
+            result["error"] = str(exc)
+            return result
+
+        # 2) Validate that the token can read the phone number.
+        phone_number_id = getattr(self.account, "phone_number_id", "")
+        if phone_number_id:
+            try:
+                info = self._request(
+                    "GET", f"{self._base_url}/{phone_number_id}",
+                    params={"fields": "display_phone_number,verified_name,quality_rating"},
+                    timeout=10,
+                )
+                result["phone_checked"] = True
+                result["display_phone_number"] = info.get("display_phone_number")
+                result["verified_name"] = info.get("verified_name")
+                result["quality_rating"] = info.get("quality_rating")
+            except MessagingServiceError as exc:
+                result["error"] = str(exc)
+                result["phone_error"] = str(exc)
+                return result
+        else:
+            result["error"] = "Укажите Phone Number ID для проверки."
+            return result
+
+        result["ok"] = True
+        return result
+
     # ------------------------------------------------------------ templates
     def get_templates(self) -> list[dict]:
         """List approved + pending templates of the WABA (cached by the caller)."""
