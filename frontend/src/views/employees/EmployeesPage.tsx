@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Users,
@@ -17,6 +18,7 @@ import { Avatar } from "@/shared/ui/Avatar";
 import { authApi } from "@/shared/api/base";
 import { QUERY_KEYS } from "@/shared/constants";
 import { formatDate } from "@/shared/utils/formatters";
+import { InviteEmployeeModal } from "@/features/invite-employee/InviteEmployeeModal";
 import type { ColumnDef } from "@tanstack/react-table";
 
 type Employee = {
@@ -34,10 +36,20 @@ type Employee = {
 };
 
 export function EmployeesPage() {
+  const [inviteOpen, setInviteOpen] = useState(false);
+
   const { data: employees, isLoading } = useQuery({
     queryKey: [QUERY_KEYS.USERS],
     queryFn: () => authApi.users.list(),
-    select: (res): Employee[] => res.data?.results || (res.data as Employee[]),
+    // The team page shows only employees: users without a role and clients
+    // (role_name === null/"" or "client") are hidden from the list and stats.
+    select: (res): Employee[] => {
+      const all: Employee[] = res.data?.results || (res.data as Employee[]);
+      return all.filter((e) => {
+        const role = e.role_name?.toLowerCase();
+        return Boolean(role) && role !== "client";
+      });
+    },
   });
 
   const totalCount = employees?.length || 0;
@@ -141,11 +153,16 @@ export function EmployeesPage() {
         title="Сотрудники студии"
         description="Управление командой: роли, доступы и статусы"
         actions={
-          <Button>
+          <Button onClick={() => setInviteOpen(true)}>
             <Plus className="h-4 w-4" />
             Пригласить сотрудника
           </Button>
         }
+      />
+
+      <InviteEmployeeModal
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
       />
 
       {/* Stats cards */}
@@ -218,6 +235,9 @@ export function EmployeesPage() {
               loading={isLoading}
               searchable
               searchPlaceholder="Поиск по сотрудникам..."
+              onRowClick={(employee) => {
+                window.location.href = `/employees/${employee.id}`;
+              }}
             />
           </div>
         </Card>
