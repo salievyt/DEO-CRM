@@ -63,6 +63,16 @@ export interface WhatsAppAccount {
   created_at: string;
 }
 
+export interface TelegramAccount {
+  id: string;
+  name: string;
+  bot_username: string;
+  bot_name: string;
+  status: string;
+  is_default: boolean;
+  created_at: string;
+}
+
 export interface WhatsAppTemplate {
   name: string;
   language: string;
