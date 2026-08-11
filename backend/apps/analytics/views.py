@@ -43,7 +43,7 @@ class SummaryMetricsView(views.APIView):
             {
                 "total_clients": Client.objects.count(),
                 "active_projects": Project.objects.exclude(
-                    status__name__in=["Завершен", "Приостановлен"]
+                    status__name__in=["Завершён", "Отменён", "На паузе", "Приостановлен"]
                 ).count(),
                 "monthly_revenue": float(
                     Invoice.objects.filter(status="paid", paid_at__gte=start_month).aggregate(
