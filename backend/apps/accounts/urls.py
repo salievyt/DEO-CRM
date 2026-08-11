@@ -23,6 +23,7 @@ urlpatterns = [
     path("2fa/disable/", views.Disable2FAView.as_view(), name="auth-2fa-disable"),
     # Users management
     path("users/", views.UserListView.as_view(), name="user-list"),
+    path("users/invite/", views.UserInviteView.as_view(), name="user-invite"),
     path("users/<uuid:pk>/", views.UserDetailView.as_view(), name="user-detail"),
     path("users/<uuid:pk>/assign-role/", views.AssignRoleView.as_view(), name="user-assign-role"),
     # Employee profiles

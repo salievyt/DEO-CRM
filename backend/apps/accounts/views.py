@@ -4,9 +4,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from common.permissions import IsAdmin
+from common.permissions import IsProjectManager
 
-from .serializers import RegisterSerializer, UserSerializer
+from .serializers import InviteUserSerializer, RegisterSerializer, UserSerializer
 
 User = get_user_model()
 
@@ -61,25 +61,33 @@ class ChangePasswordView(APIView):
         return Response({"detail": "Пароль успешно изменен"})
 
 
+class UserInviteView(generics.CreateAPIView):
+    """Invite a new employee (superadmin/owner/PM). Creates the account and returns temporary credentials."""
+
+    queryset = User.objects.all()
+    serializer_class = InviteUserSerializer
+    permission_classes = (IsProjectManager,)
+
+
 class UserListView(generics.ListAPIView):
-    """List all users (admin/manager)."""
+    """List all users (superadmin/owner/PM)."""
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = (IsAdmin,)
+    permission_classes = (IsProjectManager,)
     search_fields = ("email", "first_name", "last_name", "phone")
     ordering_fields = ("email", "date_joined", "last_login")
 
 
 class UserDetailView(generics.RetrieveUpdateAPIView):
-    """User details (admin only)."""
+    """User details (superadmin/owner/PM)."""
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = (IsAdmin,)
+    permission_classes = (IsProjectManager,)
 
 
 class AssignRoleView(APIView):
-    """Assign role to user (admin only)."""
-    permission_classes = (IsAdmin,)
+    """Assign role to user (superadmin/owner/PM)."""
+    permission_classes = (IsProjectManager,)
 
     def post(self, request, pk):
         from .models import Role
