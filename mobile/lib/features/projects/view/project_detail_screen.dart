@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../entities/project.dart';
 import '../data/projects_providers.dart';
 
 class ProjectDetailScreen extends ConsumerWidget {

@@ -6,7 +6,6 @@ import 'package:mockito/annotations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:deo_crm_mobile/core/api/auth_api.dart';
 import 'package:deo_crm_mobile/core/api/api_service.dart';
-import 'package:deo_crm_mobile/entities/user.dart';
 
 // Generate mocks
 @GenerateMocks([Dio, FlutterSecureStorage])

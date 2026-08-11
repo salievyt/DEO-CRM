@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_theme.dart';
 
 class AppSharedWidgets {
   static Widget loadingIndicator({double size = 24}) {

@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../entities/client.dart';
 import '../../entities/project.dart';
 import '../../entities/document.dart';
 import '../../entities/finance.dart';

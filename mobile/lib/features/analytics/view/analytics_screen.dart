@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../../../entities/analytics.dart';
 import '../data/analytics_providers.dart';
 
 class AnalyticsScreen extends ConsumerWidget {

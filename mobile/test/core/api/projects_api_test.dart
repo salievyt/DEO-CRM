@@ -5,7 +5,6 @@ import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
 import 'package:deo_crm_mobile/core/api/projects_api.dart';
 import 'package:deo_crm_mobile/core/api/api_service.dart';
-import 'package:deo_crm_mobile/entities/project.dart';
 
 @GenerateMocks([Dio])
 import 'projects_api_test.mocks.dart';
