@@ -252,7 +252,17 @@ class WhatsAppWebhookView(APIView):
             notify(conversation, "message.created", message_serialized(message))
             notify(conversation, "conversation.updated",
                    conversation_serialized(conversation))
+            self._run_scenarios(message)
         # else: duplicate webhook delivery — already processed, no-op.
+    def _run_scenarios(self, message) -> None:
+        """Trigger keyword auto-responses for a freshly stored inbound message."""
+        try:
+            from apps.scenarios.services import maybe_auto_respond
+
+            maybe_auto_respond(message)
+        except Exception:  # noqa: BLE001 - automation must never break the webhook
+            log_event("scenarios.processor_error", level=logging.ERROR,
+                      conversation_id=str(message.conversation_id))
 
     @staticmethod
     def _map_message_type(msg) -> str:
