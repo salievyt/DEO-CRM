@@ -4,6 +4,15 @@ from django.core.validators import MinValueValidator
 from django.db import models
 
 
+# Shared by Payment and Income — one source of truth for the frontend.
+PAYMENT_METHOD_CHOICES = [
+    ("bank_transfer", "Банковский перевод"),
+    ("cash", "Наличные"),
+    ("card", "Карта"),
+    ("crypto", "Криптовалюта"),
+]
+
+
 class Invoice(models.Model):
     """Invoice for a client project."""
     STATUS_CHOICES = [
@@ -89,12 +98,7 @@ class InvoiceItem(models.Model):
 
 class Payment(models.Model):
     """Payments received."""
-    METHOD_CHOICES = [
-        ("bank_transfer", "Банковский перевод"),
-        ("cash", "Наличные"),
-        ("card", "Карта"),
-        ("crypto", "Криптовалюта"),
-    ]
+    METHOD_CHOICES = PAYMENT_METHOD_CHOICES
 
     invoice = models.ForeignKey(
         Invoice, on_delete=models.CASCADE, related_name="payments",
@@ -163,6 +167,52 @@ class Expense(models.Model):
 
     def __str__(self):
         return f"{self.category} - {self.amount} ₽ ({self.expense_date})"
+
+
+class Income(models.Model):
+    """Company income records (manual revenue entries).
+
+    Unlike paid invoices, income entries are entered by hand — e.g. cash
+    receipts, one-off sales, or revenue not tied to an invoice.
+    """
+
+    METHOD_CHOICES = PAYMENT_METHOD_CHOICES
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    client = models.ForeignKey(
+        "clients.Client", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="incomes", verbose_name="Клиент"
+    )
+    project = models.ForeignKey(
+        "projects.Project", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="incomes", verbose_name="Проект"
+    )
+    amount = models.DecimalField(
+        max_digits=12, decimal_places=2, validators=[MinValueValidator(0)],
+        verbose_name="Сумма"
+    )
+    description = models.TextField(verbose_name="Описание")
+    method = models.CharField(
+        max_length=20, choices=METHOD_CHOICES, default="bank_transfer",
+        verbose_name="Способ оплаты"
+    )
+    income_date = models.DateField(verbose_name="Дата дохода")
+    created_by = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True,
+        verbose_name="Создал"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создан")
+
+    class Meta:
+        verbose_name = "Доход"
+        verbose_name_plural = "Доходы"
+        ordering = ["-income_date"]
+        indexes = [
+            models.Index(fields=["income_date"]),
+        ]
+
+    def __str__(self):
+        return f"{self.description} - {self.amount} ₽ ({self.income_date})"
 
 
 class Product(models.Model):

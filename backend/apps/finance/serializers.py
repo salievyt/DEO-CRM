@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from .models import (
-    Expense, ExpenseCategory, Invoice, InvoiceItem, Payment, Product, Salary
+    Expense, ExpenseCategory, Income, Invoice, InvoiceItem, Payment, Product, Salary
 )
 
 
@@ -108,6 +108,21 @@ class ExpenseSerializer(serializers.ModelSerializer):
         fields = [
             "id", "category", "category_name", "project", "amount",
             "description", "expense_date", "created_at",
+        ]
+        read_only_fields = ["id", "created_at"]
+
+
+class IncomeSerializer(serializers.ModelSerializer):
+    client_name = serializers.CharField(source="client.full_name", read_only=True)
+    project_name = serializers.CharField(source="project.name", read_only=True)
+    method_display = serializers.CharField(source="get_method_display", read_only=True)
+
+    class Meta:
+        model = Income
+        fields = [
+            "id", "client", "client_name", "project", "project_name",
+            "amount", "description", "method", "method_display",
+            "income_date", "created_at",
         ]
         read_only_fields = ["id", "created_at"]
 

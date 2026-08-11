@@ -11,6 +11,7 @@ urlpatterns = [
         name="invoice-mark-paid",
     ),
     path("payments/", views.PaymentListCreateView.as_view(), name="payment-list"),
+    path("incomes/", views.IncomeListCreateView.as_view(), name="income-list"),
     path("products/", views.ProductListCreateView.as_view(), name="product-list"),
     path("products/<uuid:pk>/", views.ProductDetailView.as_view(), name="product-detail"),
     path("expenses/", views.ExpenseListCreateView.as_view(), name="expense-list"),

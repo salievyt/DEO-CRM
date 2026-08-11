@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Expense, ExpenseCategory, Invoice, InvoiceItem, Payment, Salary
+from .models import Expense, ExpenseCategory, Income, Invoice, InvoiceItem, Payment, Salary
 
 
 class InvoiceItemInline(admin.TabularInline):
@@ -41,6 +41,14 @@ class ExpenseAdmin(admin.ModelAdmin):
     list_display = ["category", "amount", "description", "expense_date"]
     list_filter = ["category", "expense_date"]
     date_hierarchy = "expense_date"
+
+
+@admin.register(Income)
+class IncomeAdmin(admin.ModelAdmin):
+    list_display = ["description", "amount", "method", "income_date", "client", "project"]
+    list_filter = ["method", "income_date"]
+    search_fields = ["description"]
+    date_hierarchy = "income_date"
 
 
 @admin.register(Salary)

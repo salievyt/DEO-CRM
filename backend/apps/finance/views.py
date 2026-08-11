@@ -9,11 +9,12 @@ from rest_framework.response import Response
 from common.permissions import IsAdmin, IsOwner
 
 from .models import (
-    Expense, ExpenseCategory, Invoice, Payment, Product, Salary
+    Expense, ExpenseCategory, Income, Invoice, Payment, Product, Salary
 )
 from .serializers import (
     ExpenseCategorySerializer,
     ExpenseSerializer,
+    IncomeSerializer,
     InvoiceCreateSerializer,
     InvoiceDetailSerializer,
     InvoiceListSerializer,
@@ -117,6 +118,26 @@ class PaymentListCreateView(generics.ListCreateAPIView):
         invoice.save()
 
 
+class IncomeListCreateView(generics.ListCreateAPIView):
+    """List or create manual income records."""
+    permission_classes = [IsAuthenticated, IsOwner]
+    serializer_class = IncomeSerializer
+    filterset_fields = ["method"]
+
+    def get_queryset(self):
+        qs = Income.objects.select_related("client", "project").all()
+        project = self.request.query_params.get("project")
+        client = self.request.query_params.get("client")
+        if project:
+            qs = qs.filter(project_id=project)
+        if client:
+            qs = qs.filter(client_id=client)
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+
 class ExpenseListCreateView(generics.ListCreateAPIView):
     """List or create expenses."""
     permission_classes = [IsAuthenticated, IsOwner]
@@ -173,6 +194,11 @@ class FinancialSummaryView(views.APIView):
             status="paid", paid_at__gte=start_of_month
         ).aggregate(total=Sum("amount"))["total"] or 0
 
+        # Manual income this month
+        income = Income.objects.filter(
+            income_date__gte=start_of_month.date()
+        ).aggregate(total=Sum("amount"))["total"] or 0
+
         # Expenses this month
         expenses = Expense.objects.filter(
             expense_date__gte=start_of_month.date()
@@ -188,10 +214,13 @@ class FinancialSummaryView(views.APIView):
             status__in=["sent", "overdue"]
         ).aggregate(total=Sum("amount"))["total"] or 0
 
+        total_income = revenue + income
         return Response({
             "revenue": revenue,
+            "income": income,
+            "total_income": total_income,
             "expenses": expenses + salaries,
-            "profit": revenue - expenses - salaries,
+            "profit": total_income - expenses - salaries,
             "outstanding": outstanding,
             "month": now.month,
             "year": now.year,
@@ -206,11 +235,13 @@ class ProfitByProjectView(views.APIView):
         from apps.projects.models import Project
         projects = Project.objects.annotate(
             revenue=Sum("invoices__amount", filter=Q(invoices__status="paid")),
+            income_total=Sum("incomes__amount"),
             expense_total=Sum("expenses__amount"),
         )
         data = []
         for p in projects:
-            rev = p.revenue or 0
+            # Revenue = paid invoices + manual income linked to the project.
+            rev = (p.revenue or 0) + (p.income_total or 0)
             exp = p.expense_total or 0
             data.append({
                 "id": str(p.id),
