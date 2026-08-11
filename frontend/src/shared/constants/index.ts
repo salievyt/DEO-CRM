@@ -37,6 +37,7 @@ export const QUERY_KEYS = {
   // Finance
   INVOICES: "invoices",
   INVOICE: "invoice",
+  INCOMES: "incomes",
   EXPENSES: "expenses",
   EXPENSE_CATEGORIES: "expense-categories",
   FINANCE_SUMMARY: "finance-summary",
@@ -83,4 +84,30 @@ export const QUERY_KEYS = {
   DEALS: "deals",
   DEAL: "deal",
   DEAL_LEADS_AVAILABLE: "deal-leads-available",
+
+  // WhatsApp
+  WHATSAPP_ACCOUNTS: "whatsapp-accounts",
+
+  // Telegram
+  TELEGRAM_ACCOUNTS: "telegram-accounts",
+
+  // Calls (АТС)
+  CALL_RECORDS: "call-records",
+  CALL_STATS: "call-stats",
+  PBX_CONNECTIONS: "pbx-connections",
+  SIP_ACCOUNTS: "sip-accounts",
+
+  // Scenarios (keyword auto-responder)
+  SCENARIOS: "scenarios",
+  SCENARIO: "scenario",
+  SCENARIO_TEMPLATES: "scenario-templates",
+  SCENARIO_TRIGGERS: "scenario-triggers",
+  SCENARIO_STATS: "scenario-stats",
+  SCENARIO_TOP: "scenario-top",
+
+  // Learning (knowledge base)
+  LEARNING_ARTICLES: "learning-articles",
+  LEARNING_ARTICLE: "learning-article",
+  LEARNING_ADMIN_ARTICLES: "learning-admin-articles",
+  LEARNING_ADMIN_ARTICLE: "learning-admin-article",
 };

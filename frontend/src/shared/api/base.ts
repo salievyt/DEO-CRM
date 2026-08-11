@@ -50,8 +50,7 @@ api.interceptors.response.use(
 // --- API Services ---
 
 export const authApi = {
-  login: (email: string, password: string) =>
-    api.post("/auth/login/", { email, password }),
+  login: (email: string, password: string) => api.post("/auth/login/", { email, password }),
   register: (data: { email: string; password: string; first_name: string; last_name: string }) =>
     api.post("/auth/register/", data),
   me: () => api.get("/auth/me/"),
@@ -65,8 +64,8 @@ export const authApi = {
   users: {
     list: (params?: Record<string, unknown>) => api.get("/auth/users/", { params }),
     get: (id: string) => api.get(`/auth/users/${id}/`),
-    assignRole: (id: string, role: string) =>
-      api.post(`/auth/users/${id}/assign-role/`, { role }),
+    invite: (data: Record<string, unknown>) => api.post("/auth/users/invite/", data),
+    assignRole: (id: string, role: string) => api.post(`/auth/users/${id}/assign-role/`, { role }),
   },
   enable2FA: () => api.post("/auth/2fa/enable/"),
   verify2FA: (code: string) => api.post("/auth/2fa/verify/", { code }),
@@ -92,8 +91,7 @@ export const clientsApi = {
   },
   assignTags: (clientId: string, tagIds: string[]) =>
     api.post(`/clients/${clientId}/tags/`, { tags: tagIds }),
-  removeTag: (clientId: string, tagId: string) =>
-    api.delete(`/clients/${clientId}/tags/${tagId}/`),
+  removeTag: (clientId: string, tagId: string) => api.delete(`/clients/${clientId}/tags/${tagId}/`),
 };
 
 export const client360Api = {
@@ -130,8 +128,7 @@ export const leadsApi = {
   stages: {
     list: () => api.get("/leads/stages/"),
     create: (data: Record<string, unknown>) => api.post("/leads/stages/", data),
-    update: (id: string, data: Record<string, unknown>) =>
-      api.patch(`/leads/stages/${id}/`, data),
+    update: (id: string, data: Record<string, unknown>) => api.patch(`/leads/stages/${id}/`, data),
   },
 };
 
@@ -164,8 +161,7 @@ export const tasksApi = {
   delete: (id: string) => api.delete(`/tasks/${id}/`),
   changeStatus: (id: string, statusId: string) =>
     api.post(`/tasks/${id}/change-status/`, { status_id: statusId }),
-  assign: (id: string, userId: string) =>
-    api.post(`/tasks/${id}/assign/`, { user_id: userId }),
+  assign: (id: string, userId: string) => api.post(`/tasks/${id}/assign/`, { user_id: userId }),
   comments: {
     list: (taskId: string) => api.get(`/tasks/${taskId}/comments/`),
     create: (taskId: string, data: Record<string, unknown>) =>
@@ -194,12 +190,17 @@ export const financeApi = {
     list: (params?: Record<string, unknown>) => api.get("/finance/products/", { params }),
     get: (id: string) => api.get(`/finance/products/${id}/`),
     create: (data: Record<string, unknown>) => api.post("/finance/products/", data),
-    update: (id: string, data: Record<string, unknown>) => api.patch(`/finance/products/${id}/`, data),
+    update: (id: string, data: Record<string, unknown>) =>
+      api.patch(`/finance/products/${id}/`, data),
     delete: (id: string) => api.delete(`/finance/products/${id}/`),
   },
   expenses: {
     list: (params?: Record<string, unknown>) => api.get("/finance/expenses/", { params }),
     create: (data: Record<string, unknown>) => api.post("/finance/expenses/", data),
+  },
+  incomes: {
+    list: (params?: Record<string, unknown>) => api.get("/finance/incomes/", { params }),
+    create: (data: Record<string, unknown>) => api.post("/finance/incomes/", data),
   },
   expenseCategories: {
     list: () => api.get("/finance/expense-categories/"),
@@ -267,10 +268,8 @@ export const analyticsApi = {
       api.get("/analytics/business/managers/", { params }),
     sources: (params?: Record<string, unknown>) =>
       api.get("/analytics/business/sources/", { params }),
-    ltv: (params?: Record<string, unknown>) =>
-      api.get("/analytics/business/ltv/", { params }),
-    churn: (params?: Record<string, unknown>) =>
-      api.get("/analytics/business/churn/", { params }),
+    ltv: (params?: Record<string, unknown>) => api.get("/analytics/business/ltv/", { params }),
+    churn: (params?: Record<string, unknown>) => api.get("/analytics/business/churn/", { params }),
     retention: (params?: Record<string, unknown>) =>
       api.get("/analytics/business/retention/", { params }),
     config: () => api.get("/analytics/business/config/"),
@@ -323,8 +322,7 @@ export const dealsApi = {
   convert: (data: Record<string, unknown>) => api.post("/deals/", data),
   update: (id: string, data: Record<string, unknown>) => api.patch(`/deals/${id}/`, data),
   delete: (id: string) => api.delete(`/deals/${id}/`),
-  changeStatus: (id: string, status: string) =>
-    api.post(`/deals/${id}/status/`, { status }),
+  changeStatus: (id: string, status: string) => api.post(`/deals/${id}/status/`, { status }),
   addPayment: (id: string, data: Record<string, unknown>) =>
     api.post(`/deals/${id}/payments/`, data),
   attachDocument: (id: string, documentId: string) =>
@@ -368,6 +366,19 @@ export const aiApi = {
   generateReport: (data: Record<string, unknown>) => api.post("/ai/generate/report/", data),
   generateSummary: (data: Record<string, unknown>) => api.post("/ai/generate/summary/", data),
   generateEstimate: (data: Record<string, unknown>) => api.post("/ai/generate/estimate/", data),
+  // The backend derives the prompt type from the URL, so each type must
+  // hit its own endpoint — otherwise every generation would be a ТЗ.
+  generate: (type: string, data: Record<string, unknown>) => {
+    const endpoints: Record<string, string> = {
+      tz: "/ai/generate/tz/",
+      commercial_offer: "/ai/generate/proposal/",
+      contract: "/ai/generate/contract/",
+      report: "/ai/generate/report/",
+      summary: "/ai/generate/summary/",
+      estimate: "/ai/generate/estimate/",
+    };
+    return api.post(endpoints[type] || endpoints.tz, data);
+  },
   history: () => api.get("/ai/history/"),
   templates: () => api.get("/ai/templates/"),
   settings: {
@@ -381,7 +392,8 @@ export const aiApi = {
       list: () => api.get("/ai/ab-testing/campaigns/"),
       get: (id: string) => api.get(`/ai/ab-testing/campaigns/${id}/`),
       create: (data: Record<string, unknown>) => api.post("/ai/ab-testing/campaigns/", data),
-      update: (id: string, data: Record<string, unknown>) => api.patch(`/ai/ab-testing/campaigns/${id}/`, data),
+      update: (id: string, data: Record<string, unknown>) =>
+        api.patch(`/ai/ab-testing/campaigns/${id}/`, data),
       delete: (id: string) => api.delete(`/ai/ab-testing/campaigns/${id}/`),
     },
     stats: () => api.get("/ai/ab-testing/stats/"),
@@ -411,8 +423,7 @@ export const crmApi = {
 
 export const messagingApi = {
   conversations: {
-    list: (params?: Record<string, unknown>) =>
-      api.get("/messaging/conversations/", { params }),
+    list: (params?: Record<string, unknown>) => api.get("/messaging/conversations/", { params }),
     get: (id: string) => api.get(`/messaging/conversations/${id}/`),
     create: (data: Record<string, unknown>) => api.post("/messaging/conversations/", data),
     fromLead: (leadId: string) =>
@@ -433,6 +444,64 @@ export const messagingApi = {
   media: (messageId: string) =>
     api.get(`/messaging/messages/${messageId}/media/`, { responseType: "blob" }),
   unread: () => api.get("/messaging/unread/"),
+  whatsapp: {
+    accounts: {
+      list: () => api.get("/messaging/whatsapp/accounts/"),
+      create: (data: Record<string, unknown>) =>
+        api.post("/messaging/whatsapp/accounts/create/", data),
+      update: (id: string, data: Record<string, unknown>) =>
+        api.patch(`/messaging/whatsapp/accounts/${id}/`, data),
+      remove: (id: string) => api.delete(`/messaging/whatsapp/accounts/${id}/`),
+      test: (data: Record<string, unknown>) => api.post("/messaging/whatsapp/accounts/test/", data),
+      testById: (id: string) => api.post(`/messaging/whatsapp/accounts/${id}/test/`),
+    },
+  },
+  telegram: {
+    accounts: {
+      list: () => api.get("/messaging/telegram/accounts/"),
+      create: (data: Record<string, unknown>) =>
+        api.post("/messaging/telegram/accounts/create/", data),
+      update: (id: string, data: Record<string, unknown>) =>
+        api.patch(`/messaging/telegram/accounts/${id}/`, data),
+      remove: (id: string) => api.delete(`/messaging/telegram/accounts/${id}/`),
+      test: (data: Record<string, unknown>) => api.post("/messaging/telegram/accounts/test/", data),
+      testById: (id: string) => api.post(`/messaging/telegram/accounts/${id}/test/`),
+      webhook: (id: string) => api.post(`/messaging/telegram/accounts/${id}/webhook/`),
+    },
+  },
+};
+
+export const scenariosApi = {
+  list: (params?: Record<string, unknown>) => api.get("/scenarios/", { params }),
+  get: (id: string) => api.get(`/scenarios/${id}/`),
+  create: (data: Record<string, unknown>) => api.post("/scenarios/", data),
+  update: (id: string, data: Record<string, unknown>) => api.patch(`/scenarios/${id}/`, data),
+  delete: (id: string) => api.delete(`/scenarios/${id}/`),
+  test: (id: string, text: string) => api.post(`/scenarios/${id}/test/`, { text }),
+  templates: () => api.get("/scenarios/templates/"),
+  triggers: (params?: Record<string, unknown>) => api.get("/scenarios/triggers/", { params }),
+  stats: () => api.get("/scenarios/stats/"),
+  top: () => api.get("/scenarios/top/"),
+};
+
+export const callsApi = {
+  connections: {
+    list: () => api.get("/calls/pbx/"),
+    create: (data: Record<string, unknown>) => api.post("/calls/pbx/create/", data),
+    update: (id: string, data: Record<string, unknown>) => api.patch(`/calls/pbx/${id}/`, data),
+    remove: (id: string) => api.delete(`/calls/pbx/${id}/`),
+    test: (data: Record<string, unknown>) => api.post("/calls/pbx/test/", data),
+    testById: (id: string) => api.post(`/calls/pbx/${id}/test/`),
+  },
+  sip: {
+    list: () => api.get("/calls/sip/"),
+    quickCreate: (data: Record<string, unknown>) => api.post("/calls/sip/quick/", data),
+    remove: (id: string) => api.delete(`/calls/sip/${id}/`),
+  },
+  records: {
+    list: (params?: Record<string, unknown>) => api.get("/calls/records/", { params }),
+  },
+  stats: (params?: Record<string, unknown>) => api.get("/calls/stats/", { params }),
 };
 
 export const employeeProfileApi = {
@@ -513,18 +582,35 @@ export const structureApi = {
   },
 };
 
+export const learningApi = {
+  list: (params?: Record<string, unknown>) => api.get("/learning/", { params }),
+  get: (slug: string) => api.get(`/learning/${slug}/`),
+  read: {
+    mark: (slug: string) => api.post(`/learning/read/${slug}/`),
+    unmark: (slug: string) => api.delete(`/learning/read/${slug}/`),
+  },
+  // Admin content management (superadmin/owner only)
+  admin: {
+    list: (params?: Record<string, unknown>) =>
+      api.get("/learning/admin/articles/", { params }),
+    get: (id: string) => api.get(`/learning/admin/articles/${id}/`),
+    create: (data: Record<string, unknown>) =>
+      api.post("/learning/admin/articles/", data),
+    update: (id: string, data: Record<string, unknown>) =>
+      api.patch(`/learning/admin/articles/${id}/`, data),
+    remove: (id: string) => api.delete(`/learning/admin/articles/${id}/`),
+  },
+};
+
 export const notificationsApi = {
-  list: (params?: Record<string, unknown>) =>
-    api.get("/notifications/", { params }),
+  list: (params?: Record<string, unknown>) => api.get("/notifications/", { params }),
   markAllRead: () => api.post("/notifications/mark-all-read/"),
   unreadCount: () => api.get("/notifications/unread-count/"),
   preferences: {
     get: () => api.get("/notifications/preferences/"),
-    update: (data: Record<string, unknown>) =>
-      api.patch("/notifications/preferences/", data),
+    update: (data: Record<string, unknown>) => api.patch("/notifications/preferences/", data),
   },
-  archive: (data: Record<string, unknown>) =>
-    api.post("/notifications/archive/", data),
+  archive: (data: Record<string, unknown>) => api.post("/notifications/archive/", data),
   archiveAll: () => api.post("/notifications/archive-all/"),
   archiveOne: (id: string) => api.post(`/notifications/${id}/archive/`),
 };

@@ -10,6 +10,7 @@ import { AuthGuard } from "@/features/auth/AuthGuard";
 import { cn } from "@/lib/utils";
 import { notificationsApi, tasksApi, messengerApi } from "@/shared/api/base";
 import { QUERY_KEYS } from "@/shared/constants";
+import { useMissedCallNotifications } from "@/shared/lib/useMissedCallNotifications";
 import { formatDateTime } from "@/shared/utils/formatters";
 import {
   LayoutDashboard,
@@ -34,91 +35,89 @@ import {
   FlaskConical,
   UserCircle,
   ChevronDown,
-  Home,
   UserCheck,
-  ClipboardList,
-  Landmark,
   MessageCircle,
+  Phone,
+  PhoneCall,
+  Send,
   Sparkles,
-  Shield,
   Package,
   Handshake,
+  Filter,
+  GraduationCap,
+  BookOpen,
+  FileEdit,
 } from "lucide-react";
 import type { Notification } from "@/entities/notification/types";
 import type { Task } from "@/entities/task/types";
 
 const NAV_CATEGORIES = [
   {
-    name: "Рабочее пространство",
-    icon: Home,
+    name: "Воронки",
+    icon: Filter,
     items: [
       { name: "Дашборд", href: "/dashboard", icon: LayoutDashboard, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer"] },
-      { name: "Календарь", href: "/calendar", icon: CalendarDays, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "client"], matchSubRoutes: true },
-      { name: "Кабинет", href: "/cabinet", icon: UserCircle, roles: ["superadmin", "owner", "project_manager", "client"], matchSubRoutes: true },
-    ],
-  },
-  {
-    name: "CRM",
-    icon: UserCheck,
-    items: [
-      { name: "Клиенты", href: "/clients", icon: Users, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
       { name: "Лиды", href: "/leads", icon: TrendingUp, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
-    ],
-  },
-  {
-    name: "Сотрудники",
-    icon: Users,
-    items: [
-      { name: "Сотрудники", href: "/employees", icon: UserCheck, roles: ["superadmin", "owner", "project_manager"], matchSubRoutes: true },
-    ],
-  },
-  {
-    name: "Проекты и задачи",
-    icon: ClipboardList,
-    items: [
-      { name: "Проекты", href: "/projects", icon: FolderKanban, roles: ["superadmin", "owner", "project_manager", "developer", "designer"], matchSubRoutes: true },
-      { name: "Задачи", href: "/tasks", icon: CheckSquare, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer"], countKey: "tasks" as const, matchSubRoutes: true },
-    ],
-  },
-  {
-    name: "Каталог и сделки",
-    icon: Package,
-    items: [
-      { name: "Каталог", href: "/catalog", icon: Package, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
       { name: "Сделки", href: "/deals", icon: Handshake, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
     ],
   },
   {
-    name: "Финансы и документы",
-    icon: Landmark,
+    name: "Продажи",
+    icon: DollarSign,
     items: [
+      { name: "Клиенты", href: "/clients", icon: Users, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
+      { name: "Проекты", href: "/projects", icon: FolderKanban, roles: ["superadmin", "owner", "project_manager", "developer", "designer"], matchSubRoutes: true },
+      { name: "Задачи", href: "/tasks", icon: CheckSquare, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer"], countKey: "tasks" as const, matchSubRoutes: true },
+      { name: "Каталог", href: "/catalog", icon: Package, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
       { name: "Финансы", href: "/finance", icon: DollarSign, roles: ["superadmin", "owner", "project_manager"], matchSubRoutes: true },
       { name: "Документы", href: "/documents", icon: FileText, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "client"], matchSubRoutes: true },
     ],
   },
   {
-    name: "Коммуникации",
+    name: "Каналы связи",
     icon: MessageCircle,
     items: [
       { name: "Мессенджер", href: "/messenger", icon: MessageSquare, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "client"], countKey: "messenger" as const, matchSubRoutes: true },
+      { name: "Звонки", href: "/calls", icon: PhoneCall, roles: ["superadmin", "owner", "project_manager"], matchSubRoutes: true },
+      { name: "WhatsApp", href: "/integrations/whatsapp", icon: Phone, roles: ["superadmin", "owner"], matchSubRoutes: true },
+      { name: "Telegram", href: "/integrations/telegram", icon: Send, roles: ["superadmin", "owner"], matchSubRoutes: true },
     ],
   },
   {
-    name: "AI и аналитика",
+    name: "Автоматизация",
     icon: Sparkles,
     items: [
       { name: "DEO AI", href: "/ai", icon: Bot, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer"] },
       { name: "A/B Тесты", href: "/ai/ab-testing", icon: FlaskConical, roles: ["superadmin", "owner", "project_manager"] },
+      { name: "Сценарии", href: "/scenarios", icon: Sparkles, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
       { name: "Аналитика", href: "/analytics", icon: BarChart3, roles: ["superadmin", "owner", "project_manager", "marketer"] },
       { name: "Business Analytics", href: "/analytics/business", icon: BarChart3, roles: ["superadmin", "owner", "project_manager", "marketer"] },
       { name: "HeatMap Studio", href: "/analytics/heatmap", icon: BarChart3, roles: ["superadmin", "owner", "project_manager"] },
     ],
   },
   {
-    name: "Администрирование",
-    icon: Shield,
+    name: "Команда",
+    icon: Users,
     items: [
-      { name: "Админ", href: "/admin", icon: ShieldCheck, roles: ["superadmin", "owner"], matchSubRoutes: true },
+      { name: "Сотрудники", href: "/employees", icon: UserCheck, roles: ["superadmin", "owner", "project_manager"], matchSubRoutes: true },
+      { name: "Календарь", href: "/calendar", icon: CalendarDays, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "client"], matchSubRoutes: true },
+      { name: "Кабинет", href: "/cabinet", icon: UserCircle, roles: ["superadmin", "owner", "project_manager", "client"], matchSubRoutes: true },
+    ],
+  },
+  {
+    name: "Справка",
+    icon: GraduationCap,
+    items: [
+      { name: "Обучение", href: "/learning", icon: BookOpen, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "client"], matchSubRoutes: true },
+    ],
+  },
+  {
+    name: "Настройки",
+    icon: Settings,
+    items: [
+      { name: "Настройки", href: "/settings", icon: Settings, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "client"], matchSubRoutes: true },
+      { name: "Админ", href: "/admin", icon: ShieldCheck, roles: ["superadmin", "owner"] },
+      { name: "Статьи", href: "/admin/learning", icon: FileEdit, roles: ["superadmin", "owner"], matchSubRoutes: true },
     ],
   },
 ];
@@ -130,6 +129,9 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+
+  // Realtime missed-call alerts (WebSocket → toast + badge refresh)
+  useMissedCallNotifications();
 
   const userRole = user?.role_name?.toLowerCase() || "client";
 
@@ -358,21 +360,8 @@ export default function DashboardLayout({
             })}
           </nav>
 
-          {/* User Info & Settings */}
+          {/* User & Logout */}
           <div className="border-t border-surface-200/50 p-3 dark:border-surface-700/30">
-            <Link
-              href="/settings"
-              className={cn(
-                "flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
-                pathname === "/settings"
-                  ? "bg-brand-500/10 text-brand-700 dark:text-brand-300"
-                  : "text-surface-600 hover:bg-surface-100/80 dark:text-surface-400 dark:hover:bg-surface-800/60"
-              )}
-              onClick={() => setSidebarOpen(false)}
-            >
-              <Settings className="h-5 w-5" />
-              Настройки
-            </Link>
             <button
               onClick={logout}
               className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-danger-600 transition-all hover:bg-danger-50 dark:text-red-400 dark:hover:bg-red-900/20"
