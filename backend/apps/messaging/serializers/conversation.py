@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from ..models import Conversation, WhatsAppAccount
+from ..models import Conversation, TelegramAccount, WhatsAppAccount
 from ..models.enums import Channel, MessageType
 
 
@@ -10,6 +10,8 @@ class ConversationListSerializer(serializers.ModelSerializer):
     contact_phone = serializers.CharField(source="contact.phone", read_only=True)
     company_name = serializers.CharField(source="contact.company_name", read_only=True)
     assigned_user_name = serializers.SerializerMethodField()
+    telegram_account_id = serializers.UUIDField(source="telegram_account.id", read_only=True)
+    telegram_account_name = serializers.CharField(source="telegram_account.name", read_only=True)
 
     class Meta:
         model = Conversation
@@ -17,6 +19,7 @@ class ConversationListSerializer(serializers.ModelSerializer):
             "id", "contact_id", "contact_name", "contact_phone", "company_name",
             "channel", "status", "assigned_user", "assigned_user_name",
             "unread_count", "last_message_at", "last_message_preview",
+            "telegram_account_id", "telegram_account_name",
             "created_at", "updated_at",
         ]
         read_only_fields = fields
@@ -53,6 +56,7 @@ class ConversationCreateSerializer(serializers.Serializer):
         choices=Channel.choices, default=Channel.WHATSAPP
     )
     whatsapp_account_id = serializers.UUIDField(required=False, allow_null=True)
+    telegram_account_id = serializers.UUIDField(required=False, allow_null=True)
 
     def validate(self, attrs):
         from apps.clients.models import Client
@@ -76,6 +80,21 @@ class ConversationCreateSerializer(serializers.Serializer):
                 if attrs["whatsapp_account"] is None:
                     raise serializers.ValidationError(
                         {"channel": "Не настроен ни один WhatsApp аккаунт"}
+                    )
+        elif attrs["channel"] == Channel.TELEGRAM:
+            account_id = attrs.get("telegram_account_id")
+            if account_id:
+                account = TelegramAccount.objects.filter(pk=account_id).first()
+                if not account:
+                    raise serializers.ValidationError(
+                        {"telegram_account_id": "Telegram бот не найден"}
+                    )
+                attrs["telegram_account"] = account
+            else:
+                attrs["telegram_account"] = TelegramAccount.get_default()
+                if attrs["telegram_account"] is None:
+                    raise serializers.ValidationError(
+                        {"channel": "Не настроен ни один Telegram бот"}
                     )
         return attrs
 

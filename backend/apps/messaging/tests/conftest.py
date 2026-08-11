@@ -5,7 +5,7 @@ from rest_framework.test import APIClient
 from apps.accounts.models import Role
 from apps.clients.models import Client
 from apps.leads.models import Lead, LeadStage
-from apps.messaging.models import Conversation, Message, WhatsAppAccount
+from apps.messaging.models import Conversation, Message, TelegramAccount, WhatsAppAccount
 from apps.messaging.models.enums import Channel, ConversationStatus, Direction, MessageType
 
 User = get_user_model()
@@ -71,6 +71,36 @@ def whatsapp_account(db):
     account.set_access_token("super-secret-token")
     account.save()
     return account
+
+
+@pytest.fixture
+def telegram_account(db):
+    account = TelegramAccount(
+        name="DEO Bot",
+        bot_username="deo_studio_bot",
+        bot_name="DEO Studio Bot",
+        status="active",
+        is_default=True,
+    )
+    account.set_bot_token("123456:super-secret-token")
+    account.webhook_secret = "secret-webhook-token"
+    account.save()
+    return account
+
+
+@pytest.fixture
+def telegram_conversation(db, client, telegram_account):
+    from apps.messaging.services.conversations import (
+        find_or_create_conversation,
+        get_or_create_telegram_client,
+    )
+
+    tg_client = get_or_create_telegram_client(
+        987654, first_name="Иван", last_name="Петров", username="ivan_petrov"
+    )
+    return find_or_create_conversation(
+        telegram_account, tg_client, Channel.TELEGRAM
+    )
 
 
 @pytest.fixture

@@ -1,4 +1,5 @@
 from .account import WhatsAppAccountSerializer
+from .telegram import TelegramAccountSerializer
 from .conversation import (
     ConversationCreateSerializer,
     ConversationDetailSerializer,
@@ -9,6 +10,7 @@ from .message import MessageSerializer
 
 __all__ = [
     "WhatsAppAccountSerializer",
+    "TelegramAccountSerializer",
     "ConversationCreateSerializer",
     "ConversationDetailSerializer",
     "ConversationListSerializer",

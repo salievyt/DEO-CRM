@@ -25,6 +25,7 @@ from ..services.conversations import (
     record_outgoing_message,
 )
 from ..services.realtime import notify
+from ..services.telegram import TelegramService
 from ..services.whatsapp import WhatsAppService
 
 _MEDIA_MAP = {
@@ -189,6 +190,8 @@ class MessageListCreateView(generics.ListCreateAPIView):
         )
 
     def _dispatch_send(self, conversation, message, data) -> dict:
+        if conversation.channel == "telegram":
+            return self._dispatch_send_telegram(conversation, message, data)
         if conversation.channel != "whatsapp":
             raise MessagingServiceError(
                 f"Канал «{conversation.get_channel_display()}» пока не подключён.",
@@ -214,6 +217,39 @@ class MessageListCreateView(generics.ListCreateAPIView):
                 to, tpl["name"], tpl["language"],
                 parameters=tpl.get("parameters") or [],
             )
+        if message.media_url:
+            media_type = _media_type_for(message.media_mime)
+            return service.send_media(
+                to, media_type, message.media_url,
+                caption=message.text or None,
+                filename=message.media_name or None,
+            )
+        return service.send_text_message(to, message.text)
+
+    @staticmethod
+    def _dispatch_send_telegram(conversation, message, data) -> dict:
+        """Send a message through the bot this conversation belongs to."""
+        from ..models import TelegramAccount
+
+        if data.get("template"):
+            raise MessagingServiceError(
+                "Telegram не поддерживает шаблонные сообщения. Отправьте обычное сообщение.",
+                code="templates_unsupported",
+            )
+        account = conversation.telegram_account or TelegramAccount.get_default()
+        if account is None:
+            raise MessagingServiceError(
+                "Telegram бот не настроен. Подключите бота на странице интеграции.",
+                code="no_telegram_account",
+            )
+        to = conversation.telegram_chat_id or conversation.contact.telegram_chat_id
+        if not to:
+            raise MessagingServiceError(
+                "У клиента нет Telegram chat_id — напишите ему первым через бота.",
+                code="no_telegram_chat_id",
+            )
+
+        service = TelegramService(account)
         if message.media_url:
             media_type = _media_type_for(message.media_mime)
             return service.send_media(
@@ -254,7 +290,7 @@ class MessageListCreateView(generics.ListCreateAPIView):
 
 
 class MessageMediaView(APIView):
-    """Proxy incoming WhatsApp media through the backend (token stays server-side)."""
+    """Proxy incoming media through the backend (provider token stays server-side)."""
 
     permission_classes = [permissions.IsAuthenticated, IsInboxStaff]
 
@@ -265,6 +301,12 @@ class MessageMediaView(APIView):
         if not message:
             return Response({"error": "Сообщение не найдено"}, status=404)
 
+        if message.channel == "telegram":
+            return self._proxy_telegram_media(message)
+        return self._proxy_whatsapp_media(message)
+
+    # ------------------------------------------------------------- whatsapp
+    def _proxy_whatsapp_media(self, message):
         media_id = message.metadata.get("media_id")
         if not media_id:
             return Response({"error": "Медиа недоступно"}, status=404)
@@ -291,6 +333,49 @@ class MessageMediaView(APIView):
 
         content_type = message.media_mime or info.get("mime_type") or "application/octet-stream"
         filename = message.media_name or f"whatsapp-media-{message.id}.bin"
+        return self._stream(upstream, content_type, filename,
+                            file_size=info.get("file_size"))
+
+    # ------------------------------------------------------------- telegram
+    def _proxy_telegram_media(self, message):
+        from ..models import TelegramAccount
+
+        file_id = message.metadata.get("file_id")
+        if not file_id:
+            return Response({"error": "Медиа недоступно"}, status=404)
+
+        account = None
+        bot_username = message.metadata.get("bot_username") or ""
+        if bot_username:
+            account = TelegramAccount.objects.filter(
+                bot_username=bot_username
+            ).first()
+        if account is None:
+            account = TelegramAccount.get_default()
+        if account is None:
+            return Response({"error": "Telegram бот не настроен"}, status=400)
+
+        service = TelegramService(account)
+        try:
+            info = service.get_file(file_id)
+        except MessagingServiceError as exc:
+            return Response({"error": exc.user_message}, status=502)
+
+        if not info.get("file_path"):
+            return Response({"error": "Медиа недоступно"}, status=404)
+
+        upstream = requests.get(service.get_file_url(info["file_path"]), stream=True, timeout=30)
+        if upstream.status_code != 200:
+            return Response({"error": "Не удалось загрузить медиа"}, status=502)
+
+        content_type = message.media_mime or "application/octet-stream"
+        filename = message.media_name or f"telegram-media-{message.id}.bin"
+        return self._stream(upstream, content_type, filename,
+                            file_size=info.get("file_size"))
+
+    # ---------------------------------------------------------------- shared
+    @staticmethod
+    def _stream(upstream, content_type, filename, file_size=None) -> StreamingHttpResponse:
         response = StreamingHttpResponse(
             upstream.iter_content(chunk_size=64 * 1024),
             content_type=content_type,
@@ -299,7 +384,8 @@ class MessageMediaView(APIView):
             response["Content-Disposition"] = f'inline; filename="{filename}"'
         else:
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
-        response["Content-Length"] = str(info.get("file_size") or "")
+        if file_size:
+            response["Content-Length"] = str(file_size)
         return response
 
 

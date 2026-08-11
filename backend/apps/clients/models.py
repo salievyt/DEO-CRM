@@ -29,6 +29,9 @@ class Client(models.Model):
     phone = models.CharField(max_length=20, verbose_name="Телефон")
     email = models.EmailField(blank=True, verbose_name="Email")
     telegram = models.CharField(max_length=100, blank=True, verbose_name="Telegram")
+    telegram_chat_id = models.CharField(
+        max_length=100, blank=True, verbose_name="Telegram chat_id", db_index=True
+    )
     whatsapp = models.CharField(max_length=100, blank=True, verbose_name="WhatsApp")
     address = models.TextField(blank=True, verbose_name="Адрес")
     source = models.CharField(

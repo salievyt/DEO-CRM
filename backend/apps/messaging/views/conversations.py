@@ -33,7 +33,7 @@ class ConversationListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         qs = Conversation.objects.select_related(
-            "contact", "assigned_user", "whatsapp_account"
+            "contact", "assigned_user", "whatsapp_account", "telegram_account"
         ).all()
 
         channel = self.request.query_params.get("channel")
@@ -73,7 +73,9 @@ class ConversationListCreateView(generics.ListCreateAPIView):
     def _create_conversation(validated_data):
         client = validated_data["client"]
         channel = validated_data["channel"]
-        account = validated_data.get("whatsapp_account")
+        account = validated_data.get("whatsapp_account") or validated_data.get(
+            "telegram_account"
+        )
         return get_or_create_conversation(account, client, channel)
 
 

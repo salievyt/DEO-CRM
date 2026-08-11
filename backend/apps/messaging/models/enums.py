@@ -54,3 +54,10 @@ class WhatsAppAccountStatus(models.TextChoices):
     DISABLED = "disabled", "Отключён"
     INVALID_CREDENTIALS = "invalid_credentials", "Неверные учётные данные"
     RATE_LIMITED = "rate_limited", "Превышен лимит запросов"
+
+
+class TelegramAccountStatus(models.TextChoices):
+    ACTIVE = "active", "Активен"
+    DISABLED = "disabled", "Отключён"
+    INVALID_CREDENTIALS = "invalid_credentials", "Неверные учётные данные"
+    RATE_LIMITED = "rate_limited", "Превышен лимит запросов"

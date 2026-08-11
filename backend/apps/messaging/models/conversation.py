@@ -5,6 +5,7 @@ from django.db.models import Q
 
 from .account import WhatsAppAccount
 from .enums import Channel, ConversationStatus
+from .telegram import TelegramAccount
 
 
 class Conversation(models.Model):
@@ -33,6 +34,17 @@ class Conversation(models.Model):
         blank=True,
         related_name="conversations",
         verbose_name="WhatsApp аккаунт",
+    )
+    telegram_account = models.ForeignKey(
+        TelegramAccount,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="conversations",
+        verbose_name="Telegram бот",
+    )
+    telegram_chat_id = models.CharField(
+        max_length=100, blank=True, default="", verbose_name="Telegram chat_id"
     )
     assigned_user = models.ForeignKey(
         "accounts.User",
@@ -76,12 +88,17 @@ class Conversation(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["contact", "channel", "whatsapp_account"],
-                condition=Q(whatsapp_account__isnull=False),
+                condition=Q(whatsapp_account__isnull=False, telegram_account__isnull=True),
                 name="uniq_contact_channel_account",
             ),
             models.UniqueConstraint(
+                fields=["contact", "channel", "telegram_account"],
+                condition=Q(telegram_account__isnull=False, whatsapp_account__isnull=True),
+                name="uniq_contact_channel_telegram_account",
+            ),
+            models.UniqueConstraint(
                 fields=["contact", "channel"],
-                condition=Q(whatsapp_account__isnull=True),
+                condition=Q(whatsapp_account__isnull=True, telegram_account__isnull=True),
                 name="uniq_contact_channel_no_account",
             ),
         ]

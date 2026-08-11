@@ -5,6 +5,13 @@ from .views.accounts import (
     WhatsAppAccountDetailView,
     WhatsAppAccountListView,
 )
+from .views.telegram_accounts import (
+    TelegramAccountCreateView,
+    TelegramAccountDetailView,
+    TelegramAccountListView,
+    TelegramAccountTestView,
+    TelegramAccountWebhookView,
+)
 from .views.conversations import (
     ConversationAssignView,
     ConversationCanSendView,
@@ -42,4 +49,10 @@ urlpatterns = [
     path("whatsapp/accounts/create/", WhatsAppAccountCreateView.as_view(), name="messaging-whatsapp-account-create"),
     path("whatsapp/accounts/<uuid:pk>/", WhatsAppAccountDetailView.as_view(), name="messaging-whatsapp-account-detail"),
     path("whatsapp/templates/", WhatsAppTemplateListView.as_view(), name="messaging-whatsapp-templates"),
+    path("telegram/accounts/", TelegramAccountListView.as_view(), name="messaging-telegram-account-list"),
+    path("telegram/accounts/create/", TelegramAccountCreateView.as_view(), name="messaging-telegram-account-create"),
+    path("telegram/accounts/test/", TelegramAccountTestView.as_view(), name="messaging-telegram-account-test"),
+    path("telegram/accounts/<uuid:pk>/", TelegramAccountDetailView.as_view(), name="messaging-telegram-account-detail"),
+    path("telegram/accounts/<uuid:pk>/test/", TelegramAccountTestView.as_view(), name="messaging-telegram-account-test-one"),
+    path("telegram/accounts/<uuid:pk>/webhook/", TelegramAccountWebhookView.as_view(), name="messaging-telegram-account-webhook"),
 ]

@@ -107,6 +107,50 @@ def get_or_create_client_for_lead(lead):
     return client
 
 
+def get_or_create_telegram_client(chat_id, first_name: str = "", last_name: str = "",
+                                   username: str = ""):
+    """Find a client by Telegram chat_id or create one (webhook path).
+
+    The numeric ``chat_id`` is what the Bot API needs to reply, so it is kept
+    in ``telegram_chat_id``; the display username (if any) goes to ``telegram``.
+    """
+    from apps.clients.models import Client
+
+    chat_id = str(chat_id or "").strip()
+    if not chat_id:
+        raise ValueError("Telegram chat_id is required")
+
+    client = (
+        Client.objects.filter(telegram_chat_id=chat_id)
+        .order_by("-created_at")
+        .first()
+    )
+    if client is None:
+        first, last = _split_name(f"{first_name} {last_name}".strip())
+        client = Client.objects.create(
+            first_name=first or (username or "Telegram"),
+            last_name=last or "Клиент",
+            phone="",
+            telegram=username or "",
+            telegram_chat_id=chat_id,
+            source="telegram",
+            notes="Создан автоматически из Telegram",
+        )
+    else:
+        changed = False
+        if username and not client.telegram:
+            client.telegram = username
+            changed = True
+        if first_name and client.first_name in ("", "Telegram"):
+            first, last = _split_name(f"{first_name} {last_name}".strip())
+            if first:
+                client.first_name, client.last_name = first, last or "—"
+                changed = True
+        if changed:
+            client.save(update_fields=["first_name", "last_name", "telegram"])
+    return client
+
+
 def get_or_create_conversation(account, client, channel: str = Channel.WHATSAPP) -> Conversation:
     """Get the (client, channel[, account]) conversation or create a fresh one.
 
@@ -116,8 +160,10 @@ def get_or_create_conversation(account, client, channel: str = Channel.WHATSAPP)
     qs = Conversation.objects.filter(contact=client, channel=channel)
     if channel == Channel.WHATSAPP:
         qs = qs.filter(whatsapp_account=account)
+    elif channel == Channel.TELEGRAM:
+        qs = qs.filter(telegram_account=account)
     else:
-        qs = qs.filter(whatsapp_account__isnull=True)
+        qs = qs.filter(whatsapp_account__isnull=True, telegram_account__isnull=True)
 
     existing = qs.first()
     if existing:
@@ -127,20 +173,33 @@ def get_or_create_conversation(account, client, channel: str = Channel.WHATSAPP)
         contact=client,
         channel=channel,
         whatsapp_account=account if channel == Channel.WHATSAPP else None,
+        telegram_account=account if channel == Channel.TELEGRAM else None,
         status=ConversationStatus.OPEN,
     )
 
 
-def find_or_create_conversation(account, client, channel: str = Channel.WHATSAPP) -> Conversation:
-    """Get the conversation for (client, channel[, account]) or create one."""
+def find_or_create_conversation(account, client, channel: str = Channel.WHATSAPP,
+                                telegram_chat_id: str = "") -> Conversation:
+    """Get the conversation for (client, channel[, account]) or create one.
+
+    Telegram conversations are scoped per bot (like WhatsApp per business
+    number); ``telegram_chat_id`` is stored on the conversation so replies are
+    always sent to the right chat of that bot.
+    """
     qs = Conversation.objects.filter(contact=client, channel=channel)
     if channel == Channel.WHATSAPP:
         qs = qs.filter(whatsapp_account=account)
+    elif channel == Channel.TELEGRAM:
+        qs = qs.filter(telegram_account=account)
     else:
-        qs = qs.filter(whatsapp_account__isnull=True)
+        qs = qs.filter(whatsapp_account__isnull=True, telegram_account__isnull=True)
 
     conversation = qs.first()
     if conversation:
+        if channel == Channel.TELEGRAM and telegram_chat_id and \
+                not conversation.telegram_chat_id:
+            conversation.telegram_chat_id = telegram_chat_id
+            conversation.save(update_fields=["telegram_chat_id", "updated_at"])
         return conversation
 
     # Only link a persisted account (env fallback instances have no pk yet).
@@ -152,6 +211,10 @@ def find_or_create_conversation(account, client, channel: str = Channel.WHATSAPP
                 contact=client,
                 channel=channel,
                 whatsapp_account=saved_account if channel == Channel.WHATSAPP else None,
+                telegram_account=saved_account if channel == Channel.TELEGRAM else None,
+                telegram_chat_id=(
+                    telegram_chat_id if channel == Channel.TELEGRAM else ""
+                ),
                 status=ConversationStatus.OPEN,
                 last_customer_message_at=timezone.now(),
                 last_message_at=timezone.now(),
