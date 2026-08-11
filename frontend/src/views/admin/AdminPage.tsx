@@ -1,8 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
+  ArrowRight,
+  BookOpen,
   Database,
   LockKeyhole,
   Plus,
@@ -176,6 +179,26 @@ export function AdminPage() {
               })}
             </div>
           </Card>
+
+          <Link
+            href="/admin/learning"
+            className="group block rounded-2xl border border-surface-200 bg-white p-5 transition-all hover:border-brand-300 hover:shadow-md dark:border-surface-700 dark:bg-surface-800 dark:hover:border-brand-500/40"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-900/20 dark:text-brand-300">
+                <BookOpen className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold text-surface-900 dark:text-white">
+                  База знаний
+                </h2>
+                <p className="mt-0.5 text-xs text-surface-500">
+                  Редактор статей раздела «Обучение»
+                </p>
+              </div>
+              <ArrowRight className="ml-auto h-4 w-4 text-surface-400 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-500" />
+            </div>
+          </Link>
 
           <Card>
             <h2 className="text-sm font-semibold text-surface-900 dark:text-white">
