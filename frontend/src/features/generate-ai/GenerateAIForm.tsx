@@ -30,7 +30,8 @@ export function GenerateAIForm() {
   const [copied, setCopied] = useState(false);
 
   const mutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) => aiApi.generateTZ(data),
+    mutationFn: (data: Record<string, unknown>) =>
+      aiApi.generate(String(data.prompt_type || "tz"), data),
     onSuccess: (res) => {
       setResult(res.data.output);
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.AI_HISTORY] });

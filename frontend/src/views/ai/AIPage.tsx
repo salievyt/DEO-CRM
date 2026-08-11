@@ -13,6 +13,8 @@ import {
   Sparkles,
   Copy,
   Check,
+  ChevronDown,
+  ChevronUp,
   Settings2,
   PlugZap,
   ShieldCheck,
@@ -68,6 +70,20 @@ const promptTypes = [
   },
 ];
 
+// Metadata for history entries: label + icon + color per prompt type.
+// Built from the promptTypes list above, plus types not in the generator.
+const promptTypeMeta: Record<
+  string,
+  { label: string; icon: React.ComponentType<{ className?: string }>; color: string }
+> = Object.fromEntries(
+  promptTypes.map((t) => [t.id, { label: t.label, icon: t.icon, color: t.color }])
+);
+promptTypeMeta["client_response"] = {
+  label: "Ответ клиенту",
+  icon: MessageSquareText,
+  color: "text-teal-600 bg-teal-50 dark:bg-teal-900/20",
+};
+
 interface AISettingsData {
   api_url: string;
   api_key_preview: string;
@@ -97,7 +113,7 @@ export function AIPage() {
 
   const generateMutation = useMutation({
     mutationFn: (data: { type: string; variables: Record<string, string> }) =>
-      aiApi.generateTZ({
+      aiApi.generate(data.type, {
         prompt_type: data.type,
         variables: data.variables,
       }),
@@ -271,21 +287,7 @@ export function AIPage() {
           ) : (
             <div className="divide-y divide-surface-200 dark:divide-surface-700">
               {history.map((item: any) => (
-                <div key={item.id} className="flex items-center justify-between px-6 py-4">
-                  <div>
-                    <p className="font-medium text-surface-900 dark:text-white">
-                      {item.prompt_type}
-                    </p>
-                    <p className="text-xs text-surface-500">
-                      {formatDateTime(item.created_at)} · {item.model || "—"}
-                    </p>
-                  </div>
-                  <Badge
-                    variant={item.status === "completed" ? "success" : "default"}
-                  >
-                    {item.status === "completed" ? "Готово" : item.status}
-                  </Badge>
-                </div>
+                <HistoryItem key={item.id} item={item} />
               ))}
             </div>
           )}
@@ -293,6 +295,154 @@ export function AIPage() {
       )}
 
       {activeTab === "settings" && <AISettingsTab />}
+    </div>
+  );
+}
+
+/* ---------------- AI history ---------------- */
+
+function HistoryItem({ item }: { item: any }) {
+  const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const meta = promptTypeMeta[item.prompt_type];
+  const Icon = meta?.icon || Bot;
+  const statusDone = item.status === "completed";
+
+  const inputData = item.input_data || {};
+  const inputVars: Record<string, string> =
+    inputData.variables && typeof inputData.variables === "object"
+      ? inputData.variables
+      : inputData;
+  const visibleVars = Object.entries(inputVars).filter(
+    ([key, value]) =>
+      key !== "prompt_type" &&
+      typeof value === "string" &&
+      value.trim() !== ""
+  );
+
+  const handleCopy = async () => {
+    if (!item.output_data) return;
+    try {
+      await navigator.clipboard.writeText(item.output_data);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = item.output_data;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="px-6 py-4">
+      {/* Header — clickable to expand */}
+      <button
+        onClick={() => setExpanded((prev) => !prev)}
+        aria-expanded={expanded}
+        className="flex w-full items-center justify-between gap-3 text-left"
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <div className={cn("shrink-0 rounded-lg p-2", meta?.color || "bg-surface-100 text-surface-500 dark:bg-surface-800")}>
+            <Icon className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate font-medium text-surface-900 dark:text-white">
+              {meta?.label || item.prompt_type}
+            </p>
+            <p className="truncate text-xs text-surface-500">
+              {formatDateTime(item.created_at)} · {item.model || "—"}
+              {item.tokens_used ? ` · ${item.tokens_used} ток.` : ""}
+            </p>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Badge
+            variant={
+              statusDone
+                ? "success"
+                : item.status === "failed"
+                  ? "danger"
+                  : "default"
+            }
+          >
+            {statusDone
+              ? "Готово"
+              : item.status === "failed"
+                ? "Ошибка"
+                : "В обработке"}
+          </Badge>
+          {expanded ? (
+            <ChevronUp className="h-4 w-4 text-surface-400" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-surface-400" />
+          )}
+        </div>
+      </button>
+
+      {/* Expanded body — the actual AI answer */}
+      {expanded && (
+        <div className="mt-4 space-y-4 border-t border-surface-100 pt-4 dark:border-surface-700">
+          {visibleVars.length > 0 && (
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">
+                Параметры запроса
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {visibleVars.map(([key, value]) => (
+                  <span
+                    key={key}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-surface-200 bg-surface-50 px-3 py-1 text-xs text-surface-600 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-300"
+                  >
+                    <span className="font-medium text-surface-400">{key}:</span>
+                    {String(value)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wide text-surface-400">
+                Ответ DEO AI
+              </p>
+              {item.output_data && (
+                <button
+                  onClick={handleCopy}
+                  className="flex items-center gap-1 text-xs text-surface-500 hover:text-surface-700 dark:hover:text-surface-300"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-3 w-3 text-success-500" />
+                      Скопировано
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3 w-3" />
+                      Копировать
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+            {item.output_data ? (
+              <pre className="max-h-96 overflow-y-auto whitespace-pre-wrap rounded-lg bg-surface-50 p-4 font-sans text-sm text-surface-700 dark:bg-surface-900 dark:text-surface-300">
+                {item.output_data}
+              </pre>
+            ) : (
+              <p className="rounded-lg border border-dashed border-surface-200 p-4 text-sm text-surface-500 dark:border-surface-700">
+                {item.status === "failed"
+                  ? "Запрос завершился ошибкой — ответ не сформирован."
+                  : "Ответ ещё не сформирован."}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
