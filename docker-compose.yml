@@ -102,6 +102,9 @@ services:
       AWS_STORAGE_BUCKET_NAME: deo-crm-files
     ports:
       - "8001:8000"
+    # Daphne (ASGI) serves both HTTP and WebSockets — required for realtime
+    # notifications (missed calls, messenger). Replaces the WSGI gunicorn cmd.
+    command: daphne config.asgi:application --bind 0.0.0.0 --port 8000
     depends_on:
       postgres:
         condition: service_healthy
