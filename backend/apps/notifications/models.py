@@ -13,6 +13,7 @@ class Notification(models.Model):
         PROJECT_UPDATED = "project_updated", "Проект обновлён"
         DEADLINE_REMINDER = "deadline_reminder", "Напоминание о дедлайне"
         MESSAGE_RECEIVED = "message_received", "Новое сообщение"
+        MISSED_CALL = "missed_call", "Пропущенный звонок"
         COMMENT_ADDED = "comment_added", "Новый комментарий"
         TEAM_CHANGE = "team_change", "Изменение в команде"
         SYSTEM = "system", "Системное"
