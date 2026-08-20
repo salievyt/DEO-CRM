@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import { appleColors, appleTypography, appleSpacing, appleRounded, interTypography } from "./src/shared/config/apple-design";
 
 const config: Config = {
   content: [
@@ -82,14 +83,10 @@ const config: Config = {
           500: "#6366f1",
           600: "#4f46e5",
         },
+        apple: appleColors,
       },
-      fontFamily: {
-        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
-        mono: ["JetBrains Mono", "Fira Code", "monospace"],
-        display: ["Inter", "system-ui", "sans-serif"],
-      },
-      fontSize: {
-        "2xs": ["0.625rem", { lineHeight: "0.875rem" }],
+      spacing: {
+        ...appleSpacing,
       },
       borderRadius: {
         sm: "0.375rem",
@@ -97,6 +94,94 @@ const config: Config = {
         lg: "0.75rem",
         xl: "1rem",
         "2xl": "1.25rem",
+        ...appleRounded,
+      },
+      fontFamily: {
+        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+        mono: ["JetBrains Mono", "Fira Code", "monospace"],
+        display: ["Inter", "system-ui", "sans-serif"],
+        "sf-display": ["SF Pro Display", "system-ui", "-apple-system", "sans-serif"],
+        "sf-text": ["SF Pro Text", "system-ui", "-apple-system", "sans-serif"],
+        "inter-display": [interTypography.heroDisplay.fontFamily],
+        "inter-text": [interTypography.body.fontFamily],
+      },
+      fontSize: {
+        "2xs": ["0.625rem", { lineHeight: "0.875rem" }],
+        "apple-hero": [appleTypography.heroDisplay.fontSize, {
+          fontWeight: appleTypography.heroDisplay.fontWeight,
+          lineHeight: appleTypography.heroDisplay.lineHeight,
+          letterSpacing: appleTypography.heroDisplay.letterSpacing,
+        }],
+        "apple-display-lg": [appleTypography.displayLg.fontSize, {
+          fontWeight: appleTypography.displayLg.fontWeight,
+          lineHeight: appleTypography.displayLg.lineHeight,
+          letterSpacing: appleTypography.displayLg.letterSpacing,
+        }],
+        "apple-display-md": [appleTypography.displayMd.fontSize, {
+          fontWeight: appleTypography.displayMd.fontWeight,
+          lineHeight: appleTypography.displayMd.lineHeight,
+          letterSpacing: appleTypography.displayMd.letterSpacing,
+        }],
+        "apple-lead": [appleTypography.lead.fontSize, {
+          fontWeight: appleTypography.lead.fontWeight,
+          lineHeight: appleTypography.lead.lineHeight,
+          letterSpacing: appleTypography.lead.letterSpacing,
+        }],
+        "apple-tagline": [appleTypography.tagline.fontSize, {
+          fontWeight: appleTypography.tagline.fontWeight,
+          lineHeight: appleTypography.tagline.lineHeight,
+          letterSpacing: appleTypography.tagline.letterSpacing,
+        }],
+        "apple-body-strong": [appleTypography.bodyStrong.fontSize, {
+          fontWeight: appleTypography.bodyStrong.fontWeight,
+          lineHeight: appleTypography.bodyStrong.lineHeight,
+          letterSpacing: appleTypography.bodyStrong.letterSpacing,
+        }],
+        "apple-body": [appleTypography.body.fontSize, {
+          fontWeight: appleTypography.body.fontWeight,
+          lineHeight: appleTypography.body.lineHeight,
+          letterSpacing: appleTypography.body.letterSpacing,
+        }],
+        "apple-caption": [appleTypography.caption.fontSize, {
+          fontWeight: appleTypography.caption.fontWeight,
+          lineHeight: appleTypography.caption.lineHeight,
+          letterSpacing: appleTypography.caption.letterSpacing,
+        }],
+        "apple-caption-strong": [appleTypography.captionStrong.fontSize, {
+          fontWeight: appleTypography.captionStrong.fontWeight,
+          lineHeight: appleTypography.captionStrong.lineHeight,
+          letterSpacing: appleTypography.captionStrong.letterSpacing,
+        }],
+        "apple-button-large": [appleTypography.buttonLarge.fontSize, {
+          fontWeight: appleTypography.buttonLarge.fontWeight,
+          lineHeight: appleTypography.buttonLarge.lineHeight,
+          letterSpacing: appleTypography.buttonLarge.letterSpacing,
+        }],
+        "apple-button-utility": [appleTypography.buttonUtility.fontSize, {
+          fontWeight: appleTypography.buttonUtility.fontWeight,
+          lineHeight: appleTypography.buttonUtility.lineHeight,
+          letterSpacing: appleTypography.buttonUtility.letterSpacing,
+        }],
+        "apple-fine-print": [appleTypography.finePrint.fontSize, {
+          fontWeight: appleTypography.finePrint.fontWeight,
+          lineHeight: appleTypography.finePrint.lineHeight,
+          letterSpacing: appleTypography.finePrint.letterSpacing,
+        }],
+        "inter-hero": [interTypography.heroDisplay.fontSize, {
+          fontWeight: interTypography.heroDisplay.fontWeight,
+          lineHeight: interTypography.heroDisplay.lineHeight,
+          letterSpacing: interTypography.heroDisplay.letterSpacing,
+        }],
+        "inter-display-lg": [interTypography.displayLg.fontSize, {
+          fontWeight: interTypography.displayLg.fontWeight,
+          lineHeight: interTypography.displayLg.lineHeight,
+          letterSpacing: interTypography.displayLg.letterSpacing,
+        }],
+        "inter-body": [interTypography.body.fontSize, {
+          fontWeight: interTypography.body.fontWeight,
+          lineHeight: interTypography.body.lineHeight,
+          letterSpacing: interTypography.body.letterSpacing,
+        }],
       },
       boxShadow: {
         soft: "0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.06)",
@@ -105,6 +190,11 @@ const config: Config = {
         modal: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
         glass: "0 8px 32px rgb(0 0 0 / 0.08)",
         glow: "0 0 20px rgb(99 102 241 / 0.15)",
+        "apple-product": "rgba(0, 0, 0, 0.22) 3px 5px 30px 0",
+      },
+      backdropBlur: {
+        xs: "2px",
+        "apple-glass": "20px",
       },
       animation: {
         "fade-in": "fadeIn 0.2s ease-in-out",
@@ -119,6 +209,8 @@ const config: Config = {
         "pulse-soft": "pulseSoft 2s ease-in-out infinite",
         "shimmer": "shimmer 1.5s ease-in-out infinite",
         "bounce-gentle": "bounceGentle 1s ease-in-out infinite",
+        "apple-press": "applePress 0.2s ease-out",
+        "apple-reveal": "appleReveal 0.4s ease-out",
       },
       keyframes: {
         fadeIn: {
@@ -165,9 +257,15 @@ const config: Config = {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-3px)" },
         },
-      },
-      backdropBlur: {
-        xs: "2px",
+        applePress: {
+          "0%": { transform: "scale(1)" },
+          "50%": { transform: "scale(0.95)" },
+          "100%": { transform: "scale(1)" },
+        },
+        appleReveal: {
+          "0%": { opacity: "0", transform: "translateY(20px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
@@ -179,7 +277,40 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    function({ addUtilities, addComponents, theme }: any) {
+      addUtilities({
+        '.apple-body-text': {
+          fontFamily: theme('fontFamily.sf-text'),
+          fontSize: theme('fontSize.apple-body[0]'),
+          fontWeight: theme('fontSize.apple-body[1].fontWeight'),
+          lineHeight: theme('fontSize.apple-body[1].lineHeight'),
+          letterSpacing: theme('fontSize.apple-body[1].letterSpacing'),
+        },
+        '.apple-display-text': {
+          fontFamily: theme('fontFamily.sf-display'),
+          fontWeight: '600',
+          letterSpacing: '-0.02em',
+        },
+        '.apple-product-shadow': {
+          boxShadow: theme('boxShadow.apple-product'),
+        },
+        '.apple-glass': {
+          backdropFilter: 'blur(20px) saturate(180%)',
+          backgroundColor: 'rgba(245, 245, 247, 0.8)',
+        },
+      });
+
+      addComponents({
+        '.apple-card-utility': {
+          backgroundColor: theme('colors.apple.canvas'),
+          border: `1px solid ${theme('colors.apple.hairline')}`,
+          borderRadius: theme('borderRadius.lg'),
+          padding: theme('spacing.lg'),
+        },
+      });
+    },
+  ],
 };
 
 export default config;

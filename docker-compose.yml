@@ -84,9 +84,9 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.docker
       DJANGO_DEBUG: "True"
-      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,backend,deo-crm-backend
-      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001
-      CSRF_TRUSTED_ORIGINS: http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,backend,deo-crm-backend,test.deo-core.codes
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001,https://test.deo-core.codes,http://test.deo-core.codes
+      CSRF_TRUSTED_ORIGINS: http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001,https://test.deo-core.codes,http://test.deo-core.codes
       DATABASE_URL: postgres://deo_crm_user:deo_crm_pass@postgres:5432/deo_crm
       POSTGRES_DB: deo_crm
       POSTGRES_USER: deo_crm_user

@@ -84,6 +84,16 @@ export const leadsApi = {
   create: (data: Record<string, unknown>) => api.post("/leads/", data),
   update: (id: string, data: Record<string, unknown>) => api.patch(`/leads/${id}/`, data),
   move: (id: string, stageId: string) => api.post(`/leads/${id}/move/`, { stage_id: stageId }),
+  publicCreate: (data: {
+    contact_name: string;
+    phone: string;
+    email?: string;
+    company_name?: string;
+    telegram?: string;
+    budget?: number;
+    notes?: string;
+    service_type?: string;
+  }) => api.post("/leads/public/", data),
 };
 
 // Projects API
