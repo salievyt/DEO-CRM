@@ -68,6 +68,13 @@ DJANGO_SETTINGS_MODULE = "config.settings.local"
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
 testpaths = ["apps"]
 
+[tool.vercel.scripts]
+# Vercel runs this after dependencies are installed and before the deployment
+# goes live, so production schema changes ship together with the code that
+# needs them. `collectstatic` is executed by Vercel automatically and must not
+# be duplicated here.
+build = "python manage.py migrate --noinput --settings=config.settings.production"
+
 [build-system]
 requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"

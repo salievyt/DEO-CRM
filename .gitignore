@@ -81,3 +81,5 @@ coverage.xml
 
 # Reports
 reports/
+.vercel
+.env*
