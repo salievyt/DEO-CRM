@@ -7,7 +7,23 @@ class ProjectDefaultsTest(TestCase):
     def test_default_project_statuses_exist(self):
         self.assertQuerySetEqual(
             ProjectStatus.objects.order_by("order").values_list("name", flat=True),
-            ["Переговоры", "В работе", "На паузе", "Завершён", "Отменён"],
+            [
+                "Новый",
+                "Переговоры",
+                "Брифинг",
+                "Оценка",
+                "Согласование",
+                "Планирование",
+                "В работе",
+                "На проверке",
+                "Правки",
+                "Готов к запуску",
+                "Запущен",
+                "На паузе",
+                "Поддержка",
+                "Завершён",
+                "Отменён",
+            ],
         )
 
     def test_default_service_types_exist(self):
