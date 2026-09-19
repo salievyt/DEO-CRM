@@ -37,6 +37,12 @@ class FormTemplate(models.Model):
         verbose_name="Поля",
         help_text='Список полей: {"key","label","type","required","options"}',
     )
+    public_token = models.UUIDField(
+        default=uuid.uuid4, unique=True, editable=False, verbose_name="Публичный токен"
+    )
+    public_link_expires_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="Публичная ссылка действует до"
+    )
     is_active = models.BooleanField(default=True, verbose_name="Активна")
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -56,6 +62,18 @@ class FormTemplate(models.Model):
 
     def __str__(self):
         return self.title
+
+    def is_public_link_expired(self):
+        if not self.public_link_expires_at:
+            return False
+        from django.utils import timezone
+
+        return timezone.now() > self.public_link_expires_at
+
+    @property
+    def public_url(self):
+        base = getattr(settings, "FORMS_PUBLIC_BASE_URL", None)
+        return f"{base.rstrip('/')}/forms/{self.public_token}/" if base else None
 
 
 class FormInvitation(models.Model):

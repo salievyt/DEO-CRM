@@ -21,6 +21,9 @@ export interface FormTemplate {
   created_by_name: string | null;
   link_count: number;
   filled_count: number;
+  public_token: string;
+  public_url: string | null;
+  public_link_expires_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -59,6 +62,7 @@ export interface FormTemplateCreateInput {
   entity_type: FormEntityType;
   form_fields: FormField[];
   is_active?: boolean;
+  link_lifetime?: "1" | "3" | "7" | "forever";
 }
 
 export interface PublicFormGetResponse {

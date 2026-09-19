@@ -6,9 +6,10 @@ from .models import FormInvitation, FormTemplate
 @admin.register(FormTemplate)
 class FormTemplateAdmin(admin.ModelAdmin):
     list_display = (
-        "title", "entity_type", "is_active", "link_count",
+        "title", "entity_type", "is_active", "public_link_expires_at", "link_count",
         "created_by", "created_at",
     )
+    readonly_fields = ("public_token",)
     list_filter = ("entity_type", "is_active", "created_at")
     search_fields = ("title", "description")
 

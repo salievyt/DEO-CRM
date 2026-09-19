@@ -64,22 +64,9 @@ class FormsApiTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("form_fields", response.data["detail"])
 
-    def test_generate_link_and_fill_publicly(self):
+    def test_template_has_public_link_and_accepts_multiple_responses(self):
         form = self._create_template()
-        self.client_api.force_authenticate(self.owner)
-        response = self.client_api.post(
-            "/api/v1/forms/invitations/",
-            {
-                "form": str(form.id),
-                "recipient_name": "Иван Петров",
-                "recipient_email": "ivan@test.ru",
-            },
-            format="json",
-        )
-        self.assertEqual(response.status_code, 201)
-        token = response.data["token"]
-        self.assertIn("answer_url", response.data)
-        self.assertIn(str(token), response.data["answer_url"])
+        token = form.public_token
 
         public = APIClient()
         detail = public.get(f"/api/v1/forms/i/{token}/")
@@ -98,20 +85,24 @@ class FormsApiTests(TestCase):
         self.assertIsNotNone(invitation.submitted_at)
         self.assertEqual(invitation.response["name"], "Иван")
 
-    def test_public_link_rejects_second_submit(self):
-        form = self._create_template()
-        invitation = FormInvitation.objects.create(
-            form=form,
-            status=FormInvitation.Status.FILLED,
-            response={"name": "Иван"},
-        )
-        public = APIClient()
-        response = public.post(
-            f"/api/v1/forms/i/{invitation.token}/",
-            {"response": {"name": "Снова"}},
+        second = public.post(
+            f"/api/v1/forms/i/{token}/",
+            {"response": {"name": "Мария"}},
             format="json",
         )
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(FormInvitation.objects.filter(form=form).count(), 2)
+
+    def test_expired_public_link_returns_gone(self):
+        from datetime import timedelta
+        from django.utils import timezone
+
+        form = self._create_template()
+        form.public_link_expires_at = timezone.now() - timedelta(seconds=1)
+        form.save(update_fields=["public_link_expires_at"])
+        public = APIClient()
+        response = public.get(f"/api/v1/forms/i/{form.public_token}/")
+        self.assertEqual(response.status_code, 410)
 
     def test_unknown_token_404(self):
         public = APIClient()

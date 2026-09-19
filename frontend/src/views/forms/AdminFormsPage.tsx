@@ -60,10 +60,8 @@ export function AdminFormsPage() {
     mode: "create" | "edit";
     template: FormTemplate | null;
   } | null>(null);
-  const [linkFor, setLinkFor] = useState<FormTemplate | null>(null);
   const [linksFor, setLinksFor] = useState<FormTemplate | null>(null);
   const [toDelete, setToDelete] = useState<FormTemplate | null>(null);
-  const [toDeleteInvite, setToDeleteInvite] = useState<FormInvitation | null>(null);
   const queryClient = useQueryClient();
 
   const { data: templates, isLoading } = useQuery({
@@ -105,15 +103,6 @@ export function AdminFormsPage() {
     },
   });
 
-  const deleteInviteMutation = useMutation({
-    mutationFn: (id: string) => formsApi.invitations.remove(id),
-    onSuccess: () => {
-      invalidate();
-      setToDeleteInvite(null);
-      toast({ title: "Ссылка удалена", type: "success" });
-    },
-  });
-
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return (templates || []).filter((t) => {
@@ -123,14 +112,13 @@ export function AdminFormsPage() {
     });
   }, [templates, search, entityFilter]);
 
-  const linkCount = templates?.reduce((sum, t) => sum + t.link_count, 0) || 0;
   const filledCount = templates?.reduce((sum, t) => sum + t.filled_count, 0) || 0;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Анкеты"
-        description="Шаблоны анкет и ссылки для заполнения клиентами и сотрудниками"
+        description="Публичные анкеты для клиентов и сотрудников"
         actions={
           <Button onClick={() => setEditor({ mode: "create", template: null })}>
             <Plus className="h-4 w-4" />
@@ -141,7 +129,7 @@ export function AdminFormsPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={FileText} label="Шаблонов" value={templates?.length || 0} />
-        <StatCard icon={LinkIcon} label="Ссылок создано" value={linkCount} />
+        <StatCard icon={LinkIcon} label="Публичных ссылок" value={templates?.length || 0} />
         <StatCard icon={ListChecks} label="Заполнено" value={filledCount} />
         <StatCard
           icon={Users}
@@ -221,8 +209,8 @@ export function AdminFormsPage() {
                       </Badge>
                     </div>
                     <p className="mt-0.5 truncate text-xs text-surface-500">
-                      {template.entity_type_display} · {template.form_fields.length} пол. · ссылок:{" "}
-                      {template.link_count} · заполнено: {template.filled_count}
+                      {template.entity_type_display} · {template.form_fields.length} пол. · ответов:{" "}
+                      {template.filled_count} · {formatLinkLifetime(template.public_link_expires_at)}
                     </p>
                     {template.description && (
                       <p className="mt-0.5 line-clamp-1 text-xs text-surface-400">
@@ -234,15 +222,26 @@ export function AdminFormsPage() {
 
                 <div className="flex items-center gap-1 sm:gap-2">
                   <ActionButton
-                    onClick={() => setLinkFor(template)}
-                    title="Создать ссылку"
-                    icon={<LinkIcon className="h-4 w-4" />}
+                    onClick={() => template.public_url && copyToClipboard(template.public_url)}
+                    title="Копировать публичную ссылку"
+                    icon={<Copy className="h-4 w-4" />}
                   />
                   <ActionButton
                     onClick={() => setLinksFor(template)}
-                    title="Ссылки"
-                    icon={<ExternalLink className="h-4 w-4" />}
+                    title="Ответы"
+                    icon={<ListChecks className="h-4 w-4" />}
                   />
+                  {template.public_url && (
+                    <a
+                      href={template.public_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Открыть публичную анкету"
+                      className="rounded-lg p-2 text-surface-400 transition-colors hover:bg-surface-100 hover:text-brand-600 dark:hover:bg-surface-700 dark:hover:text-brand-300"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  )}
                   <ActionButton
                     onClick={() => setEditor({ mode: "edit", template })}
                     title="Редактировать"
@@ -278,13 +277,10 @@ export function AdminFormsPage() {
         />
       )}
 
-      {linkFor && <GenerateLinkDialog template={linkFor} onClose={() => setLinkFor(null)} />}
-
       {linksFor && (
         <InvitationsDialog
           template={linksFor}
           onClose={() => setLinksFor(null)}
-          onDelete={(invite) => setToDeleteInvite(invite)}
         />
       )}
 
@@ -293,7 +289,7 @@ export function AdminFormsPage() {
         title="Удалить шаблон?"
         description={
           toDelete
-            ? `Шаблон «${toDelete.title}» и все его ссылки будут удалены безвозвратно.`
+            ? `Анкета «${toDelete.title}» и все ответы будут удалены безвозвратно.`
             : undefined
         }
         confirmLabel="Удалить"
@@ -302,15 +298,6 @@ export function AdminFormsPage() {
         loading={deleteTemplateMutation.isPending}
       />
 
-      <ConfirmDialog
-        open={Boolean(toDeleteInvite)}
-        title="Удалить ссылку?"
-        description="Генерированная ссылка перестанет работать."
-        confirmLabel="Удалить"
-        onConfirm={() => toDeleteInvite && deleteInviteMutation.mutate(toDeleteInvite.id)}
-        onCancel={() => setToDeleteInvite(null)}
-        loading={deleteInviteMutation.isPending}
-      />
     </div>
   );
 }
@@ -332,6 +319,9 @@ function TemplateEditorDialog({
   const [description, setDescription] = useState(template?.description || "");
   const [entityType, setEntityType] = useState<FormEntityType>(template?.entity_type || "client");
   const [isActive, setIsActive] = useState(template?.is_active ?? true);
+  const [linkLifetime, setLinkLifetime] = useState<"1" | "3" | "7" | "forever">(
+    getLinkLifetime(template?.public_link_expires_at)
+  );
   const [error, setError] = useState("");
   const [fields, setFields] = useState<FormField[]>(
     template?.form_fields?.length
@@ -375,6 +365,7 @@ function TemplateEditorDialog({
       description,
       entity_type: entityType,
       is_active: isActive,
+      link_lifetime: linkLifetime,
       form_fields: cleaned,
     });
   };
@@ -400,7 +391,7 @@ function TemplateEditorDialog({
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Короткое описание, показывается на странице анкеты"
         />
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
           <Select
             label="Тип анкеты"
             value={entityType}
@@ -421,6 +412,19 @@ function TemplateEditorDialog({
               Анкета активна
             </span>
           </label>
+          <Select
+            label="Срок публичной ссылки"
+            value={linkLifetime}
+            onChange={(e) =>
+              setLinkLifetime(e.target.value as "1" | "3" | "7" | "forever")
+            }
+            options={[
+              { value: "1", label: "1 день" },
+              { value: "3", label: "3 дня" },
+              { value: "7", label: "7 дней" },
+              { value: "forever", label: "Навсегда" },
+            ]}
+          />
         </div>
 
         <div className="space-y-2">
@@ -532,133 +536,12 @@ function TemplateEditorDialog({
   );
 }
 
-function GenerateLinkDialog({
-  template,
-  onClose,
-}: {
-  template: FormTemplate;
-  onClose: () => void;
-}) {
-  const queryClient = useQueryClient();
-  const [recipientName, setRecipientName] = useState("");
-  const [recipientEmail, setRecipientEmail] = useState("");
-  const [expiresDays, setExpiresDays] = useState("7");
-  const [link, setLink] = useState<string | null>(null);
-
-  const mutation = useMutation({
-    mutationFn: (payload: Record<string, unknown>) => formsApi.invitations.create(payload),
-    onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.FORM_INVITATIONS] });
-      setLink((res.data?.answer_url as string) || null);
-      toast({ title: "Ссылка создана", type: "success" });
-    },
-    onError: (err: unknown) => {
-      toast({
-        title: "Не удалось создать ссылку",
-        message: extractError(err),
-        type: "error",
-      });
-    },
-  });
-
-  const generate = () => {
-    const now = new Date();
-    const days = Math.max(1, Number(expiresDays) || 7);
-    const expiresAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
-    mutation.mutate({
-      form: template.id,
-      recipient_name: recipientName.trim(),
-      recipient_email: recipientEmail.trim(),
-      expires_at: expiresAt.toISOString(),
-    });
-  };
-
-  const reset = () => {
-    setLink(null);
-    setRecipientName("");
-    setRecipientEmail("");
-  };
-
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      title="Создать ссылку на анкету"
-      description={`«${template.title}» — получатель сможет заполнить анкету без авторизации`}
-    >
-      {link ? (
-        <div className="space-y-4">
-          <div className="rounded-lg border border-success-500/40 bg-success-50 p-3 text-sm text-success-700 dark:border-green-500/30 dark:bg-green-900/20 dark:text-green-300">
-            Ссылка создана. Отправьте её получателю.
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-surface-700 dark:text-surface-200">
-              Ссылка на анкету
-            </label>
-            <div className="mt-1 flex items-center gap-2">
-              <input
-                readOnly
-                value={link}
-                onFocus={(e) => e.target.select()}
-                className="input flex-1 font-mono text-xs"
-              />
-              <Button variant="secondary" onClick={() => copyToClipboard(link)}>
-                <Copy className="h-4 w-4" />
-                Копировать
-              </Button>
-            </div>
-          </div>
-          <div className="flex justify-end gap-3 border-t border-surface-200 pt-4 dark:border-surface-700">
-            <Button variant="secondary" onClick={reset}>
-              Создать ещё одну
-            </Button>
-            <Button onClick={onClose}>Готово</Button>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <Input
-            label="Имя получателя"
-            value={recipientName}
-            onChange={(e) => setRecipientName(e.target.value)}
-            placeholder="Иван Петров"
-          />
-          <Input
-            label="Email получателя"
-            type="email"
-            value={recipientEmail}
-            onChange={(e) => setRecipientEmail(e.target.value)}
-            placeholder="client@example.com"
-          />
-          <Input
-            label="Срок действия (дней)"
-            type="number"
-            min={1}
-            value={expiresDays}
-            onChange={(e) => setExpiresDays(e.target.value)}
-          />
-          <div className="flex justify-end gap-3 border-t border-surface-200 pt-4 dark:border-surface-700">
-            <Button variant="secondary" onClick={onClose}>
-              Отмена
-            </Button>
-            <Button onClick={generate} loading={mutation.isPending}>
-              Сгенерировать ссылку
-            </Button>
-          </div>
-        </div>
-      )}
-    </Modal>
-  );
-}
-
 function InvitationsDialog({
   template,
   onClose,
-  onDelete,
 }: {
   template: FormTemplate;
   onClose: () => void;
-  onDelete: (invite: FormInvitation) => void;
 }) {
   const { data: invitations, isLoading } = useQuery({
     queryKey: [QUERY_KEYS.FORM_INVITATIONS, template.id],
@@ -672,8 +555,8 @@ function InvitationsDialog({
     <Modal
       open
       onClose={onClose}
-      title={`Ссылки — ${template.title}`}
-      description={`Создано ссылок: ${list.length}`}
+      title={`Ответы — ${template.title}`}
+      description={`Получено ответов: ${list.length}`}
       size="lg"
     >
       {isLoading ? (
@@ -682,9 +565,9 @@ function InvitationsDialog({
         </div>
       ) : list.length === 0 ? (
         <EmptyState
-          title="Ссылок ещё нет"
-          description="Сгенерируйте первую ссылку для этой анкеты"
-          icon={<LinkIcon className="h-8 w-8" />}
+          title="Ответов пока нет"
+          description="Здесь появятся заполненные анкеты"
+          icon={<ListChecks className="h-8 w-8" />}
         />
       ) : (
         <div className="max-h-[60vh] space-y-2 overflow-y-auto">
@@ -696,38 +579,21 @@ function InvitationsDialog({
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-surface-900 dark:text-white">
-                    {invite.recipient_name || invite.recipient_email || "Без имени"}
+                    Ответ от {new Date(invite.submitted_at || invite.created_at).toLocaleString("ru-RU")}
                   </p>
                   <p className="truncate text-xs text-surface-500">
-                    {invite.recipient_email || "Нет email"} · {invite.status_display}
+                    {invite.status_display}
                   </p>
                 </div>
-                <div className="flex flex-shrink-0 items-center gap-1">
-                  {invite.answer_url && (
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(invite.answer_url!)}
-                      title="Скопировать ссылку"
-                      className="rounded-lg p-2 text-surface-400 transition-colors hover:bg-surface-100 hover:text-brand-600 dark:hover:bg-surface-700 dark:hover:text-brand-300"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => onDelete(invite)}
-                    title="Удалить"
-                    className="rounded-lg p-2 text-surface-400 transition-colors hover:bg-danger-50 hover:text-danger-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+                <Badge variant="success">Заполнена</Badge>
               </div>
-              {invite.answer_url && (
-                <p className="mt-1 truncate rounded bg-surface-50 px-2 py-1 font-mono text-[11px] text-surface-500 dark:bg-surface-800">
-                  {invite.answer_url}
-                </p>
-              )}
+              <div className="mt-2 space-y-1 rounded bg-surface-50 px-3 py-2 text-xs dark:bg-surface-800">
+                {Object.entries(invite.response).map(([key, value]) => (
+                  <p key={key} className="text-surface-600 dark:text-surface-300">
+                    <span className="font-medium">{key}:</span> {String(value)}
+                  </p>
+                ))}
+              </div>
             </div>
           ))}
         </div>
@@ -811,6 +677,21 @@ function copyToClipboard(text: string) {
       () => toast({ title: "Не удалось скопировать", type: "error" })
     );
   }
+}
+
+function getLinkLifetime(expiresAt?: string | null): "1" | "3" | "7" | "forever" {
+  if (!expiresAt) return "forever";
+  const days = Math.max(1, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86_400_000));
+  if (days <= 1) return "1";
+  if (days <= 3) return "3";
+  return "7";
+}
+
+function formatLinkLifetime(expiresAt: string | null): string {
+  if (!expiresAt) return "ссылка бессрочная";
+  const date = new Date(expiresAt);
+  if (date.getTime() <= Date.now()) return "ссылка истекла";
+  return `ссылка до ${date.toLocaleDateString("ru-RU")}`;
 }
 
 function extractError(err: unknown): string {

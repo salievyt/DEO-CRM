@@ -80,22 +80,22 @@ class PublicFormView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, token):
-        invitation = self._get_usable_invitation(token)
+        form = self._get_usable_form(token)
         return Response(
             {
-                "form": FormTemplateSerializer(invitation.form).data,
+                "form": FormTemplateSerializer(form).data,
                 "invitation": {
-                    "id": str(invitation.id),
-                    "token": str(invitation.token),
-                    "recipient_name": invitation.recipient_name,
-                    "entity_type": invitation.entity_type,
-                    "status": invitation.status,
+                    "id": str(form.id),
+                    "token": str(form.public_token),
+                    "recipient_name": "",
+                    "entity_type": form.entity_type,
+                    "status": FormInvitation.Status.SENT,
                 },
             }
         )
 
     def post(self, request, token):
-        invitation = self._get_usable_invitation(token)
+        form = self._get_usable_form(token)
         response = request.data.get("response")
         if not isinstance(response, dict):
             return Response(
@@ -103,34 +103,25 @@ class PublicFormView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         with transaction.atomic():
-            invitation = (
-                FormInvitation.objects.select_for_update().get(pk=invitation.pk)
+            invitation = FormInvitation.objects.create(
+                form=form,
+                entity_type=form.entity_type,
+                response=response,
+                status=FormInvitation.Status.FILLED,
+                submitted_at=timezone.now(),
             )
-            if invitation.status == FormInvitation.Status.FILLED:
-                return Response(
-                    {"detail": "Анкета уже заполнена."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            invitation.response = response
-            invitation.status = FormInvitation.Status.FILLED
-            invitation.submitted_at = timezone.now()
-            invitation.save(update_fields=[
-                "response", "status", "submitted_at",
-            ])
         return Response(
             {"detail": "Ответ сохранён.", "id": str(invitation.id)},
             status=status.HTTP_200_OK,
         )
 
-    def _get_usable_invitation(self, token):
+    def _get_usable_form(self, token):
         try:
-            invitation = FormInvitation.objects.select_related(
-                "form"
-            ).get(token=token)
-        except (FormInvitation.DoesNotExist, ValueError):
+            form = FormTemplate.objects.get(public_token=token)
+        except (FormTemplate.DoesNotExist, ValueError):
             raise NotFound({"detail": "Ссылка не найдена или неактивна."})
-        if not invitation.form.is_active:
+        if not form.is_active:
             raise NotFound({"detail": "Ссылка не найдена или неактивна."})
-        if invitation.status == FormInvitation.Status.EXPIRED or invitation.is_expired():
+        if form.is_public_link_expired():
             raise TokenGone()
-        return invitation
+        return form

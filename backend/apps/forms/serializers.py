@@ -1,3 +1,6 @@
+from datetime import timedelta
+
+from django.utils import timezone
 from rest_framework import serializers
 
 from .models import FormInvitation, FormTemplate
@@ -12,18 +15,42 @@ class FormTemplateSerializer(serializers.ModelSerializer):
     )
     link_count = serializers.IntegerField(source="invitations.count", read_only=True)
     filled_count = serializers.SerializerMethodField()
+    public_url = serializers.CharField(read_only=True)
+    link_lifetime = serializers.ChoiceField(
+        choices=("1", "3", "7", "forever"), write_only=True, required=False
+    )
 
     class Meta:
         model = FormTemplate
         fields = [
             "id", "title", "description", "entity_type", "entity_type_display",
             "form_fields", "is_active", "created_by_name", "link_count",
-            "filled_count", "created_at", "updated_at",
+            "filled_count", "public_token", "public_url", "public_link_expires_at",
+            "link_lifetime", "created_at", "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = [
+            "id", "public_token", "public_link_expires_at", "created_at", "updated_at"
+        ]
 
     def get_filled_count(self, obj):
         return obj.invitations.filter(status=FormInvitation.Status.FILLED).count()
+
+    def create(self, validated_data):
+        lifetime = validated_data.pop("link_lifetime", "forever")
+        validated_data["public_link_expires_at"] = self._expires_at(lifetime)
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        lifetime = validated_data.pop("link_lifetime", None)
+        if lifetime is not None:
+            validated_data["public_link_expires_at"] = self._expires_at(lifetime)
+        return super().update(instance, validated_data)
+
+    @staticmethod
+    def _expires_at(lifetime):
+        if lifetime == "forever":
+            return None
+        return timezone.now() + timedelta(days=int(lifetime))
 
     def validate_form_fields(self, value):
         if not isinstance(value, list):

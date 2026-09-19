@@ -58,7 +58,7 @@ export default function PublicFormPage({ params }: { params: { token: string } }
           </h1>
           <p className="mt-2 text-sm text-surface-500">
             {gone
-              ? "Срок действия ссылки закончился. Попросите новый инвайт."
+              ? "Срок действия ссылки закончился. Обратитесь к владельцу анкеты."
               : errorDetail || "Анкета больше не доступна или ссылка указана неверно."}
           </p>
         </div>
