@@ -7,7 +7,7 @@ from rest_framework import generics, views
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from common.permissions import IsOwner
+from common.permissions import IsAnalyticsViewer, IsOwner
 
 from .models import AnalyticsDashboard
 from .serializers import DashboardSerializer, ReportSerializer
@@ -231,6 +231,118 @@ class WorkloadMetricsView(views.APIView):
                     "avg_tasks_per_member": round(team_active_tasks / max(member_count, 1), 1),
                 },
                 "members": workload_data,
+            }
+        )
+
+
+class CapacityPlanningView(views.APIView):
+    """Future team load: committed vs available hours per user per week.
+
+    GET parameters:
+      - ``weeks``         — number of future weeks (default 4, max 12)
+      - ``weekly_hours``  — default weekly working hours per user (default 40)
+      - ``user``          — restrict to a single user id
+    """
+
+    permission_classes = [IsAuthenticated, IsAnalyticsViewer]
+
+    def get(self, request):
+        from apps.tasks.models import Task
+
+        weeks = min(max(int(request.query_params.get("weeks", 4)), 1), 12)
+        weekly_hours = int(request.query_params.get("weekly_hours", 40))
+
+        today = timezone.now().date()
+        current_monday = today - timedelta(days=today.weekday())
+
+        week_defs = []
+        for index in range(weeks):
+            start = current_monday + timedelta(days=7 * index)
+            week_defs.append((start, start + timedelta(days=6)))
+
+        users = (
+            User.objects.filter(is_active=True)
+            .exclude(role__name="client")
+            .order_by("first_name", "last_name")
+        )
+        user_filter = request.query_params.get("user")
+        if user_filter:
+            users = users.filter(id=user_filter)
+
+        done_statuses = ["Выполнена", "Отклонена"]
+        members = []
+        for user in users:
+            per_week = []
+            for week_index, (start, end) in enumerate(week_defs):
+                committed = (
+                    Task.objects.filter(
+                        assignee=user,
+                        deadline__gte=start,
+                        deadline__lte=end,
+                    )
+                    .exclude(status__name__in=done_statuses)
+                    .aggregate(total=Sum("estimated_hours"))["total"]
+                    or 0
+                )
+                committed = float(committed)
+                per_week.append(
+                    {
+                        "week": week_index + 1,
+                        "start_date": start.isoformat(),
+                        "end_date": end.isoformat(),
+                        "committed_hours": round(committed, 1),
+                        "available_hours": round(max(weekly_hours - committed, 0), 1),
+                        "over_allocated": committed > weekly_hours,
+                    }
+                )
+
+            members.append(
+                {
+                    "user_id": str(user.id),
+                    "user_name": user.get_full_name() or user.email,
+                    "role": user.role.name if user.role else None,
+                    "avg_committed_hours": round(
+                        sum(w["committed_hours"] for w in per_week) / max(weeks, 1),
+                        1,
+                    ),
+                    "weeks": per_week,
+                }
+            )
+
+        # Team-wide per-week summary
+        team_weeks = []
+        for week_index in range(weeks):
+            committed_sum = sum(
+                m["weeks"][week_index]["committed_hours"] for m in members
+            )
+            available_sum = sum(
+                m["weeks"][week_index]["available_hours"] for m in members
+            )
+            team_weeks.append(
+                {
+                    "week": week_index + 1,
+                    "start_date": week_defs[week_index][0].isoformat(),
+                    "end_date": week_defs[week_index][1].isoformat(),
+                    "committed_hours": round(committed_sum, 1),
+                    "available_hours": round(available_sum, 1),
+                    "capacity_hours": round(
+                        available_sum + sum(
+                            m["weeks"][week_index]["committed_hours"] for m in members
+                        ),
+                        1,
+                    ),
+                }
+            )
+
+        return Response(
+            {
+                "weekly_hours_default": weekly_hours,
+                "weeks": weeks,
+                "team": {
+                    "member_count": len(members),
+                    "weeks": team_weeks,
+                },
+                "members": members,
             }
         )
 

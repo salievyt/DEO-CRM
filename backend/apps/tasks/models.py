@@ -42,7 +42,7 @@ class Task(models.Model):
     )
     project = models.ForeignKey(
         "projects.Project", on_delete=models.CASCADE, related_name="tasks",
-        verbose_name="Проект"
+        null=True, blank=True, verbose_name="Проект"
     )
     title = models.CharField(max_length=255, verbose_name="Название")
     description = models.TextField(blank=True, verbose_name="Описание")

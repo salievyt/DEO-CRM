@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 
 from django.db import models
 
@@ -52,6 +53,18 @@ class Project(models.Model):
         verbose_name="Себестоимость"
     )
     deadline = models.DateField(null=True, blank=True, verbose_name="Срок")
+    hours_budget = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        verbose_name="Бюджет времени (часы)"
+    )
+    cost_per_hour = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        verbose_name="Ставка за час (₽)"
+    )
+    tracked_hours = models.DecimalField(
+        max_digits=8, decimal_places=2, default=Decimal("0"),
+        verbose_name="Затрачено (часы)"
+    )
     status = models.ForeignKey(
         ProjectStatus, on_delete=models.PROTECT, related_name="projects",
         verbose_name="Статус"

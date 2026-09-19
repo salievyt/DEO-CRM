@@ -23,6 +23,7 @@ urlpatterns = [
     path("metrics/tasks/", views.TaskMetricsView.as_view(), name="metrics-tasks"),
     path("reports/generate/", views.ReportGenerateView.as_view(), name="report-generate"),
     path("metrics/workload/", views.WorkloadMetricsView.as_view(), name="metrics-workload"),
+    path("capacity/", views.CapacityPlanningView.as_view(), name="capacity-planning"),
     # ---- Business Analytics ----
     path("business/summary/", BusinessSummaryView.as_view(), name="business-summary"),
     path("business/revenue/", BusinessRevenueView.as_view(), name="business-revenue"),

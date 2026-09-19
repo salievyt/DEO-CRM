@@ -178,6 +178,17 @@ class TaskTimerStopView(views.APIView):
         task.actual_hours = round(total / 3600, 1)
         task.save()
 
+        # Keep the project's time budget in sync
+        if task.project_id:
+            from apps.projects.models import Project
+
+            project_total = TaskTimer.objects.filter(
+                task__project_id=task.project_id, is_running=False
+            ).aggregate(total=Sum("duration_seconds"))["total"] or 0
+            Project.objects.filter(pk=task.project_id).update(
+                tracked_hours=round(project_total / 3600, 2)
+            )
+
         return Response(TaskTimerSerializer(timer).data)
 
 

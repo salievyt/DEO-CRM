@@ -43,7 +43,7 @@ class TaskTimerSerializer(serializers.ModelSerializer):
 
 
 class TaskListSerializer(serializers.ModelSerializer):
-    project_name = serializers.CharField(source="project.name", read_only=True)
+    project_name = serializers.SerializerMethodField()
     assignee_name = serializers.CharField(
         source="assignee.get_full_name", read_only=True
     )
@@ -64,9 +64,12 @@ class TaskListSerializer(serializers.ModelSerializer):
     def get_subtask_count(self, obj):
         return obj.subtasks.count()
 
+    def get_project_name(self, obj):
+        return obj.project.name if obj.project else None
+
 
 class TaskDetailSerializer(serializers.ModelSerializer):
-    project_name = serializers.CharField(source="project.name", read_only=True)
+    project_name = serializers.SerializerMethodField()
     assignee_name = serializers.CharField(
         source="assignee.get_full_name", read_only=True
     )
@@ -97,6 +100,9 @@ class TaskDetailSerializer(serializers.ModelSerializer):
             total=models.Sum("duration_seconds")
         )
         return result["total"] or 0
+
+    def get_project_name(self, obj):
+        return obj.project.name if obj.project else None
 
 
 class TaskCreateSerializer(serializers.ModelSerializer):

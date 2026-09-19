@@ -5,6 +5,11 @@ from . import views
 urlpatterns = [
     path("", views.ProjectListCreateView.as_view(), name="project-list"),
     path("stats/", views.ProjectStatsView.as_view(), name="project-stats"),
+    path(
+        "<uuid:pk>/timesheet/",
+        views.ProjectTimesheetView.as_view(),
+        name="project-timesheet",
+    ),
     path("<uuid:pk>/", views.ProjectDetailView.as_view(), name="project-detail"),
     path(
         "<uuid:project_pk>/team/",
