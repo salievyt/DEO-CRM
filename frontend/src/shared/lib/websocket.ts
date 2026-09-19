@@ -1,6 +1,10 @@
 import { io, Socket } from "socket.io-client";
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8001";
+const WS_URL =
+  process.env.NEXT_PUBLIC_WS_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "wss://crm.backend.deo-core.codes"
+    : "ws://localhost:8001");
 
 let socket: Socket | null = null;
 

@@ -2,7 +2,19 @@ from .base import *  # noqa: F403, F401
 
 DEBUG = False
 
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",")  # noqa: F405
+ALLOWED_HOSTS = os.environ.get(  # noqa: F405
+    "DJANGO_ALLOWED_HOSTS",
+    "crm.backend.deo-core.codes,.vercel.app",
+).split(",")
+
+CORS_ALLOWED_ORIGINS = os.environ.get(  # noqa: F405
+    "CORS_ALLOWED_ORIGINS",
+    "https://crm.deo-core.codes",
+).split(",")
+CSRF_TRUSTED_ORIGINS = os.environ.get(  # noqa: F405
+    "CSRF_TRUSTED_ORIGINS",
+    "https://crm.deo-core.codes,https://crm.backend.deo-core.codes",
+).split(",")
 
 SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True

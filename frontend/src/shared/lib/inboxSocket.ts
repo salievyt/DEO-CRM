@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const WS_BASE = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8001";
+const WS_BASE =
+  process.env.NEXT_PUBLIC_WS_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "wss://crm.backend.deo-core.codes"
+    : "ws://localhost:8001");
 
 export interface InboxSocketEvent {
   event:

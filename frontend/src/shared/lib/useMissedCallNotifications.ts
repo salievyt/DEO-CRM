@@ -5,7 +5,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/shared/ui/Toast";
 import { QUERY_KEYS } from "@/shared/constants";
 
-const WS_BASE = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8001";
+const WS_BASE =
+  process.env.NEXT_PUBLIC_WS_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "wss://crm.backend.deo-core.codes"
+    : "ws://localhost:8001");
 
 interface MissedCallEvent {
   event: "missed_call";
