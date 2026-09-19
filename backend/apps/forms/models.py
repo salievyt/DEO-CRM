@@ -136,4 +136,4 @@ class FormInvitation(models.Model):
         )
         if not base:
             base = None
-        return f"{base.rstrip('/')}/forms/i/{self.token}/" if base else None
+        return f"{base.rstrip('/')}/forms/{self.token}/" if base else None

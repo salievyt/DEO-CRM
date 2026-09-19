@@ -72,12 +72,6 @@ export function AdminFormsPage() {
     select: (res): FormTemplate[] => res.data?.results || [],
   });
 
-  const { data: invitations } = useQuery({
-    queryKey: [QUERY_KEYS.FORM_INVITATIONS],
-    queryFn: () => formsApi.invitations.list(),
-    select: (res): FormInvitation[] => res.data?.results || [],
-  });
-
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.FORM_TEMPLATES] });
     queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.FORM_INVITATIONS] });
@@ -111,22 +105,6 @@ export function AdminFormsPage() {
     },
   });
 
-  const createInviteMutation = useMutation({
-    mutationFn: (payload: Record<string, unknown>) => formsApi.invitations.create(payload),
-    onSuccess: () => {
-      invalidate();
-      setLinkFor(null);
-      toast({ title: "Ссылка создана", type: "success" });
-    },
-    onError: (err: unknown) => {
-      toast({
-        title: "Не удалось создать ссылку",
-        message: extractError(err),
-        type: "error",
-      });
-    },
-  });
-
   const deleteInviteMutation = useMutation({
     mutationFn: (id: string) => formsApi.invitations.remove(id),
     onSuccess: () => {
@@ -145,8 +123,8 @@ export function AdminFormsPage() {
     });
   }, [templates, search, entityFilter]);
 
-  const linkCount = invitations?.length || 0;
-  const filledCount = invitations?.filter((i) => i.status === "filled").length || 0;
+  const linkCount = templates?.reduce((sum, t) => sum + t.link_count, 0) || 0;
+  const filledCount = templates?.reduce((sum, t) => sum + t.filled_count, 0) || 0;
 
   return (
     <div className="space-y-6">
@@ -300,19 +278,11 @@ export function AdminFormsPage() {
         />
       )}
 
-      {linkFor && (
-        <GenerateLinkDialog
-          template={linkFor}
-          loading={createInviteMutation.isPending}
-          onGenerate={(payload) => createInviteMutation.mutate(payload)}
-          onClose={() => setLinkFor(null)}
-        />
-      )}
+      {linkFor && <GenerateLinkDialog template={linkFor} onClose={() => setLinkFor(null)} />}
 
       {linksFor && (
         <InvitationsDialog
           template={linksFor}
-          invitations={(invitations || []).filter((i) => i.form === linksFor.id)}
           onClose={() => setLinksFor(null)}
           onDelete={(invite) => setToDeleteInvite(invite)}
         />
@@ -564,29 +534,49 @@ function TemplateEditorDialog({
 
 function GenerateLinkDialog({
   template,
-  loading,
-  onGenerate,
   onClose,
 }: {
   template: FormTemplate;
-  loading: boolean;
-  onGenerate: (payload: Record<string, unknown>) => void;
   onClose: () => void;
 }) {
+  const queryClient = useQueryClient();
   const [recipientName, setRecipientName] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
   const [expiresDays, setExpiresDays] = useState("7");
+  const [link, setLink] = useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: (payload: Record<string, unknown>) => formsApi.invitations.create(payload),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.FORM_INVITATIONS] });
+      setLink((res.data?.answer_url as string) || null);
+      toast({ title: "Ссылка создана", type: "success" });
+    },
+    onError: (err: unknown) => {
+      toast({
+        title: "Не удалось создать ссылку",
+        message: extractError(err),
+        type: "error",
+      });
+    },
+  });
 
   const generate = () => {
     const now = new Date();
     const days = Math.max(1, Number(expiresDays) || 7);
     const expiresAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
-    onGenerate({
+    mutation.mutate({
       form: template.id,
       recipient_name: recipientName.trim(),
       recipient_email: recipientEmail.trim(),
       expires_at: expiresAt.toISOString(),
     });
+  };
+
+  const reset = () => {
+    setLink(null);
+    setRecipientName("");
+    setRecipientEmail("");
   };
 
   return (
@@ -596,60 +586,101 @@ function GenerateLinkDialog({
       title="Создать ссылку на анкету"
       description={`«${template.title}» — получатель сможет заполнить анкету без авторизации`}
     >
-      <div className="space-y-4">
-        <Input
-          label="Имя получателя"
-          value={recipientName}
-          onChange={(e) => setRecipientName(e.target.value)}
-          placeholder="Иван Петров"
-        />
-        <Input
-          label="Email получателя"
-          type="email"
-          value={recipientEmail}
-          onChange={(e) => setRecipientEmail(e.target.value)}
-          placeholder="client@example.com"
-        />
-        <Input
-          label="Срок действия (дней)"
-          type="number"
-          min={1}
-          value={expiresDays}
-          onChange={(e) => setExpiresDays(e.target.value)}
-        />
-        <div className="flex justify-end gap-3 border-t border-surface-200 pt-4 dark:border-surface-700">
-          <Button variant="secondary" onClick={onClose}>
-            Отмена
-          </Button>
-          <Button onClick={generate} loading={loading}>
-            Сгенерировать ссылку
-          </Button>
+      {link ? (
+        <div className="space-y-4">
+          <div className="rounded-lg border border-success-500/40 bg-success-50 p-3 text-sm text-success-700 dark:border-green-500/30 dark:bg-green-900/20 dark:text-green-300">
+            Ссылка создана. Отправьте её получателю.
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-200">
+              Ссылка на анкету
+            </label>
+            <div className="mt-1 flex items-center gap-2">
+              <input
+                readOnly
+                value={link}
+                onFocus={(e) => e.target.select()}
+                className="input flex-1 font-mono text-xs"
+              />
+              <Button variant="secondary" onClick={() => copyToClipboard(link)}>
+                <Copy className="h-4 w-4" />
+                Копировать
+              </Button>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 border-t border-surface-200 pt-4 dark:border-surface-700">
+            <Button variant="secondary" onClick={reset}>
+              Создать ещё одну
+            </Button>
+            <Button onClick={onClose}>Готово</Button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-4">
+          <Input
+            label="Имя получателя"
+            value={recipientName}
+            onChange={(e) => setRecipientName(e.target.value)}
+            placeholder="Иван Петров"
+          />
+          <Input
+            label="Email получателя"
+            type="email"
+            value={recipientEmail}
+            onChange={(e) => setRecipientEmail(e.target.value)}
+            placeholder="client@example.com"
+          />
+          <Input
+            label="Срок действия (дней)"
+            type="number"
+            min={1}
+            value={expiresDays}
+            onChange={(e) => setExpiresDays(e.target.value)}
+          />
+          <div className="flex justify-end gap-3 border-t border-surface-200 pt-4 dark:border-surface-700">
+            <Button variant="secondary" onClick={onClose}>
+              Отмена
+            </Button>
+            <Button onClick={generate} loading={mutation.isPending}>
+              Сгенерировать ссылку
+            </Button>
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }
 
 function InvitationsDialog({
   template,
-  invitations,
   onClose,
   onDelete,
 }: {
   template: FormTemplate;
-  invitations: FormInvitation[];
   onClose: () => void;
   onDelete: (invite: FormInvitation) => void;
 }) {
+  const { data: invitations, isLoading } = useQuery({
+    queryKey: [QUERY_KEYS.FORM_INVITATIONS, template.id],
+    queryFn: () => formsApi.invitations.list({ form: template.id, page_size: 100 }),
+    select: (res): FormInvitation[] => res.data?.results || [],
+  });
+
+  const list = invitations || [];
+
   return (
     <Modal
       open
       onClose={onClose}
       title={`Ссылки — ${template.title}`}
-      description={`Создано ссылок: ${invitations.length}`}
+      description={`Создано ссылок: ${list.length}`}
       size="lg"
     >
-      {invitations.length === 0 ? (
+      {isLoading ? (
+        <div className="flex h-40 items-center justify-center">
+          <LoadingSpinner size="lg" text="Загружаем ссылки..." />
+        </div>
+      ) : list.length === 0 ? (
         <EmptyState
           title="Ссылок ещё нет"
           description="Сгенерируйте первую ссылку для этой анкеты"
@@ -657,7 +688,7 @@ function InvitationsDialog({
         />
       ) : (
         <div className="max-h-[60vh] space-y-2 overflow-y-auto">
-          {invitations.map((invite) => (
+          {list.map((invite) => (
             <div
               key={invite.id}
               className="rounded-lg border border-surface-200 p-3 dark:border-surface-700"

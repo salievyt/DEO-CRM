@@ -23,3 +23,9 @@ SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Shareable form links point to the deployed frontend by default.
+FORMS_PUBLIC_BASE_URL = os.environ.get(  # noqa: F405
+    "FORMS_PUBLIC_BASE_URL",
+    "https://crm.deo-core.codes",
+).rstrip("/")
