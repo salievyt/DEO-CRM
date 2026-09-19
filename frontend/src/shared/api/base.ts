@@ -245,6 +245,11 @@ export const messengerApi = {
     list: (params?: Record<string, unknown>) => api.get("/messenger/chats/", { params }),
     get: (id: string) => api.get(`/messenger/chats/${id}/`),
     create: (data: Record<string, unknown>) => api.post("/messenger/chats/", data),
+    markRead: (id: string) => api.post(`/messenger/chats/${id}/read/`, {}),
+    addParticipants: (id: string, userIds: string[]) =>
+      api.post(`/messenger/chats/${id}/participants/`, { user_ids: userIds }),
+    removeParticipant: (id: string, userId: string) =>
+      api.delete(`/messenger/chats/${id}/participants/${userId}/`),
   },
   messages: {
     list: (chatId: string, params?: Record<string, unknown>) =>

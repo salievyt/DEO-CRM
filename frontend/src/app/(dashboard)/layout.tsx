@@ -10,7 +10,7 @@ import { AuthGuard } from "@/features/auth/AuthGuard";
 import { cn } from "@/lib/utils";
 import { notificationsApi, tasksApi, messengerApi } from "@/shared/api/base";
 import { QUERY_KEYS } from "@/shared/constants";
-import { useMissedCallNotifications } from "@/shared/lib/useMissedCallNotifications";
+import { useRealtimeNotifications } from "@/shared/lib/useRealtimeNotifications";
 import { formatDateTime } from "@/shared/utils/formatters";
 import {
   LayoutDashboard,
@@ -132,8 +132,9 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
-  // Realtime missed-call alerts (WebSocket → toast + badge refresh)
-  useMissedCallNotifications();
+  // Realtime alerts: missed calls + chat messages (WebSocket → toast,
+  // browser notification, badge refresh)
+  useRealtimeNotifications();
 
   const userRole = user?.role_name?.toLowerCase() || "client";
 
