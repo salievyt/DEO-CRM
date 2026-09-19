@@ -29,3 +29,19 @@ FORMS_PUBLIC_BASE_URL = os.environ.get(  # noqa: F405
     "FORMS_PUBLIC_BASE_URL",
     "https://crm.deo-core.codes",
 ).rstrip("/")
+
+# Vercel functions do not have a local Redis process. Keep cache-backed
+# features and websocket handshakes operational until an external Redis URL
+# is configured for production.
+if os.environ.get("VERCEL") and not os.environ.get("REDIS_URL"):  # noqa: F405
+    CACHES = {  # noqa: F405
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "deo-crm-vercel",
+        }
+    }
+    CHANNEL_LAYERS = {  # noqa: F405
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        }
+    }

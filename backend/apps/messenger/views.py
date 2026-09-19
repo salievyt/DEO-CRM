@@ -65,8 +65,6 @@ class UnreadCountView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from django.db.models import Count, Max
-
         chats = Chat.objects.filter(participants__user=request.user)
         total_unread = 0
         for chat in chats:
@@ -74,10 +72,10 @@ class UnreadCountView(APIView):
                 chat=chat, user=request.user
             ).first()
             last_read = participant.last_read_at if participant else None
-            unread = Message.objects.filter(
-                chat=chat,
-                created_at__gt=last_read,
-            ).exclude(sender=request.user).count()
+            unread_messages = Message.objects.filter(chat=chat).exclude(sender=request.user)
+            if last_read is not None:
+                unread_messages = unread_messages.filter(created_at__gt=last_read)
+            unread = unread_messages.count()
             total_unread += unread
 
         return Response({"total_unread": total_unread})
