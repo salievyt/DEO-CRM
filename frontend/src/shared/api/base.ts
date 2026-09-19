@@ -223,15 +223,21 @@ export const financeApi = {
 export const documentsApi = {
   list: (params?: Record<string, unknown>) => api.get("/documents/", { params }),
   get: (id: string) => api.get(`/documents/${id}/`),
-  upload: (data: FormData) =>
+  upload: (data: FormData, onProgress?: (percent: number) => void) =>
     api.post("/documents/", data, {
       headers: { "Content-Type": "multipart/form-data" },
+      onUploadProgress: (event) => onProgress?.(event.total ? Math.round((event.loaded * 100) / event.total) : 0),
     }),
   update: (id: string, data: Record<string, unknown>) => api.patch(`/documents/${id}/`, data),
   delete: (id: string) => api.delete(`/documents/${id}/`),
   download: (id: string) => api.get(`/documents/${id}/download/`),
   types: () => api.get("/documents/types/"),
   templates: () => api.get("/documents/templates/"),
+  versions: (id: string) => api.get(`/documents/${id}/versions/`),
+  addVersion: (id: string, data: FormData) => api.post(`/documents/${id}/versions/`, data, { headers: { "Content-Type": "multipart/form-data" } }),
+  comments: (id: string) => api.get(`/documents/${id}/comments/`),
+  addComment: (id: string, text: string) => api.post(`/documents/${id}/comments/`, { text }),
+  activity: (id: string) => api.get(`/documents/${id}/activity/`),
 };
 
 export const messengerApi = {

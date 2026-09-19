@@ -10,6 +10,17 @@ urlpatterns = [
         views.DocumentDownloadView.as_view(),
         name="document-download",
     ),
+    path(
+        "<uuid:pk>/versions/",
+        views.DocumentVersionListCreateView.as_view(),
+        name="document-versions",
+    ),
+    path(
+        "<uuid:pk>/comments/",
+        views.DocumentCommentListCreateView.as_view(),
+        name="document-comments",
+    ),
+    path("<uuid:pk>/activity/", views.DocumentActivityListView.as_view(), name="document-activity"),
     path("types/", views.DocumentTypeListView.as_view(), name="document-types"),
     path(
         "templates/",

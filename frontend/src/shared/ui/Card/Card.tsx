@@ -3,7 +3,7 @@
 import { cn } from "@/shared/utils/cn";
 import styles from "./Card.module.css";
 
-interface CardProps {
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   className?: string;
   padding?: "none" | "sm" | "md" | "lg";
@@ -30,6 +30,7 @@ export function Card({
   padding = "md",
   variant = "default",
   hover = false,
+  ...props
 }: CardProps) {
   return (
     <div
@@ -40,6 +41,7 @@ export function Card({
         hover && styles.interactive,
         className
       )}
+      {...props}
     >
       {children}
     </div>
