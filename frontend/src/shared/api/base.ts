@@ -614,6 +614,30 @@ export const learningApi = {
   },
 };
 
+export const formsApi = {
+  templates: {
+    list: (params?: Record<string, unknown>) => api.get("/forms/", { params }),
+    get: (id: string) => api.get(`/forms/templates/${id}/`),
+    create: (data: Record<string, unknown>) => api.post("/forms/", data),
+    update: (id: string, data: Record<string, unknown>) =>
+      api.patch(`/forms/templates/${id}/`, data),
+    remove: (id: string) => api.delete(`/forms/templates/${id}/`),
+  },
+  invitations: {
+    list: (params?: Record<string, unknown>) =>
+      api.get("/forms/invitations/", { params }),
+    get: (id: string) => api.get(`/forms/invitations/${id}/`),
+    create: (data: Record<string, unknown>) =>
+      api.post("/forms/invitations/", data),
+    remove: (id: string) => api.delete(`/forms/invitations/${id}/`),
+  },
+  public: {
+    get: (token: string) => api.get(`/forms/i/${token}/`),
+    submit: (token: string, response: Record<string, unknown>) =>
+      api.post(`/forms/i/${token}/`, { response }),
+  },
+};
+
 export const notificationsApi = {
   list: (params?: Record<string, unknown>) => api.get("/notifications/", { params }),
   markAllRead: () => api.post("/notifications/mark-all-read/"),

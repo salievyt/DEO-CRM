@@ -47,6 +47,7 @@ import {
   GraduationCap,
   BookOpen,
   FileEdit,
+  ClipboardList,
 } from "lucide-react";
 import type { Notification } from "@/entities/notification/types";
 import type { Task } from "@/entities/task/types";
@@ -118,6 +119,7 @@ const NAV_CATEGORIES = [
       { name: "Настройки", href: "/settings", icon: Settings, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "client"], matchSubRoutes: true },
       { name: "Админ", href: "/admin", icon: ShieldCheck, roles: ["superadmin", "owner"] },
       { name: "Статьи", href: "/admin/learning", icon: FileEdit, roles: ["superadmin", "owner"], matchSubRoutes: true },
+      { name: "Анкеты", href: "/admin/forms", icon: ClipboardList, roles: ["superadmin", "owner"], matchSubRoutes: true },
     ],
   },
 ];

@@ -115,4 +115,9 @@ export const QUERY_KEYS = {
   LEARNING_ARTICLE: "learning-article",
   LEARNING_ADMIN_ARTICLES: "learning-admin-articles",
   LEARNING_ADMIN_ARTICLE: "learning-admin-article",
+
+  // Forms (анкеты)
+  FORM_TEMPLATES: "form-templates",
+  FORM_INVITATIONS: "form-invitations",
+  FORM_PUBLIC: "form-public",
 };
