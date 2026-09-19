@@ -106,6 +106,11 @@ class TaskDetailSerializer(serializers.ModelSerializer):
 
 
 class TaskCreateSerializer(serializers.ModelSerializer):
+    # Optional on create: falls back to the first status by order.
+    status = serializers.PrimaryKeyRelatedField(
+        queryset=TaskStatus.objects.all(), required=False, allow_null=True
+    )
+
     class Meta:
         model = Task
         fields = [
@@ -113,3 +118,13 @@ class TaskCreateSerializer(serializers.ModelSerializer):
             "assignee", "reviewer", "status", "priority",
             "deadline", "estimated_hours",
         ]
+
+    def validate(self, attrs):
+        if not attrs.get("status"):
+            default_status = TaskStatus.objects.order_by("order", "pk").first()
+            if default_status is None:
+                raise serializers.ValidationError(
+                    {"status": "Не настроены статусы задач"}
+                )
+            attrs["status"] = default_status
+        return attrs

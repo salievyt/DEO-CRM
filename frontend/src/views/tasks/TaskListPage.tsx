@@ -20,6 +20,7 @@ import { Badge } from "@/shared/ui/Badge";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
 import { Modal } from "@/shared/ui/Modal";
 import { Input } from "@/shared/ui/Input";
+import { Select } from "@/shared/ui/Select";
 import { LoadingSpinner } from "@/shared/ui/LoadingSpinner";
 import { ProjectSearchSelect } from "@/shared/ui/ProjectSearchSelect";
 import { UserSearchSelect } from "@/shared/ui/UserSearchSelect";
@@ -470,10 +471,31 @@ function TaskForm({
     estimated_hours: "",
   });
 
+  const statusesQuery = useQuery({
+    queryKey: [QUERY_KEYS.TASK_STATUSES],
+    queryFn: () => tasksApi.statuses(),
+    select: (res) => res.data?.results ?? [],
+  });
+
+  const prioritiesQuery = useQuery({
+    queryKey: [QUERY_KEYS.TASK_PRIORITIES],
+    queryFn: () => tasksApi.priorities(),
+    select: (res) => res.data?.results ?? [],
+  });
+
+  const statusOptions = (statusesQuery.data ?? []).map(
+    (s: { id: string; name: string }) => ({ value: s.id, label: s.name })
+  );
+  const priorityOptions = (prioritiesQuery.data ?? []).map(
+    (p: { id: string; name: string }) => ({ value: p.id, label: p.name })
+  );
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
       ...form,
+      status: form.status || undefined,
+      priority: form.priority || undefined,
       estimated_hours: form.estimated_hours
         ? Number(form.estimated_hours)
         : undefined,
@@ -508,6 +530,22 @@ function TaskForm({
         <UserSearchSelect
           value={form.assignee}
           onChange={(id) => setForm({ ...form, assignee: id })}
+        />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Select
+          label="Статус"
+          options={statusOptions}
+          value={form.status}
+          onChange={(e) => setForm({ ...form, status: e.target.value })}
+          placeholder="По умолчанию"
+        />
+        <Select
+          label="Приоритет"
+          options={priorityOptions}
+          value={form.priority}
+          onChange={(e) => setForm({ ...form, priority: e.target.value })}
+          placeholder="Не выбран"
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">

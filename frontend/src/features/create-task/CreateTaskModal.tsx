@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { tasksApi } from "@/shared/api/base";
 import { QUERY_KEYS } from "@/shared/constants";
 import { Button } from "@/shared/ui/Button";
@@ -23,10 +23,32 @@ export function CreateTaskModal({ open, onClose }: CreateTaskModalProps) {
     description: "",
     project: "",
     assignee: "",
+    status: "",
+    priority: "",
     deadline: "",
     estimated_hours: "",
-    priority: "",
   });
+
+  const statusesQuery = useQuery({
+    queryKey: [QUERY_KEYS.TASK_STATUSES],
+    queryFn: () => tasksApi.statuses(),
+    select: (res) => res.data?.results ?? [],
+  });
+
+  const prioritiesQuery = useQuery({
+    queryKey: [QUERY_KEYS.TASK_PRIORITIES],
+    queryFn: () => tasksApi.priorities(),
+    select: (res) => res.data?.results ?? [],
+  });
+
+  const statusOptions = (statusesQuery.data ?? []).map((s: { id: string; name: string }) => ({
+    value: s.id,
+    label: s.name,
+  }));
+  const priorityOptions = (prioritiesQuery.data ?? []).map((p: { id: string; name: string }) => ({
+    value: p.id,
+    label: p.name,
+  }));
 
   const mutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => tasksApi.create(data),
@@ -42,6 +64,8 @@ export function CreateTaskModal({ open, onClose }: CreateTaskModalProps) {
     e.preventDefault();
     mutation.mutate({
       ...form,
+      status: form.status || undefined,
+      priority: form.priority || undefined,
       estimated_hours: form.estimated_hours ? Number(form.estimated_hours) : undefined,
     });
   };
@@ -75,6 +99,22 @@ export function CreateTaskModal({ open, onClose }: CreateTaskModalProps) {
           <UserSearchSelect
             value={form.assignee}
             onChange={(id) => setForm({ ...form, assignee: id })}
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Select
+            label="Статус"
+            options={statusOptions}
+            value={form.status}
+            onChange={(e) => setForm({ ...form, status: e.target.value })}
+            placeholder="По умолчанию"
+          />
+          <Select
+            label="Приоритет"
+            options={priorityOptions}
+            value={form.priority}
+            onChange={(e) => setForm({ ...form, priority: e.target.value })}
+            placeholder="Не выбран"
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
