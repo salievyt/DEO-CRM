@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
-import { Eye, EyeOff, LogIn } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, KeyRound, LogIn } from "lucide-react";
 
 export default function LoginPage() {
   return (
@@ -18,13 +18,15 @@ export default function LoginPage() {
 function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login } = useAuth();
+  const { login, verifyLogin2FA } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [challenge, setChallenge] = useState("");
+  const [otpCode, setOtpCode] = useState("");
 
   useEffect(() => {
     if (searchParams.get("registered") === "true") {
@@ -40,10 +42,20 @@ function LoginPageInner() {
     setIsLoading(true);
 
     try {
-      await login(email, password);
-      router.push("/dashboard");
-    } catch {
-      setError("Неверный email или пароль");
+      if (challenge) {
+        await verifyLogin2FA(challenge, otpCode);
+        router.push("/dashboard");
+      } else {
+        const result = await login(email, password);
+        if (result.requires2FA && result.challenge) {
+          setChallenge(result.challenge);
+          setOtpCode("");
+        } else {
+          router.push("/dashboard");
+        }
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || "Не удалось выполнить вход");
     } finally {
       setIsLoading(false);
     }
@@ -69,17 +81,17 @@ function LoginPageInner() {
             />
           </div>
           <h1 className="text-2xl font-bold text-surface-900 dark:text-white">
-            Добро пожаловать
+            {challenge ? "Подтвердите вход" : "Добро пожаловать"}
           </h1>
           <p className="mt-1.5 text-sm text-surface-500">
-            Войдите в систему управления проектами
+            {challenge ? "Введите код из приложения-аутентификатора" : "Войдите в систему управления проектами"}
           </p>
         </div>
 
         {/* Glass card */}
         <div className="card-glass dark:border-surface-700/50">
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-1.5">
+            {!challenge && <div className="space-y-1.5">
               <label htmlFor="email" className="block text-sm font-medium text-surface-700 dark:text-surface-200">
                 Email
               </label>
@@ -93,9 +105,9 @@ function LoginPageInner() {
                 autoComplete="email"
                 required
               />
-            </div>
+            </div>}
 
-            <div className="space-y-1.5">
+            {!challenge && <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label htmlFor="password" className="block text-sm font-medium text-surface-700 dark:text-surface-200">
                   Пароль
@@ -127,7 +139,29 @@ function LoginPageInner() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-            </div>
+            </div>}
+
+            {challenge && (
+              <div className="space-y-1.5">
+                <label htmlFor="otp" className="block text-sm font-medium text-surface-700 dark:text-surface-200">
+                  Код подтверждения
+                </label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
+                  <input
+                    id="otp"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.toUpperCase())}
+                    className="input pl-10 text-center font-mono text-lg tracking-widest"
+                    placeholder="000000 или XXXXX-XXXXX"
+                    autoComplete="one-time-code"
+                    autoFocus
+                    required
+                  />
+                </div>
+                <p className="text-xs text-surface-500">Можно использовать один из резервных кодов.</p>
+              </div>
+            )}
 
             {successMessage && (
               <div className="animate-fade-in rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-400">
@@ -152,17 +186,17 @@ function LoginPageInner() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Вход...
+                  Проверка...
                 </span>
               ) : (
                 <span className="flex items-center justify-center gap-2">
-                  <LogIn className="h-4 w-4" />
-                  Войти
+                  {challenge ? <KeyRound className="h-4 w-4" /> : <LogIn className="h-4 w-4" />}
+                  {challenge ? "Подтвердить" : "Войти"}
                 </span>
               )}
             </button>
 
-            <div className="relative">
+            {!challenge && <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-surface-200 dark:border-surface-700" />
               </div>
@@ -171,14 +205,25 @@ function LoginPageInner() {
                   Или
                 </span>
               </div>
-            </div>
+            </div>}
 
-            <Link
+            {!challenge && <Link
               href="/register"
               className="btn-secondary flex w-full items-center justify-center gap-2"
             >
               Создать аккаунт
-            </Link>
+            </Link>}
+
+            {challenge && (
+              <button
+                type="button"
+                onClick={() => { setChallenge(""); setOtpCode(""); setError(""); }}
+                className="btn-secondary flex w-full items-center justify-center gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Вернуться к паролю
+              </button>
+            )}
           </form>
         </div>
 

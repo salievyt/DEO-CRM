@@ -51,6 +51,8 @@ api.interceptors.response.use(
 
 export const authApi = {
   login: (email: string, password: string) => api.post("/auth/login/", { email, password }),
+  verifyLogin2FA: (challenge: string, code: string) =>
+    api.post("/auth/login/2fa/", { challenge, code }),
   register: (data: { email: string; password: string; first_name: string; last_name: string }) =>
     api.post("/auth/register/", data),
   me: () => api.get("/auth/me/"),
@@ -69,7 +71,11 @@ export const authApi = {
   },
   enable2FA: () => api.post("/auth/2fa/enable/"),
   verify2FA: (code: string) => api.post("/auth/2fa/verify/", { code }),
-  disable2FA: () => api.post("/auth/2fa/disable/"),
+  twoFactorStatus: () => api.get("/auth/2fa/status/"),
+  regenerateRecoveryCodes: (password: string, code: string) =>
+    api.post("/auth/2fa/recovery-codes/", { password, code }),
+  disable2FA: (password: string, code: string) =>
+    api.post("/auth/2fa/disable/", { password, code }),
 };
 
 export const clientsApi = {

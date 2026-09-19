@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
-  User,
   Shield,
   Bell,
   Palette,
@@ -165,6 +165,60 @@ function SecuritySection() {
   });
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [setup, setSetup] = useState<{ qr_code: string; secret: string } | null>(null);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [twoFactorPassword, setTwoFactorPassword] = useState("");
+  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
+
+  const twoFactorQuery = useQuery({
+    queryKey: ["two-factor-status"],
+    queryFn: () => authApi.twoFactorStatus(),
+    select: (response) => response.data,
+  });
+
+  const startTwoFactor = useMutation({
+    mutationFn: () => authApi.enable2FA(),
+    onSuccess: (response) => {
+      setSetup(response.data);
+      setErrorMessage("");
+    },
+    onError: (err: any) => setErrorMessage(err?.response?.data?.detail || "Не удалось начать настройку 2FA"),
+  });
+
+  const confirmTwoFactor = useMutation({
+    mutationFn: () => authApi.verify2FA(twoFactorCode),
+    onSuccess: (response) => {
+      setRecoveryCodes(response.data.recovery_codes || []);
+      setSetup(null);
+      setTwoFactorCode("");
+      setSuccessMessage("Двухфакторная аутентификация включена");
+      twoFactorQuery.refetch();
+    },
+    onError: (err: any) => setErrorMessage(err?.response?.data?.detail || "Неверный код"),
+  });
+
+  const disableTwoFactor = useMutation({
+    mutationFn: () => authApi.disable2FA(twoFactorPassword, twoFactorCode),
+    onSuccess: () => {
+      setTwoFactorPassword("");
+      setTwoFactorCode("");
+      setRecoveryCodes([]);
+      setSuccessMessage("Двухфакторная аутентификация отключена");
+      twoFactorQuery.refetch();
+    },
+    onError: (err: any) => setErrorMessage(err?.response?.data?.detail || "Не удалось отключить 2FA"),
+  });
+
+  const regenerateCodes = useMutation({
+    mutationFn: () => authApi.regenerateRecoveryCodes(twoFactorPassword, twoFactorCode),
+    onSuccess: (response) => {
+      setRecoveryCodes(response.data.recovery_codes || []);
+      setTwoFactorCode("");
+      setTwoFactorPassword("");
+      twoFactorQuery.refetch();
+    },
+    onError: (err: any) => setErrorMessage(err?.response?.data?.detail || "Не удалось обновить коды"),
+  });
 
   const changePasswordMutation = useMutation({
     mutationFn: () =>
@@ -270,16 +324,66 @@ function SecuritySection() {
       <hr className="border-surface-200 dark:border-surface-700" />
 
       <div>
-        <h3 className="text-sm font-semibold text-surface-700 dark:text-surface-200">
-          Двухфакторная аутентификация
-        </h3>
-        <p className="mt-1 text-sm text-surface-500">
-          Добавьте дополнительный уровень безопасности
-        </p>
-        <Button variant="secondary" className="mt-3">
-          <Shield className="h-4 w-4" />
-          Включить 2FA
-        </Button>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-sm font-semibold text-surface-700 dark:text-surface-200">Двухфакторная аутентификация</h3>
+            <p className="mt-1 text-sm text-surface-500">
+              {twoFactorQuery.data?.enabled
+                ? `Включена. Осталось резервных кодов: ${twoFactorQuery.data.recovery_codes_remaining}`
+                : "Защитите вход кодом из приложения-аутентификатора"}
+            </p>
+          </div>
+          <span className={`text-xs font-medium ${twoFactorQuery.data?.enabled ? "text-success-600" : "text-surface-500"}`}>
+            {twoFactorQuery.data?.enabled ? "Включена" : "Отключена"}
+          </span>
+        </div>
+
+        {!twoFactorQuery.data?.enabled && !setup && (
+          <Button variant="secondary" className="mt-4" onClick={() => startTwoFactor.mutate()} loading={startTwoFactor.isPending}>
+            <Shield className="h-4 w-4" />
+            Включить 2FA
+          </Button>
+        )}
+
+        {setup && (
+          <div className="mt-4 grid gap-5 border-t border-surface-200 pt-5 dark:border-surface-700 sm:grid-cols-[180px_1fr]">
+            <Image src={setup.qr_code} alt="QR-код для подключения 2FA" width={180} height={180} unoptimized className="border border-surface-200 bg-white p-2" />
+            <div className="space-y-3">
+              <p className="text-sm text-surface-600 dark:text-surface-300">Отсканируйте QR-код в Google Authenticator, 2FAS, Aegis или другом TOTP-приложении.</p>
+              <div>
+                <p className="text-xs text-surface-500">Ключ для ручного ввода</p>
+                <code className="mt-1 block break-all text-sm text-surface-800 dark:text-surface-100">{setup.secret}</code>
+              </div>
+              <Input label="Код из приложения" value={twoFactorCode} onChange={(e) => setTwoFactorCode(e.target.value)} placeholder="000000" />
+              <div className="flex gap-2">
+                <Button onClick={() => confirmTwoFactor.mutate()} loading={confirmTwoFactor.isPending}>Подтвердить</Button>
+                <Button variant="secondary" onClick={() => setSetup(null)}>Отмена</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {twoFactorQuery.data?.enabled && (
+          <div className="mt-4 grid gap-3 border-t border-surface-200 pt-4 dark:border-surface-700 sm:grid-cols-2">
+            <Input label="Текущий пароль" type="password" value={twoFactorPassword} onChange={(e) => setTwoFactorPassword(e.target.value)} />
+            <Input label="Код 2FA или резервный код" value={twoFactorCode} onChange={(e) => setTwoFactorCode(e.target.value)} />
+            <div className="flex flex-wrap gap-2 sm:col-span-2">
+              <Button variant="secondary" onClick={() => regenerateCodes.mutate()} loading={regenerateCodes.isPending}>Новые резервные коды</Button>
+              <Button variant="secondary" onClick={() => disableTwoFactor.mutate()} loading={disableTwoFactor.isPending}>Отключить 2FA</Button>
+            </div>
+          </div>
+        )}
+
+        {recoveryCodes.length > 0 && (
+          <div className="mt-4 border border-warning-200 bg-warning-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
+            <p className="text-sm font-semibold text-surface-800 dark:text-surface-100">Сохраните резервные коды</p>
+            <p className="mt-1 text-xs text-surface-600 dark:text-surface-300">Каждый код действует один раз и больше не будет показан.</p>
+            <div className="mt-3 grid grid-cols-2 gap-2 font-mono text-sm text-surface-800 dark:text-surface-100">
+              {recoveryCodes.map((code) => <span key={code}>{code}</span>)}
+            </div>
+            <Button variant="secondary" className="mt-3" onClick={() => navigator.clipboard.writeText(recoveryCodes.join("\n"))}>Скопировать коды</Button>
+          </div>
+        )}
       </div>
     </Card>
   );

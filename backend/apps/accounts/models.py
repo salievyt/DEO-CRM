@@ -1,5 +1,6 @@
 import uuid
 
+from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
@@ -120,3 +121,23 @@ class UserActivityLog(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.action} - {self.created_at:%d.%m.%Y %H:%M}"
+
+
+class RecoveryCode(models.Model):
+    """Single-use hashed recovery code for two-factor authentication."""
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="recovery_codes"
+    )
+    code_hash = models.CharField(max_length=128)
+    used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["user", "used_at"])]
+
+    def set_code(self, code):
+        self.code_hash = make_password(code)
+
+    def matches(self, code):
+        return self.used_at is None and check_password(code, self.code_hash)

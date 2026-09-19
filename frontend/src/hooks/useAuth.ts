@@ -21,7 +21,8 @@ interface AuthState {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ requires2FA: boolean; challenge?: string }>;
+  verifyLogin2FA: (challenge: string, code: string) => Promise<void>;
   register: (data: { email: string; password: string; first_name: string; last_name: string }) => Promise<void>;
   logout: () => void;
   fetchUser: () => Promise<void>;
@@ -34,12 +35,25 @@ export const useAuth = create<AuthState>((set) => ({
 
   login: async (email, password) => {
     const response = await authApi.login(email, password);
+    if (response.data.requires_2fa) {
+      return { requires2FA: true, challenge: response.data.challenge };
+    }
     const { access, refresh } = response.data;
 
     localStorage.setItem("access_token", access);
     localStorage.setItem("refresh_token", refresh);
 
     // Fetch user profile
+    const userResponse = await authApi.me();
+    set({ user: userResponse.data, isAuthenticated: true, isLoading: false });
+    return { requires2FA: false };
+  },
+
+  verifyLogin2FA: async (challenge, code) => {
+    const response = await authApi.verifyLogin2FA(challenge, code);
+    const { access, refresh } = response.data;
+    localStorage.setItem("access_token", access);
+    localStorage.setItem("refresh_token", refresh);
     const userResponse = await authApi.me();
     set({ user: userResponse.data, isAuthenticated: true, isLoading: false });
   },

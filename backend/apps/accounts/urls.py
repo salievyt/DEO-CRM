@@ -1,5 +1,5 @@
 from django.urls import path
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenRefreshView
 
 from . import views
 from .profile_views import (
@@ -11,7 +11,8 @@ from .profile_views import (
 
 urlpatterns = [
     # Auth
-    path("login/", TokenObtainPairView.as_view(), name="auth-login"),
+    path("login/", views.LoginView.as_view(), name="auth-login"),
+    path("login/2fa/", views.Login2FAView.as_view(), name="auth-login-2fa"),
     path("register/", views.RegisterView.as_view(), name="auth-register"),
     path("refresh/", TokenRefreshView.as_view(), name="auth-refresh"),
     path("logout/", views.LogoutView.as_view(), name="auth-logout"),
@@ -20,6 +21,8 @@ urlpatterns = [
     # 2FA
     path("2fa/enable/", views.Enable2FAView.as_view(), name="auth-2fa-enable"),
     path("2fa/verify/", views.Verify2FAView.as_view(), name="auth-2fa-verify"),
+    path("2fa/status/", views.TwoFactorStatusView.as_view(), name="auth-2fa-status"),
+    path("2fa/recovery-codes/", views.RegenerateRecoveryCodesView.as_view(), name="auth-2fa-recovery-codes"),
     path("2fa/disable/", views.Disable2FAView.as_view(), name="auth-2fa-disable"),
     # Users management
     path("users/", views.UserListView.as_view(), name="user-list"),
