@@ -92,4 +92,43 @@ SCENARIO_TEMPLATES = [
         "cooldown_minutes": 60,
         "priority": 6,
     },
+    # ---- Event-driven automation templates ----
+    {
+        "name": "Лид создан → задача менеджеру",
+        "description": "Автоматически создаёт задачу менеджеру при появлении нового лида",
+        "event_type": "lead_created",
+        "action_type": "create_task",
+        "action_config": {
+            "title": "Обработать лид: {name}",
+            "description": "Клиент: {name}. Обработайте заявку в течение рабочего дня.",
+            "priority": "Высокий",
+        },
+        "priority": 10,
+    },
+    {
+        "name": "Счёт не оплачен 3 дня → напоминание",
+        "description": "Создаёт менеджеру напоминание, если счёт не оплачен дольше указанного срока",
+        "event_type": "invoice_unpaid",
+        "action_type": "create_reminder",
+        "action_config": {
+            "days": 3,
+            "title": "Счёт {number} не оплачен",
+            "description": "Счёт {number} на сумму {amount} ₽ не оплачен уже {days} дней.",
+            "priority": "high",
+        },
+        "priority": 11,
+    },
+    {
+        "name": "Сделка выиграна → проект и демо-доступ",
+        "description": "Создаёт проект из выигранной сделки и демо-доступ в кабинет клиента",
+        "event_type": "deal_won",
+        "action_type": "create_project_demo",
+        "action_config": {
+            "name": "{title}",
+            "description": "Проект создан автоматически после выигрыша сделки {number}.",
+            "create_milestone": True,
+            "milestone_name": "Демо-доступ",
+        },
+        "priority": 12,
+    },
 ]

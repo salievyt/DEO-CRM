@@ -402,6 +402,11 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": timedelta(hours=1),
         "options": {"expires": 3600},
     },
+    "scenarios-process-invoice-unpaid": {
+        "task": "apps.scenarios.tasks.process_invoice_unpaid_events",
+        "schedule": crontab(hour=9, minute=5),
+        "options": {"expires": 3600 * 8},
+    },
     # Business analytics: nightly snapshot rebuild + cache pre-warm
     "refresh-business-analytics-snapshot": {
         "task": "apps.analytics.tasks.refresh_business_analytics_snapshot",

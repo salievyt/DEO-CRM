@@ -4,6 +4,7 @@ from . import views
 
 urlpatterns = [
     path("", views.ScenarioListCreateView.as_view(), name="scenario-list"),
+    path("options/", views.ScenarioOptionsView.as_view(), name="scenario-options"),
     path("templates/", views.ScenarioTemplateListView.as_view(), name="scenario-templates"),
     path("triggers/", views.ScenarioTriggerListView.as_view(), name="scenario-triggers"),
     path("stats/", views.ScenarioStatsView.as_view(), name="scenario-stats"),

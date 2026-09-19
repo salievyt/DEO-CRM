@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 
 from apps.messaging.permissions import IsInboxStaff
 
-from .models import Scenario, ScenarioTrigger, TriggerStatus
+from .models import EventType, Scenario, ScenarioTrigger, TriggerStatus
 from .serializers import (
     ScenarioSerializer,
     ScenarioStatsSerializer,
@@ -29,10 +29,33 @@ class ScenarioListCreateView(generics.ListCreateAPIView):
             qs = qs.filter(is_active=True)
         elif status_filter == "inactive":
             qs = qs.filter(is_active=False)
+        event_filter = self.request.query_params.get("event")
+        if event_filter in EventType.values:
+            qs = qs.filter(event_type=event_filter)
         return qs
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
+
+
+class ScenarioOptionsView(APIView):
+    """Selectable options for building a scenario in the UI."""
+
+    permission_classes = [permissions.IsAuthenticated, IsInboxStaff]
+
+    def get(self, request):
+        from .models import ActionType
+
+        return Response(
+            {
+                "event_types": [
+                    {"value": e.value, "label": e.label} for e in EventType
+                ],
+                "action_types": [
+                    {"value": a.value, "label": a.label} for a in ActionType
+                ],
+            }
+        )
 
 
 class ScenarioDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -94,6 +117,9 @@ class ScenarioTriggerListView(generics.ListAPIView):
         scenario_id = self.request.query_params.get("scenario")
         if scenario_id:
             qs = qs.filter(scenario_id=scenario_id)
+        event_filter = self.request.query_params.get("event")
+        if event_filter in EventType.values:
+            qs = qs.filter(event_type=event_filter)
         status_filter = self.request.query_params.get("status")
         if status_filter in TriggerStatus.values:
             qs = qs.filter(status=status_filter)

@@ -138,6 +138,18 @@ def _mark_won(user, deal):
         deal.status = Deal.STATUS_WON
         deal.won_at = timezone.now()
         deal.save(update_fields=["status", "won_at", "updated_at"])
+
+    from apps.scenarios.events import emit_event
+
+    transaction.on_commit(
+        lambda: emit_event(
+            "deal_won",
+            actor=user,
+            entity=deal,
+            entity_type="deal",
+            entity_label=deal.number,
+        )
+    )
     return deal
 
 

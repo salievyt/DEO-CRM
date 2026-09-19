@@ -22,6 +22,25 @@ class MatchMode(models.TextChoices):
     ALL = "all", "Все слова"
 
 
+class EventType(models.TextChoices):
+    """CRM events a scenario may react to (not only inbound messages)."""
+
+    MESSAGE = "message", "Входящее сообщение"
+    LEAD_CREATED = "lead_created", "Лид создан"
+    DEAL_WON = "deal_won", "Сделка выиграна"
+    INVOICE_UNPAID = "invoice_unpaid", "Счёт не оплачен"
+    PROJECT_CREATED = "project_created", "Проект создан"
+
+
+class ActionType(models.TextChoices):
+    """What the engine does when a scenario fires."""
+
+    REPLY = "reply", "Ответить клиенту"
+    CREATE_TASK = "create_task", "Создать задачу"
+    CREATE_REMINDER = "create_reminder", "Создать напоминание"
+    CREATE_PROJECT_DEMO = "create_project_demo", "Создать проект и демо-доступ"
+
+
 class TriggerStatus(models.TextChoices):
     """Outcome of a scenario auto-response attempt."""
 
@@ -31,11 +50,12 @@ class TriggerStatus(models.TextChoices):
 
 
 class Scenario(models.Model):
-    """A keyword-triggered automated reply.
+    """An automation rule reacting to a CRM event.
 
-    When an inbound message matches one of ``keywords`` (and the conversation
-    channel matches ``channel``), the engine sends ``reply_text`` back to the
-    client automatically and records a :class:`ScenarioTrigger`.
+    Message scenarios match ``keywords`` on an inbound message (channel,
+    ``match_mode``, ``reply_text``, cooldown). Event scenarios react to CRM
+    events such as a created lead or a won deal and run a business action
+    (:attr:`action_type`) configured via :attr:`action_config`.
 
     Scenarios with the same priority are ordered by creation time; the first
     matching active scenario wins.
@@ -44,6 +64,24 @@ class Scenario(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=150, verbose_name="Название")
     description = models.TextField(blank=True, default="", verbose_name="Описание")
+    event_type = models.CharField(
+        max_length=30,
+        choices=EventType.choices,
+        default=EventType.MESSAGE,
+        verbose_name="Событие",
+    )
+    action_type = models.CharField(
+        max_length=30,
+        choices=ActionType.choices,
+        default=ActionType.REPLY,
+        verbose_name="Действие",
+    )
+    action_config = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Конфигурация действия",
+        help_text="Параметры действия, например {\"days\": 3} для неоплаченных счетов",
+    )
     channel = models.CharField(
         max_length=20,
         choices=Channel.choices,
@@ -57,7 +95,7 @@ class Scenario(models.Model):
         verbose_name="Условие совпадения",
     )
     keywords = models.JSONField(default=list, verbose_name="Ключевые слова")
-    reply_text = models.TextField(verbose_name="Ответ клиенту")
+    reply_text = models.TextField(blank=True, default="", verbose_name="Ответ клиенту")
     cooldown_minutes = models.PositiveIntegerField(
         default=0, verbose_name="Пауза между ответами (мин)"
     )
@@ -91,7 +129,12 @@ class Scenario(models.Model):
 
 
 class ScenarioTrigger(models.Model):
-    """One auto-response attempt: which message fired which scenario and why."""
+    """One trigger attempt: which event fired which scenario and why.
+
+    Message scenarios also reference the conversation/message; event-driven
+    scenarios instead carry an entity (lead, deal, invoice...) via
+    ``entity_type`` / ``entity_id`` / ``entity_label``.
+    """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     scenario = models.ForeignKey(
@@ -100,15 +143,29 @@ class ScenarioTrigger(models.Model):
         related_name="triggers",
         verbose_name="Сценарий",
     )
+    event_type = models.CharField(
+        max_length=30, blank=True, default="", verbose_name="Событие"
+    )
+    entity_type = models.CharField(
+        max_length=30, blank=True, default="", verbose_name="Тип сущности"
+    )
+    entity_id = models.UUIDField(null=True, blank=True, verbose_name="ID сущности")
+    entity_label = models.CharField(
+        max_length=255, blank=True, default="", verbose_name="Сущность"
+    )
     conversation = models.ForeignKey(
         "messaging.Conversation",
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="scenario_triggers",
         verbose_name="Диалог",
     )
     message = models.ForeignKey(
         "messaging.Message",
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="scenario_triggers",
         verbose_name="Входящее сообщение",
     )
@@ -122,7 +179,9 @@ class ScenarioTrigger(models.Model):
     )
     client = models.ForeignKey(
         "clients.Client",
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="scenario_triggers",
         verbose_name="Клиент",
     )

@@ -19,7 +19,7 @@ from apps.messaging.services.conversations import (
 )
 from apps.messaging.services.realtime import notify
 
-from .models import Channel, MatchMode, Scenario, ScenarioTrigger, TriggerStatus
+from .models import Channel, EventType, MatchMode, Scenario, ScenarioTrigger, TriggerStatus
 
 logger = logging.getLogger("scenarios")
 
@@ -62,7 +62,7 @@ def maybe_auto_respond(message) -> ScenarioTrigger | None:
 
     conversation = message.conversation
     scenarios = (
-        Scenario.objects.filter(is_active=True)
+        Scenario.objects.filter(is_active=True, event_type=EventType.MESSAGE)
         .filter(Q(channel=conversation.channel) | Q(channel=Channel.ALL))
         .order_by("priority", "created_at")
     )
@@ -92,6 +92,7 @@ def _respond(scenario: Scenario, conversation, message, matched: str) -> Scenari
         if cooldown_hit:
             return ScenarioTrigger.objects.create(
                 scenario=scenario,
+                event_type=EventType.MESSAGE,
                 conversation=conversation,
                 message=message,
                 client=conversation.contact,
@@ -102,6 +103,7 @@ def _respond(scenario: Scenario, conversation, message, matched: str) -> Scenari
     reply = _send_reply(conversation, scenario.reply_text)
     trigger = ScenarioTrigger.objects.create(
         scenario=scenario,
+        event_type=EventType.MESSAGE,
         conversation=conversation,
         message=message,
         reply_message=reply,
