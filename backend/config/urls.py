@@ -33,6 +33,7 @@ api_patterns = [
     path("calls/", include("apps.calls.urls")),
     path("scenarios/", include("apps.scenarios.urls")),
     path("learning/", include("apps.learning.urls")),
+    path("forms/", include("apps.forms.urls")),
 ]
 
 urlpatterns = [

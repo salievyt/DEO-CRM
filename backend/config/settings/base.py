@@ -63,6 +63,7 @@ LOCAL_APPS = [
     "apps.calls",
     "apps.scenarios",
     "apps.learning",
+    "apps.forms",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -216,6 +217,12 @@ CSRF_TRUSTED_ORIGINS = os.environ.get(
     "CSRF_TRUSTED_ORIGINS",
     "http://localhost:3000,http://localhost:3001,http://localhost:8000,http://localhost:8001",
 ).split(",")
+
+# Base URL used when generating public form links (frontend address).
+FORMS_PUBLIC_BASE_URL = os.environ.get(
+    "FORMS_PUBLIC_BASE_URL",
+    "http://localhost:3000",
+).rstrip("/")
 
 # Spectacular (Swagger)
 SPECTACULAR_SETTINGS = {
