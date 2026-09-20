@@ -3,9 +3,17 @@
 import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { api } from "@/shared/api/base";
-import { Eye, EyeOff, ShieldCheck, ArrowLeft, CheckCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Lock,
+  ShieldCheck,
+} from "lucide-react";
+import { AuthLayout } from "@/features/auth/AuthLayout";
+import { AuthField } from "@/features/auth/AuthField";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -50,94 +58,76 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="auth-gradient-light dark:auth-gradient relative flex min-h-screen items-center justify-center overflow-hidden px-4">
-      {/* Gradient orbs */}
-      <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-brand-400/20 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-purple-400/20 blur-3xl" />
-
-      <div className="relative w-full max-w-md animate-fade-in-up">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 shadow-lg shadow-brand-600/20 ring-4 ring-white/50 dark:ring-surface-800">
-            <Image
-              src="/images/DEO_CRM_LOGO.svg"
-              alt="DEO CRM"
-              width={48}
-              height={48}
-              className="h-12 w-12 object-contain"
-            />
-          </div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-white">
-            Новый пароль
-          </h1>
-          <p className="mt-1.5 text-sm text-surface-500">
-            Придумайте новый надёжный пароль
-          </p>
-        </div>
-
-        <div className="card-glass dark:border-surface-700/50">
-          {success ? (
-            <div className="animate-fade-in space-y-5 text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-success-50 dark:bg-green-900/30">
-                <CheckCircle className="h-8 w-8 text-success-600 dark:text-green-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-surface-900 dark:text-white">
-                  Пароль изменён!
-                </h3>
-                <p className="mt-2 text-sm text-surface-500">
-                  Перенаправляем на страницу входа...
-                </p>
-              </div>
-              <Link
-                href="/login"
-                className="btn-primary inline-flex w-full items-center justify-center gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Перейти ко входу
-              </Link>
+    <AuthLayout>
+      <div className="rounded-2xl border border-surface-200/80 bg-white p-6 shadow-xl shadow-surface-900/[0.04] transition-colors sm:p-8 dark:border-surface-800 dark:bg-surface-900">
+        {success ? (
+          <div className="animate-fade-in space-y-5 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-success-50 ring-1 ring-success-100 dark:bg-green-900/30 dark:ring-green-900">
+              <CheckCircle2 className="h-8 w-8 text-success-600 dark:text-green-400" />
             </div>
-          ) : (
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-surface-900 dark:text-white">
+                Пароль изменён!
+              </h1>
+              <p className="mt-2 text-sm text-surface-500 dark:text-surface-400">
+                Перенаправляем на страницу входа...
+              </p>
+            </div>
+            <Link
+              href="/login"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-brand-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-brand-600/30 active:translate-y-0 active:scale-[0.99]"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Перейти ко входу
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="mb-7">
+              <h1 className="text-2xl font-bold tracking-tight text-surface-900 dark:text-white">
+                Новый пароль
+              </h1>
+              <p className="mt-1.5 text-sm text-surface-500 dark:text-surface-400">
+                Придумайте новый надёжный пароль
+              </p>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-1.5">
-                <label htmlFor="password" className="block text-sm font-medium text-surface-700 dark:text-surface-200">
-                  Новый пароль
-                </label>
-                <div className="relative">
-                  <input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="input pr-10"
-                    placeholder="Минимум 8 символов"
-                    minLength={8}
-                    required
-                  />
+              <AuthField
+                id="password"
+                label="Новый пароль"
+                icon={Lock}
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Минимум 8 символов"
+                minLength={8}
+                autoComplete="new-password"
+                required
+                rightSlot={
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600"
+                    className="rounded-md p-1.5 text-surface-400 transition-colors hover:text-surface-600 dark:text-surface-500 dark:hover:text-surface-300"
                     tabIndex={-1}
+                    aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
-                </div>
-              </div>
+                }
+              />
 
-              <div className="space-y-1.5">
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-surface-700 dark:text-surface-200">
-                  Подтвердите пароль
-                </label>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="input"
-                  placeholder="Повторите пароль"
-                  required
-                />
-              </div>
+              <AuthField
+                id="confirmPassword"
+                label="Подтвердите пароль"
+                icon={CheckCircle2}
+                type={showPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Повторите пароль"
+                autoComplete="new-password"
+                required
+              />
 
               {error && (
                 <div className="animate-fade-in rounded-xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-600 dark:border-red-800 dark:bg-red-900/30 dark:text-red-400">
@@ -145,7 +135,11 @@ export default function ResetPasswordPage() {
                 </div>
               )}
 
-              <button type="submit" disabled={isLoading} className="btn-primary w-full">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-brand-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-brand-600/30 active:translate-y-0 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50"
+              >
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-2">
                     <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -165,20 +159,16 @@ export default function ResetPasswordPage() {
               <div className="text-center">
                 <Link
                   href="/login"
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 transition-colors hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />
                   Вернуться ко входу
                 </Link>
               </div>
             </form>
-          )}
-        </div>
-
-        <p className="mt-6 text-center text-xs text-surface-400">
-          © {new Date().getFullYear()} DEO STUDIO CRM
-        </p>
+          </>
+        )}
       </div>
-    </div>
+    </AuthLayout>
   );
 }
