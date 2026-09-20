@@ -1,9 +1,13 @@
+from decimal import Decimal, InvalidOperation
+
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.exceptions import APIException, NotFound
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from apps.leads.models import Lead, LeadHistory, LeadStage
 
 from common.permissions import IsOwner
 
@@ -110,10 +114,55 @@ class PublicFormView(APIView):
                 status=FormInvitation.Status.FILLED,
                 submitted_at=timezone.now(),
             )
+            lead = self._create_lead(form, response)
+            if lead is not None:
+                invitation.lead = lead
+                invitation.save(update_fields=["lead"])
         return Response(
             {"detail": "Ответ сохранён.", "id": str(invitation.id)},
             status=status.HTTP_200_OK,
         )
+
+    def _create_lead(self, form, response):
+        if not form.create_lead or not form.lead_field_map:
+            return None
+
+        stage = LeadStage.objects.order_by("order").first()
+        if stage is None:
+            return None
+
+        values = {attr: response.get(field_key) for attr, field_key in form.lead_field_map.items()}
+        contact_name = values.get("contact_name")
+        if not contact_name or not str(contact_name).strip():
+            return None
+
+        lead_map = {
+            "source": "website",
+            "contact_name": str(contact_name).strip(),
+        }
+        phone = values.get("phone")
+        lead_map["phone"] = str(phone).strip() if phone else ""
+
+        for attr in ("email", "company_name", "telegram", "notes"):
+            value = values.get(attr)
+            if value:
+                lead_map[attr] = str(value).strip()
+
+        budget = values.get("budget")
+        if budget:
+            try:
+                lead_map["budget"] = Decimal(str(budget))
+            except InvalidOperation:
+                pass
+
+        lead = Lead.objects.create(current_stage=stage, **lead_map)
+        LeadHistory.objects.create(
+            lead=lead,
+            from_stage=None,
+            to_stage=stage,
+            notes=f"Заявка из анкеты «{form.title}»",
+        )
+        return lead
 
     def _get_usable_form(self, token):
         try:

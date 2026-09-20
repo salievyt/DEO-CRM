@@ -2,6 +2,25 @@ export type FormFieldType = "text" | "email" | "phone" | "textarea" | "select";
 
 export type FormEntityType = "client" | "employee" | "other";
 
+export type LeadAttribute =
+  | "contact_name"
+  | "phone"
+  | "email"
+  | "company_name"
+  | "telegram"
+  | "budget"
+  | "notes";
+
+export const LEAD_ATTRIBUTE_LABELS: Record<LeadAttribute, string> = {
+  contact_name: "Контактное имя",
+  phone: "Телефон",
+  email: "Email",
+  company_name: "Компания",
+  telegram: "Telegram",
+  budget: "Бюджет",
+  notes: "Заметки",
+};
+
 export interface FormField {
   key: string;
   label: string;
@@ -18,6 +37,8 @@ export interface FormTemplate {
   entity_type_display: string;
   form_fields: FormField[];
   is_active: boolean;
+  create_lead: boolean;
+  lead_field_map: Partial<Record<LeadAttribute, string>>;
   created_by_name: string | null;
   link_count: number;
   filled_count: number;
@@ -42,6 +63,8 @@ export interface FormInvitation {
   entity_id: string | null;
   status: FormInvitationStatus;
   status_display: string;
+  lead_id: string | null;
+  lead_contact_name: string | null;
   expires_at: string | null;
   submitted_at: string | null;
   response: Record<string, unknown>;
@@ -62,6 +85,8 @@ export interface FormTemplateCreateInput {
   entity_type: FormEntityType;
   form_fields: FormField[];
   is_active?: boolean;
+  create_lead?: boolean;
+  lead_field_map?: Partial<Record<LeadAttribute, string>>;
   link_lifetime?: "1" | "3" | "7" | "forever";
 }
 

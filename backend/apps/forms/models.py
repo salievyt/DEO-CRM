@@ -22,6 +22,18 @@ class FormTemplate(models.Model):
     # Supported field types for the JSON schema.
     FIELD_TYPES = ("text", "email", "phone", "textarea", "select")
 
+    # Lead attributes that can be filled from form response values.
+    LEAD_FIELD_MAP_CHOICES = (
+        ("contact_name", "Контактное имя"),
+        ("phone", "Телефон"),
+        ("email", "Email"),
+        ("company_name", "Компания"),
+        ("telegram", "Telegram"),
+        ("budget", "Бюджет"),
+        ("notes", "Заметки"),
+    )
+    LEAD_FIELD_MAP_KEYS = tuple(key for key, _ in LEAD_FIELD_MAP_CHOICES)
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255, verbose_name="Название")
     description = models.TextField(blank=True, default="", verbose_name="Описание")
@@ -44,6 +56,15 @@ class FormTemplate(models.Model):
         null=True, blank=True, verbose_name="Публичная ссылка действует до"
     )
     is_active = models.BooleanField(default=True, verbose_name="Активна")
+    create_lead = models.BooleanField(
+        default=False, verbose_name="Создавать лид из заявки"
+    )
+    lead_field_map = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Маппинг полей лида",
+        help_text='Словарь: {"атрибут_лида": "ключ_поля_анкеты"}',
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -114,6 +135,14 @@ class FormInvitation(models.Model):
         choices=Status.choices,
         default=Status.SENT,
         verbose_name="Статус",
+    )
+    lead = models.ForeignKey(
+        "leads.Lead",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="form_invitations",
+        verbose_name="Созданный лид",
     )
     expires_at = models.DateTimeField(
         null=True, blank=True, verbose_name="Ссылка действует до"

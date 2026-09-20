@@ -36,7 +36,21 @@ import type {
   FormFieldType,
   FormInvitation,
   FormTemplate,
+  LeadAttribute,
 } from "@/entities/forms/types";
+import { LEAD_ATTRIBUTE_LABELS } from "@/entities/forms/types";
+
+const LEAD_ATTRIBUTES: LeadAttribute[] = [
+  "contact_name",
+  "phone",
+  "email",
+  "company_name",
+  "telegram",
+  "budget",
+  "notes",
+];
+
+type DraftField = FormField & { rawOptions?: string };
 
 const FIELD_TYPES: { value: FormFieldType; label: string }[] = [
   { value: "text", label: "Текст" },
@@ -323,15 +337,28 @@ function TemplateEditorDialog({
     getLinkLifetime(template?.public_link_expires_at)
   );
   const [error, setError] = useState("");
-  const [fields, setFields] = useState<FormField[]>(
+  const [fields, setFields] = useState<DraftField[]>(
     template?.form_fields?.length
-      ? template.form_fields
+      ? template.form_fields.map((f) =>
+          f.type === "select"
+            ? { ...f, rawOptions: (f.options || []).join("\n") }
+            : { ...f }
+        )
       : [{ key: "", label: "", type: "text", required: false }]
   );
+  const [createLead, setCreateLead] = useState(template?.create_lead ?? false);
+  const [leadFieldMap, setLeadFieldMap] = useState<Partial<Record<LeadAttribute, string>>>(
+    template?.lead_field_map || {}
+  );
 
-  const updateField = (index: number, patch: Partial<FormField>) => {
+  const updateField = (index: number, patch: Partial<DraftField>) => {
     setFields((prev) => prev.map((f, i) => (i === index ? { ...f, ...patch } : f)));
   };
+
+  const fieldKeyOptions = fields
+    .map((f) => f.key.trim())
+    .filter(Boolean)
+    .map((key) => ({ value: key, label: key }));
 
   const save = () => {
     if (!title.trim()) {
@@ -346,18 +373,48 @@ function TemplateEditorDialog({
         setError(`Дублируется ключ поля: ${key}.`);
         return;
       }
-      cleaned.push({
-        key,
-        label: field.label.trim() || key,
-        type: field.type,
-        required: Boolean(field.required),
-        options:
-          field.type === "select" ? (field.options || []).filter((o) => o.trim()) : undefined,
-      });
+      if (field.type === "select") {
+        const options = (field.rawOptions ?? "")
+          .split(/[\n,]/)
+          .map((o) => o.trim())
+          .filter(Boolean);
+        if (options.length === 0) {
+          setError(`Укажите варианты для поля «${field.label.trim() || key}».`);
+          return;
+        }
+        cleaned.push({
+          key,
+          label: field.label.trim() || key,
+          type: field.type,
+          required: Boolean(field.required),
+          options,
+        });
+      } else {
+        cleaned.push({
+          key,
+          label: field.label.trim() || key,
+          type: field.type,
+          required: Boolean(field.required),
+        });
+      }
     }
     if (cleaned.length === 0) {
       setError("Добавьте хотя бы одно поле анкеты.");
       return;
+    }
+    if (createLead) {
+      if (!leadFieldMap.contact_name || !leadFieldMap.contact_name.trim()) {
+        setError("Укажите, какое поле анкеты будет контактным именем лида.");
+        return;
+      }
+      const cleanedKeys = new Set(cleaned.map((f) => f.key));
+      const missing = Object.values(leadFieldMap).filter(
+        (fieldKey) => fieldKey && !cleanedKeys.has(fieldKey)
+      );
+      if (missing.length > 0) {
+        setError(`Поля анкеты не найдены: ${missing.join(", ")}.`);
+        return;
+      }
     }
     setError("");
     onSave({
@@ -366,6 +423,10 @@ function TemplateEditorDialog({
       entity_type: entityType,
       is_active: isActive,
       link_lifetime: linkLifetime,
+      create_lead: createLead,
+      lead_field_map: Object.fromEntries(
+        Object.entries(leadFieldMap).filter(([, fieldKey]) => fieldKey)
+      ),
       form_fields: cleaned,
     });
   };
@@ -413,7 +474,7 @@ function TemplateEditorDialog({
             </span>
           </label>
           <Select
-            label="Срок публичной ссылки"
+            label="Срок ссылки"
             value={linkLifetime}
             onChange={(e) =>
               setLinkLifetime(e.target.value as "1" | "3" | "7" | "forever")
@@ -475,7 +536,6 @@ function TemplateEditorDialog({
                   onChange={(e) =>
                     updateField(index, {
                       type: e.target.value as FormFieldType,
-                      options: e.target.value === "select" ? [] : undefined,
                     })
                   }
                   options={FIELD_TYPES.map((f) => ({ value: f.value, label: f.label }))}
@@ -493,20 +553,23 @@ function TemplateEditorDialog({
                 </label>
               </div>
               {field.type === "select" && (
-                <Input
-                  className="mt-3"
-                  label="Варианты (через запятую)"
-                  value={(field.options || []).join(", ")}
-                  onChange={(e) =>
-                    updateField(index, {
-                      options: e.target.value
-                        .split(",")
-                        .map((o) => o.trim())
-                        .filter(Boolean),
-                    })
-                  }
-                  placeholder="Вариант 1, Вариант 2, Вариант 3"
-                />
+                <div className="mt-3">
+                  <label className="mb-1.5 block text-sm font-medium text-surface-700 dark:text-surface-200">
+                    Варианты (по одному в строке)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={field.rawOptions ?? ""}
+                    onChange={(e) => updateField(index, { rawOptions: e.target.value })}
+                    placeholder={"Вариант 1\nВариант 2\nВариант 3"}
+                    className="block w-full rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm text-surface-900 placeholder:text-surface-400 transition-colors focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-surface-600 dark:bg-surface-800 dark:text-surface-50 dark:placeholder:text-surface-500"
+                  />
+                  <p className="mt-1 text-sm text-surface-500">
+                    {fieldOptionCount(field)
+                      ? `Вариантов: ${fieldOptionCount(field)}`
+                      : "Каждая строка — отдельный вариант списка"}
+                  </p>
+                </div>
               )}
               <div className="mt-2 flex justify-end">
                 <button
@@ -519,6 +582,58 @@ function TemplateEditorDialog({
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="rounded-lg border border-surface-200 p-4 dark:border-surface-700">
+          <label className="flex cursor-pointer items-center justify-between gap-3">
+            <span>
+              <span className="block text-sm font-medium text-surface-900 dark:text-white">
+                Создавать лид из заявки
+              </span>
+              <span className="mt-0.5 block text-xs text-surface-500">
+                Ответы будут автоматически попадать в лиды воронки
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={createLead}
+              onChange={(e) => setCreateLead(e.target.checked)}
+              className="h-4 w-4 rounded border-surface-300 text-brand-600 focus:ring-brand-500"
+            />
+          </label>
+
+          {createLead && (
+            <div className="mt-4 space-y-3 border-t border-surface-100 pt-4 dark:border-surface-700">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-surface-700 dark:text-surface-200">
+                  Какие поля анкеты переносить в лид
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {LEAD_ATTRIBUTES.map((attr) => (
+                  <div key={attr}>
+                    <Select
+                      label={LEAD_ATTRIBUTE_LABELS[attr]}
+                      value={leadFieldMap[attr] ?? ""}
+                      onChange={(e) =>
+                        setLeadFieldMap((prev) => ({
+                          ...prev,
+                          [attr]: e.target.value,
+                        }))
+                      }
+                      options={[
+                        { value: "", label: "— не заполнять —" },
+                        ...fieldKeyOptions,
+                      ]}
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-surface-500">
+                Атрибут «контактное имя» обязателен для создания лида.
+              </p>
+            </div>
+          )}
         </div>
 
         {error && <p className="text-sm text-danger-600 dark:text-danger-400">{error}</p>}
@@ -585,7 +700,13 @@ function InvitationsDialog({
                     {invite.status_display}
                   </p>
                 </div>
-                <Badge variant="success">Заполнена</Badge>
+                {invite.lead_id ? (
+                  <Badge variant="success">
+                    Лид: {invite.lead_contact_name || "создан"}
+                  </Badge>
+                ) : (
+                  <Badge variant="default">Без лида</Badge>
+                )}
               </div>
               <div className="mt-2 space-y-1 rounded bg-surface-50 px-3 py-2 text-xs dark:bg-surface-800">
                 {Object.entries(invite.response).map(([key, value]) => (
@@ -677,6 +798,13 @@ function copyToClipboard(text: string) {
       () => toast({ title: "Не удалось скопировать", type: "error" })
     );
   }
+}
+
+function fieldOptionCount(field: DraftField): number {
+  return (field.rawOptions ?? "")
+    .split(/[\n,]/)
+    .map((o) => o.trim())
+    .filter(Boolean).length;
 }
 
 function getLinkLifetime(expiresAt?: string | null): "1" | "3" | "7" | "forever" {

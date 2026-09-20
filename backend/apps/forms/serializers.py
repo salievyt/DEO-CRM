@@ -24,7 +24,8 @@ class FormTemplateSerializer(serializers.ModelSerializer):
         model = FormTemplate
         fields = [
             "id", "title", "description", "entity_type", "entity_type_display",
-            "form_fields", "is_active", "created_by_name", "link_count",
+            "form_fields", "is_active", "create_lead", "lead_field_map",
+            "created_by_name", "link_count",
             "filled_count", "public_token", "public_url", "public_link_expires_at",
             "link_lifetime", "created_at", "updated_at",
         ]
@@ -76,6 +77,50 @@ class FormTemplateSerializer(serializers.ModelSerializer):
                 )
         return value
 
+    def validate_lead_field_map(self, value):
+        if not isinstance(value, dict):
+            raise serializers.ValidationError(
+                "Маппинг полей лида должен быть словарём."
+            )
+        allowed = set(FormTemplate.LEAD_FIELD_MAP_KEYS)
+        invalid = set(value) - allowed
+        if invalid:
+            raise serializers.ValidationError(
+                f"Недопустимые атрибуты лида: {', '.join(sorted(invalid))}."
+            )
+        return value
+
+    def validate(self, attrs):
+        lead_map = attrs.get(
+            "lead_field_map", getattr(self.instance, "lead_field_map", {}) or {}
+        )
+        if attrs.get("create_lead", getattr(self.instance, "create_lead", False)):
+            if "contact_name" not in lead_map or not lead_map.get("contact_name"):
+                raise serializers.ValidationError(
+                    {"lead_field_map": "Для создания лида укажите поле контактного имени."}
+                )
+            field_keys = {item.get("key") for item in attrs.get("form_fields", [])}
+            if not field_keys and self.instance is not None:
+                field_keys = {
+                    item.get("key") for item in getattr(self.instance, "form_fields", [])
+                }
+            unknown = {
+                field_key
+                for field_key in lead_map.values()
+                if field_key and field_key not in field_keys
+            }
+            if unknown:
+                raise serializers.ValidationError(
+                    {
+                        "lead_field_map": (
+                            "Указанные поля анкеты не существуют: "
+                            + ", ".join(sorted(unknown))
+                            + "."
+                        )
+                    }
+                )
+        return attrs
+
 
 class FormInvitationSerializer(serializers.ModelSerializer):
     form_title = serializers.CharField(source="form.title", read_only=True)
@@ -84,6 +129,8 @@ class FormInvitationSerializer(serializers.ModelSerializer):
     )
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     answer_url = serializers.SerializerMethodField()
+    lead_id = serializers.UUIDField(source="lead.id", read_only=True)
+    lead_contact_name = serializers.CharField(source="lead.contact_name", read_only=True)
 
     class Meta:
         model = FormInvitation
@@ -91,7 +138,7 @@ class FormInvitationSerializer(serializers.ModelSerializer):
             "id", "form", "form_title", "token", "recipient_name",
             "recipient_email", "entity_type", "entity_type_display", "entity_id",
             "status", "status_display", "expires_at", "submitted_at",
-            "response", "answer_url", "created_at",
+            "response", "answer_url", "lead_id", "lead_contact_name", "created_at",
         ]
         read_only_fields = [
             "id", "token", "status", "submitted_at", "response", "created_at",
