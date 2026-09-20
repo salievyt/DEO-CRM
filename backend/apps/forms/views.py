@@ -127,14 +127,16 @@ class PublicFormView(APIView):
         if not form.create_lead or not form.lead_field_map:
             return None
 
-        stage = LeadStage.objects.order_by("order").first()
-        if stage is None:
-            return None
-
         values = {attr: response.get(field_key) for attr, field_key in form.lead_field_map.items()}
         contact_name = values.get("contact_name")
         if not contact_name or not str(contact_name).strip():
             return None
+
+        stage = LeadStage.objects.order_by("order", "pk").first()
+        if stage is None:
+            stage = LeadStage.objects.create(
+                name="Новая заявка", order=1, probability=0
+            )
 
         lead_map = {
             "source": "website",

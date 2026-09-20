@@ -202,7 +202,7 @@ class FormLeadCreationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Lead.objects.count(), 0)
 
-    def test_response_no_lead_when_no_stages(self):
+    def test_response_creates_stage_and_lead_when_no_stages(self):
         form = self._template(
             create_lead=True,
             lead_field_map={"contact_name": "name"},
@@ -213,7 +213,9 @@ class FormLeadCreationTests(TestCase):
             format="json",
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(Lead.objects.count(), 0)
+        lead = Lead.objects.get(contact_name="Иван")
+        self.assertEqual(lead.current_stage.name, "Новая заявка")
+        self.assertEqual(LeadStage.objects.count(), 1)
 
     def test_response_accepts_invalid_budget(self):
         self._stage()
