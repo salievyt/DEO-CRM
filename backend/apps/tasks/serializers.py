@@ -1,3 +1,4 @@
+from django.db.models import Sum
 from rest_framework import serializers
 
 from .models import (
@@ -97,7 +98,7 @@ class TaskDetailSerializer(serializers.ModelSerializer):
 
     def get_timer_total(self, obj):
         result = obj.timers.aggregate(
-            total=models.Sum("duration_seconds")
+            total=Sum("duration_seconds")
         )
         return result["total"] or 0
 
@@ -110,6 +111,17 @@ class TaskCreateSerializer(serializers.ModelSerializer):
     status = serializers.PrimaryKeyRelatedField(
         queryset=TaskStatus.objects.all(), required=False, allow_null=True
     )
+    # Optional on create: falls back to the default ("Средний") priority.
+    priority = serializers.PrimaryKeyRelatedField(
+        queryset=TaskPriority.objects.all(), required=False, allow_null=True
+    )
+
+    # Nullable fields that clients may send as empty strings (e.g. an unset
+    # date input); treat them as "not provided" instead of failing validation.
+    EMPTY_AS_NULL_FIELDS = (
+        "parent_task", "project", "assignee", "reviewer",
+        "status", "priority", "deadline", "estimated_hours",
+    )
 
     class Meta:
         model = Task
@@ -119,6 +131,14 @@ class TaskCreateSerializer(serializers.ModelSerializer):
             "deadline", "estimated_hours",
         ]
 
+    def to_internal_value(self, data):
+        if isinstance(data, dict):
+            data = {
+                key: (None if key in self.EMPTY_AS_NULL_FIELDS and value == "" else value)
+                for key, value in data.items()
+            }
+        return super().to_internal_value(data)
+
     def validate(self, attrs):
         if not attrs.get("status"):
             default_status = TaskStatus.objects.order_by("order", "pk").first()
@@ -127,4 +147,9 @@ class TaskCreateSerializer(serializers.ModelSerializer):
                     {"status": "Не настроены статусы задач"}
                 )
             attrs["status"] = default_status
+        if not attrs.get("priority"):
+            attrs["priority"] = (
+                TaskPriority.objects.filter(name="Средний").first()
+                or TaskPriority.objects.order_by("level", "pk").first()
+            )
         return attrs

@@ -7,7 +7,7 @@ from apps.accounts.models import Role
 from apps.clients.models import Client
 from apps.projects.models import Project, ProjectStatus
 
-from .models import Task, TaskStatus
+from .models import Task, TaskPriority, TaskStatus
 
 User = get_user_model()
 
@@ -39,9 +39,24 @@ def project(db):
 
 @pytest.fixture
 def statuses(db):
+    # The 0003 migration seeds default statuses; clear them so fallback
+    # ordering assertions are deterministic.
+    TaskStatus.objects.all().delete()
     return [
         TaskStatus.objects.create(name="К выполнению", order=0),
         TaskStatus.objects.create(name="В работе", order=1),
+    ]
+
+
+@pytest.fixture
+def priorities(db):
+    # The 0003 migration seeds default priorities; clear them so the
+    # default-priority assertions are deterministic.
+    TaskPriority.objects.all().delete()
+    return [
+        TaskPriority.objects.create(name="Низкий", level=0),
+        TaskPriority.objects.create(name="Средний", level=1),
+        TaskPriority.objects.create(name="Высокий", level=2),
     ]
 
 
@@ -91,6 +106,7 @@ def test_create_task_with_explicit_status(api, project, statuses):
 
 @pytest.mark.django_db
 def test_create_task_without_statuses_returns_400(api, project):
+    TaskStatus.objects.all().delete()
     resp = api.post(
         reverse("task-list"),
         {"title": "Нет статусов", "project": str(project.id)},
@@ -98,3 +114,57 @@ def test_create_task_without_statuses_returns_400(api, project):
     )
     assert resp.status_code == 400
     assert "status" in resp.data["detail"]
+
+
+@pytest.mark.django_db
+def test_create_task_with_empty_optional_fields(api, project, statuses, priorities):
+    """Web form sends empty strings for unset optional fields."""
+    resp = api.post(
+        reverse("task-list"),
+        {
+            "title": "Пустые поля",
+            "project": str(project.id),
+            "assignee": "",
+            "deadline": "",
+            "priority": "",
+        },
+        format="json",
+    )
+    assert resp.status_code == 201, resp.data
+    task = Task.objects.get(title="Пустые поля")
+    assert task.assignee is None
+    assert task.deadline is None
+
+
+@pytest.mark.django_db
+def test_create_task_without_priority_uses_default(api, project, statuses, priorities):
+    resp = api.post(
+        reverse("task-list"),
+        {"title": "Без приоритета", "project": str(project.id)},
+        format="json",
+    )
+    assert resp.status_code == 201, resp.data
+    assert Task.objects.get(title="Без приоритета").priority.name == "Средний"
+
+
+@pytest.mark.django_db
+def test_create_task_with_empty_priority_uses_default(api, project, statuses, priorities):
+    resp = api.post(
+        reverse("task-list"),
+        {"title": "Пустой приоритет", "project": str(project.id), "priority": ""},
+        format="json",
+    )
+    assert resp.status_code == 201, resp.data
+    assert Task.objects.get(title="Пустой приоритет").priority.name == "Средний"
+
+
+@pytest.mark.django_db
+def test_default_statuses_and_priorities_are_seeded():
+    """The 0003 seed migration must provide default statuses and priorities."""
+    status_names = set(TaskStatus.objects.values_list("name", flat=True))
+    for name in ("К выполнению", "В работе", "На проверке", "Готово", "Отложено"):
+        assert name in status_names
+
+    priority_names = set(TaskPriority.objects.values_list("name", flat=True))
+    for name in ("Низкий", "Средний", "Высокий", "Критический"):
+        assert name in priority_names
