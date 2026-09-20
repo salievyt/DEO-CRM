@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
+
+  <!-- Главная страница -->
+  <url>
+    <loc>https://crm.deo-core.codes/</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://crm.deo-core.codes/images/DEOCORE_LOGO_OPTIMIZED.svg</image:loc>
+      <image:title>DEO CRM - Управление студией разработки</image:title>
+    </image:image>
+  </url>
+
+  <!-- CRM панель -->
+  <url>
+    <loc>https://crm.deo-core.codes/crm</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Студия -->
+  <url>
+    <loc>https://crm.deo-core.codes/studio</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Авторизация -->
+  <url>
+    <loc>https://crm.deo-core.codes/login</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://crm.deo-core.codes/register</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Дашборд (только для авторизованных) -->
+  <url>
+    <loc>https://crm.deo-core.codes/dashboard</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Основные разделы CRM -->
+  <url>
+    <loc>https://crm.deo-core.codes/dashboard/projects</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://crm.deo-core.codes/dashboard/clients</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://crm.deo-core.codes/dashboard/tasks</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://crm.deo-core.codes/dashboard/deals</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://crm.deo-core.codes/dashboard/messenger</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://crm.deo-core.codes/dashboard/calendar</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Обучение -->
+  <url>
+    <loc>https://crm.deo-core.codes/dashboard/learning</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Настройки -->
+  <url>
+    <loc>https://crm.deo-core.codes/dashboard/settings</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- Аналитика -->
+  <url>
+    <loc>https://crm.deo-core.codes/dashboard/analytics</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://crm.deo-core.codes/dashboard/analytics/business</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- AI инструменты -->
+  <url>
+    <loc>https://crm.deo-core.codes/dashboard/ai</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://crm.deo-core.codes/dashboard/ai/ab-testing</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Интеграции -->
+  <url>
+    <loc>https://crm.deo-core.codes/dashboard/integrations/whatsapp</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://crm.deo-core.codes/dashboard/integrations/telegram</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- Формы -->
+  <url>
+    <loc>https://crm.deo-core.codes/dashboard/admin/forms</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <!-- Сотрудники -->
+  <url>
+    <loc>https://crm.deo-core.codes/dashboard/employees</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- Каталог -->
+  <url>
+    <loc>https://crm.deo-core.codes/dashboard/catalog</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+</urlset>

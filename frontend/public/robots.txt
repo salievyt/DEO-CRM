@@ -1,0 +1,30 @@
+# Robots.txt для DEO CRM
+# Generated: 2026-09-20
+# Домен: https://crm.deo-core.codes
+# Sitemap: https://crm.deo-core.codes/sitemap.xml
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /_next/
+Disallow: /studio/
+Disallow: /admin/
+
+# Crawl-delay: 1
+
+# Sitemaps
+Sitemap: https://crm.deo-core.codes/sitemap.xml
+
+# User-agent: Googlebot
+# Allow: /images/
+# Allow: /fonts/
+
+# User-agent: Bingbot
+# Allow: /images/
+# Allow: /fonts/
+
+# User-agent: Yandex
+# Disallow: /admin/
+# Disallow: /studio/
+# Clean-param: ref /search/
+# Host: crm.deo-core.codes
