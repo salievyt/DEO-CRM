@@ -142,7 +142,6 @@ class FormLeadCreationTests(TestCase):
         return FormTemplate.objects.create(**values)
 
     def test_response_creates_lead_with_mapped_values(self):
-        stage = self._stage()
         form = self._template(
             create_lead=True,
             lead_field_map={
@@ -176,13 +175,13 @@ class FormLeadCreationTests(TestCase):
         self.assertEqual(lead.budget, 150000)
         self.assertEqual(lead.notes, "Хочу сайт")
         self.assertEqual(lead.source, "website")
-        self.assertEqual(lead.current_stage, stage)
+        self.assertEqual(lead.current_stage.name, "Новая заявка")
 
         invitation = FormInvitation.objects.get(form=form)
         self.assertEqual(invitation.lead, lead)
 
         history = LeadHistory.objects.get(lead=lead)
-        self.assertEqual(history.to_stage, stage)
+        self.assertEqual(history.to_stage, lead.current_stage)
         self.assertIn("Анкета с лидом", history.notes)
 
     def test_response_skips_lead_without_contact_name(self):
@@ -202,7 +201,7 @@ class FormLeadCreationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Lead.objects.count(), 0)
 
-    def test_response_creates_stage_and_lead_when_no_stages(self):
+    def test_response_creates_default_stages_and_lead_when_no_stages(self):
         form = self._template(
             create_lead=True,
             lead_field_map={"contact_name": "name"},
@@ -215,7 +214,10 @@ class FormLeadCreationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         lead = Lead.objects.get(contact_name="Иван")
         self.assertEqual(lead.current_stage.name, "Новая заявка")
-        self.assertEqual(LeadStage.objects.count(), 1)
+        self.assertEqual(
+            list(LeadStage.objects.values_list("name", flat=True).order_by("order")),
+            ["Новая заявка", "Квалификация", "Предложение", "Переговоры", "Сделка заключена"],
+        )
 
     def test_response_accepts_invalid_budget(self):
         self._stage()
@@ -236,7 +238,6 @@ class FormLeadCreationTests(TestCase):
         self.assertIsNone(lead.budget)
 
     def test_invitation_serializer_exposes_lead(self):
-        stage = self._stage()
         form = self._template(
             create_lead=True,
             lead_field_map={"contact_name": "name"},
@@ -247,7 +248,7 @@ class FormLeadCreationTests(TestCase):
             format="json",
         )
         lead = Lead.objects.get(contact_name="Мария")
-        self.assertEqual(lead.current_stage, stage)
+        self.assertEqual(lead.current_stage.name, "Новая заявка")
 
         client = APIClient()
         client.force_authenticate(self.owner)

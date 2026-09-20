@@ -7,6 +7,7 @@ from rest_framework.exceptions import APIException, NotFound
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.leads.defaults import ensure_default_stages
 from apps.leads.models import Lead, LeadHistory, LeadStage
 
 from common.permissions import IsOwner
@@ -134,9 +135,8 @@ class PublicFormView(APIView):
 
         stage = LeadStage.objects.order_by("order", "pk").first()
         if stage is None:
-            stage = LeadStage.objects.create(
-                name="Новая заявка", order=1, probability=0
-            )
+            ensure_default_stages()
+            stage = LeadStage.objects.order_by("order", "pk").first()
 
         lead_map = {
             "source": "website",

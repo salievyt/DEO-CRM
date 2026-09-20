@@ -5,6 +5,7 @@ from rest_framework.response import Response
 
 from common.permissions import IsAdmin, IsProjectManager
 
+from .defaults import ensure_default_stages
 from .models import Lead, LeadHistory, LeadStage
 from .serializers import (
     LeadCreateSerializer,
@@ -55,8 +56,12 @@ class PublicLeadCreateView(views.APIView):
         serializer = PublicLeadCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # Find the first stage (e.g., "Новые заявки")
-        default_stage = LeadStage.objects.first()
+        # Find the first stage (e.g., "Новые заявки"); seed defaults if the
+        # funnel has no stages yet.
+        default_stage = LeadStage.objects.order_by("order", "pk").first()
+        if default_stage is None:
+            ensure_default_stages()
+            default_stage = LeadStage.objects.order_by("order", "pk").first()
 
         with transaction.atomic():
             lead = Lead.objects.create(
