@@ -31,82 +31,82 @@ const appleDesignConfig: Partial<Config> = {
       fontSize: {
         // Apple display sizes
         "apple-hero": [appleTypography.heroDisplay.fontSize, {
-          fontWeight: appleTypography.heroDisplay.fontWeight,
-          lineHeight: appleTypography.heroDisplay.lineHeight,
+          fontWeight: String(appleTypography.heroDisplay.fontWeight),
+          lineHeight: String(appleTypography.heroDisplay.lineHeight),
           letterSpacing: appleTypography.heroDisplay.letterSpacing,
         }],
         "apple-display-lg": [appleTypography.displayLg.fontSize, {
-          fontWeight: appleTypography.displayLg.fontWeight,
-          lineHeight: appleTypography.displayLg.lineHeight,
+          fontWeight: String(appleTypography.displayLg.fontWeight),
+          lineHeight: String(appleTypography.displayLg.lineHeight),
           letterSpacing: appleTypography.displayLg.letterSpacing,
         }],
         "apple-display-md": [appleTypography.displayMd.fontSize, {
-          fontWeight: appleTypography.displayMd.fontWeight,
-          lineHeight: appleTypography.displayMd.lineHeight,
+          fontWeight: String(appleTypography.displayMd.fontWeight),
+          lineHeight: String(appleTypography.displayMd.lineHeight),
           letterSpacing: appleTypography.displayMd.letterSpacing,
         }],
         "apple-lead": [appleTypography.lead.fontSize, {
-          fontWeight: appleTypography.lead.fontWeight,
-          lineHeight: appleTypography.lead.lineHeight,
+          fontWeight: String(appleTypography.lead.fontWeight),
+          lineHeight: String(appleTypography.lead.lineHeight),
           letterSpacing: appleTypography.lead.letterSpacing,
         }],
         "apple-tagline": [appleTypography.tagline.fontSize, {
-          fontWeight: appleTypography.tagline.fontWeight,
-          lineHeight: appleTypography.tagline.lineHeight,
+          fontWeight: String(appleTypography.tagline.fontWeight),
+          lineHeight: String(appleTypography.tagline.lineHeight),
           letterSpacing: appleTypography.tagline.letterSpacing,
         }],
 
         // Apple body sizes
         "apple-body-strong": [appleTypography.bodyStrong.fontSize, {
-          fontWeight: appleTypography.bodyStrong.fontWeight,
-          lineHeight: appleTypography.bodyStrong.lineHeight,
+          fontWeight: String(appleTypography.bodyStrong.fontWeight),
+          lineHeight: String(appleTypography.bodyStrong.lineHeight),
           letterSpacing: appleTypography.bodyStrong.letterSpacing,
         }],
         "apple-body": [appleTypography.body.fontSize, {
-          fontWeight: appleTypography.body.fontWeight,
-          lineHeight: appleTypography.body.lineHeight,
+          fontWeight: String(appleTypography.body.fontWeight),
+          lineHeight: String(appleTypography.body.lineHeight),
           letterSpacing: appleTypography.body.letterSpacing,
         }],
         "apple-caption": [appleTypography.caption.fontSize, {
-          fontWeight: appleTypography.caption.fontWeight,
-          lineHeight: appleTypography.caption.lineHeight,
+          fontWeight: String(appleTypography.caption.fontWeight),
+          lineHeight: String(appleTypography.caption.lineHeight),
           letterSpacing: appleTypography.caption.letterSpacing,
         }],
         "apple-caption-strong": [appleTypography.captionStrong.fontSize, {
-          fontWeight: appleTypography.captionStrong.fontWeight,
-          lineHeight: appleTypography.captionStrong.lineHeight,
+          fontWeight: String(appleTypography.captionStrong.fontWeight),
+          lineHeight: String(appleTypography.captionStrong.lineHeight),
           letterSpacing: appleTypography.captionStrong.letterSpacing,
         }],
         "apple-button-large": [appleTypography.buttonLarge.fontSize, {
-          fontWeight: appleTypography.buttonLarge.fontWeight,
-          lineHeight: appleTypography.buttonLarge.lineHeight,
+          fontWeight: String(appleTypography.buttonLarge.fontWeight),
+          lineHeight: String(appleTypography.buttonLarge.lineHeight),
           letterSpacing: appleTypography.buttonLarge.letterSpacing,
         }],
         "apple-button-utility": [appleTypography.buttonUtility.fontSize, {
-          fontWeight: appleTypography.buttonUtility.fontWeight,
-          lineHeight: appleTypography.buttonUtility.lineHeight,
+          fontWeight: String(appleTypography.buttonUtility.fontWeight),
+          lineHeight: String(appleTypography.buttonUtility.lineHeight),
           letterSpacing: appleTypography.buttonUtility.letterSpacing,
         }],
         "apple-fine-print": [appleTypography.finePrint.fontSize, {
-          fontWeight: appleTypography.finePrint.fontWeight,
-          lineHeight: appleTypography.finePrint.lineHeight,
+          fontWeight: String(appleTypography.finePrint.fontWeight),
+          lineHeight: String(appleTypography.finePrint.lineHeight),
           letterSpacing: appleTypography.finePrint.letterSpacing,
         }],
 
         // Inter substitutes for non-Apple platforms
         "inter-hero": [interTypography.heroDisplay.fontSize, {
-          fontWeight: interTypography.heroDisplay.fontWeight,
-          lineHeight: interTypography.heroDisplay.lineHeight,
+          fontWeight: String(interTypography.heroDisplay.fontWeight),
+          lineHeight: String(interTypography.heroDisplay.lineHeight),
           letterSpacing: interTypography.heroDisplay.letterSpacing,
         }],
         "inter-display-lg": [interTypography.displayLg.fontSize, {
-          fontWeight: interTypography.displayLg.fontWeight,
-          lineHeight: interTypography.displayLg.lineHeight,
+          fontWeight: String(interTypography.displayLg.fontWeight),
+          lineHeight: String(interTypography.displayLg.lineHeight),
           letterSpacing: interTypography.displayLg.letterSpacing,
         }],
         "inter-body": [interTypography.body.fontSize, {
-          fontWeight: interTypography.body.fontWeight,
-          lineHeight: interTypography.body.lineHeight,
+          fontWeight: String(interTypography.body.fontWeight),
+          lineHeight: String(interTypography.body.lineHeight),
           letterSpacing: interTypography.body.letterSpacing,
         }],
       },

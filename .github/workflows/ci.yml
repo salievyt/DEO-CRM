@@ -111,6 +111,9 @@ jobs:
       - name: TypeScript type check
         run: npx tsc --noEmit
 
+      - name: Run frontend tests
+        run: npm run test:ci
+
       - name: Build
         run: npm run build
         env:
