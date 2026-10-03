@@ -152,6 +152,21 @@ def test_legacy_timer_and_focus_cannot_overlap(api, task):
     assert api.post(f"/api/v1/tasks/{task.pk}/timer/start/").status_code == 409
 
 
+def test_running_timer_is_reported_and_stopped_via_focus_api(api, task, clock):
+    assert api.post(f"/api/v1/tasks/{task.pk}/timer/start/").status_code == 200
+    clock(120)
+    state = api.get("/api/v1/focus/state/").data
+    assert state["running_timer"]["task"] == str(task.pk)
+    assert api.post("/api/v1/focus/timer/stop/").status_code == 200
+    clock(30)
+    assert api.get("/api/v1/focus/state/").data["running_timer"] is None
+    timer = TaskTimer.objects.get()
+    assert timer.duration_seconds == 120
+    assert not timer.is_running
+    assert api.get("/api/v1/focus/stats/").data["today_seconds"] == 120
+    assert api.post("/api/v1/focus/start/", {}, format="json").status_code == 201
+
+
 def test_duration_settings_validation_and_readonly_wallet(api):
     assert (
         api.patch("/api/v1/focus/settings/", {"work_minutes": 0}, format="json").status_code == 400

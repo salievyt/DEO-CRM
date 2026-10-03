@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path("state/", views.FocusStateView.as_view(), name="focus-state"),
+    path("timer/stop/", views.FocusTimerStopView.as_view(), name="focus-timer-stop"),
     path("start/", views.FocusStartView.as_view(), name="focus-start"),
     path("sessions/", views.FocusHistoryView.as_view(), name="focus-history"),
     *[

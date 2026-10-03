@@ -40,10 +40,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
   final _audio = AudioPlayer();
   Timer? _tick;
   Map<String, dynamic>? _active, _profile, _stats;
-  List<Map<String, dynamic>> _tasks = [],
-      _notes = [],
-      _history = [],
-      _shop = [];
+  List<Map<String, dynamic>> _tasks = [], _notes = [], _history = [];
   Duration _offset = Duration.zero;
   String _phase = 'work', _tab = 'tasks';
   String? _task, _error;
@@ -107,7 +104,6 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
         _api.get('/focus/stats/'),
         _api.get('/focus/notes/', params: {'page_size': 100}),
         _api.get('/focus/sessions/', params: {'page': _page}),
-        _api.get('/focus/shop/'),
         _api.choices('/tasks/my/'),
       ]);
       if (!mounted) return;
@@ -117,8 +113,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
         _notes = _rows(data[2]);
         _history = _rows(data[3]);
         _hasNext = data[3]['next'] != null;
-        _shop = _rows(data[4]);
-        _tasks = _rows(data[5]);
+        _tasks = _rows(data[4]);
         _error = null;
       });
       await _sync();
@@ -350,11 +345,6 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
                         'ocean': 'Волны',
                         'forest': 'Лес',
                       },
-                      'pet': {
-                        'bee': 'Пчёлка',
-                        'fox': 'Лисёнок',
-                        'cat': 'Котёнок',
-                      },
                     }.entries)
                       DropdownButtonFormField<String>(
                         initialValue:
@@ -364,7 +354,6 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
                             'theme': 'Тема',
                             'timer_style': 'Вид таймера',
                             'sound': 'Звук',
-                            'pet': 'Спутник',
                           }[entry.key],
                         ),
                         items: entry.value.entries
@@ -702,7 +691,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
                       ],
                     ),
                     const SizedBox(height: 25),
-                    if (!_zen) ...[
+                      if (!_zen) ...[
                       Row(
                         children: [
                           _metric(
@@ -715,50 +704,6 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
                           ),
                           _metric('${_stats?['streak'] ?? 0}', 'Дней подряд'),
                         ],
-                      ),
-                      _card(
-                        Row(
-                          children: [
-                            Text(
-                              _profile?['pet'] == 'fox'
-                                  ? '🦊'
-                                  : _profile?['pet'] == 'cat'
-                                  ? '🐱'
-                                  : '🐝',
-                              style: const TextStyle(fontSize: 40),
-                            ),
-                            const SizedBox(width: 15),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Ваш спутник'),
-                                  Text(
-                                    'Уровень ${_stats?['level'] ?? 1} · ${_stats?['xp'] ?? 0} XP',
-                                    style: const TextStyle(
-                                      color: Colors.white54,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  Text(
-                                    (_profile?['inventory'] as List? ?? [])
-                                        .map(
-                                          (id) => _shop
-                                              .where((s) => s['id'] == id)
-                                              .map((s) => s['emoji'])
-                                              .join(),
-                                        )
-                                        .join(' '),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Text(
-                              '${_profile?['coins'] ?? 0} 🪙',
-                              style: TextStyle(color: _accent),
-                            ),
-                          ],
-                        ),
                       ),
                       Wrap(
                         spacing: 8,
@@ -967,53 +912,6 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
                         ],
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'Награды за ваши шаги',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Text(
-                        'Одна завершённая минута — одна монета.',
-                        style: TextStyle(color: Colors.white54, fontSize: 12),
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: _shop.map((s) {
-                          final owned = (_profile?['inventory'] as List? ?? [])
-                              .contains(s['id']);
-                          return OutlinedButton(
-                            onPressed:
-                                _busy ||
-                                    owned ||
-                                    (_profile?['coins'] ?? 0) < s['price']
-                                ? null
-                                : () => _run(() async {
-                                    await _api.save('/focus/shop/', {
-                                      'item': s['id'],
-                                    });
-                                  }),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    s['emoji'],
-                                    style: const TextStyle(fontSize: 28),
-                                  ),
-                                  Text(s['title']),
-                                  Text(
-                                    owned ? 'Уже у вас' : '${s['price']} монет',
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
                     ],
                   ],
                 ),

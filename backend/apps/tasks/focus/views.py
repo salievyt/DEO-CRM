@@ -58,6 +58,7 @@ class FocusStateView(views.APIView):
     def get(self, request):
         lock_user(request.user)
         session = active(request.user)
+        running_timer = TaskTimer.objects.filter(user=request.user, is_running=True).first()
         return Response(
             {
                 "active": snapshot(session),
@@ -68,9 +69,36 @@ class FocusStateView(views.APIView):
                     if session or FocusSession.objects.filter(user=request.user).exists()
                     else None
                 ),
+                "running_timer": (
+                    {"task": str(running_timer.task_id), "task_title": running_timer.task.title, "started_at": running_timer.start_time}
+                    if running_timer
+                    else None
+                ),
                 "server_time": timezone.now(),
             }
         )
+
+
+class FocusTimerStopView(views.APIView):
+    """Stop a running task timer so a focus session can start."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request):
+        lock_user(request.user)
+        timer = TaskTimer.objects.filter(user=request.user, is_running=True).first()
+        if not timer:
+            return Response({"detail": "Нет активного таймера."}, status=404)
+        now = timezone.now()
+        timer.end_time = now
+        timer.duration_seconds = int((now - timer.start_time).total_seconds())
+        timer.is_running = False
+        timer.save()
+        from apps.tasks.time_tracking import recalculate_task_time
+
+        recalculate_task_time(timer.task)
+        return Response({"detail": "Таймер остановлен.", "duration_seconds": timer.duration_seconds})
 
 
 class FocusStartView(views.APIView):

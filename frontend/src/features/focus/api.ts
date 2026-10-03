@@ -33,11 +33,14 @@ export interface FocusStats {
   total_seconds: number;
   total_sessions: number;
   streak: number;
-  level: number;
-  xp: number;
   daily_goal: number;
   daily: { date: string; seconds: number; sessions: number }[];
   achievements: { id: string; title: string; unlocked: boolean }[];
+}
+export interface RunningTimer {
+  task: string;
+  task_title: string;
+  started_at: string;
 }
 export interface FocusNote {
   id: string;
@@ -51,9 +54,12 @@ export const focusApi = {
       await api.get<{
         active: FocusSession | null;
         last_session: FocusSession | null;
+        running_timer: RunningTimer | null;
         server_time: string;
       }>("/focus/state/")
     ).data,
+  stopRunningTimer: async () =>
+    (await api.post<{ detail: string; duration_seconds: number }>("/focus/timer/stop/")).data,
   settings: async () => (await api.get<FocusSettings>("/focus/settings/")).data,
   updateSettings: async (data: Partial<FocusSettings>) =>
     (await api.patch<FocusSettings>("/focus/settings/", data)).data,
