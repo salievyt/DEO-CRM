@@ -13,8 +13,14 @@ class ChatApi {
   Future<List<Chat>> getChats() async {
     final response = await _api.get('/messenger/chats/');
     final data = response.data;
-    final results = (data is Map ? (data['results'] as List<dynamic>?) : data as List<dynamic>?) ?? [];
-    return results.map((e) => Chat.fromJson(e as Map<String, dynamic>)).toList();
+    final results =
+        (data is Map
+            ? (data['results'] as List<dynamic>?)
+            : data as List<dynamic>?) ??
+        [];
+    return results
+        .map((e) => Chat.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<Chat> getChat(String id) async {
@@ -22,17 +28,30 @@ class ChatApi {
     return Chat.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<List<Message>> getMessages(String chatId, {Map<String, dynamic>? params}) async {
-    final response = await _api.get('/messenger/chats/$chatId/messages/', params: params);
+  Future<List<Message>> getMessages(
+    String chatId, {
+    Map<String, dynamic>? params,
+  }) async {
+    final response = await _api.get(
+      '/messenger/chats/$chatId/messages/',
+      params: params,
+    );
     final data = response.data;
-    final results = (data is Map ? (data['results'] as List<dynamic>?) : data as List<dynamic>?) ?? [];
-    return results.map((e) => Message.fromJson(e as Map<String, dynamic>)).toList();
+    final results =
+        (data is Map
+            ? (data['results'] as List<dynamic>?)
+            : data as List<dynamic>?) ??
+        [];
+    return results
+        .map((e) => Message.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<Message> sendMessage(String chatId, String content) async {
-    final response = await _api.post('/messenger/chats/$chatId/messages/', data: {
-      'content': content,
-    });
+    final response = await _api.post(
+      '/messenger/chats/$chatId/messages/',
+      data: {'content': content},
+    );
     return Message.fromJson(response.data as Map<String, dynamic>);
   }
 
@@ -44,11 +63,7 @@ class ChatApi {
 
   /// Build WebSocket URL for a specific chat from ApiConfig
   String wsUrlFor(String chatId) {
-    final base = ApiConfig.baseUrl;
-    final wsBase = base.startsWith('https')
-        ? base.replaceFirst('https://', 'wss://')
-        : base.replaceFirst('http://', 'ws://');
-    final serverBase = wsBase.replaceAll('/api/v1', '').replaceAll('/api/', '');
+    final serverBase = ApiConfig.wsUrl.replaceFirst(RegExp(r'/$'), '');
     return '$serverBase/ws/chat/$chatId/';
   }
 }

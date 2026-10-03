@@ -30,14 +30,23 @@ class Chat {
   factory Chat.fromJson(Map<String, dynamic> json) {
     return Chat(
       id: json['id'] as String,
-      name: json['name'] as String? ?? '',
+      name: json['display_name'] as String? ?? json['name'] as String? ?? '',
       projectId: json['project'] as String?,
       isGroup: json['is_group'] as bool? ?? false,
-      lastMessage: json['last_message'] as String?,
+      lastMessage: json['last_message'] is Map
+          ? (json['last_message'] as Map)['content'] as String?
+          : json['last_message'] as String?,
       lastMessageTime: json['last_message_time'] as String?,
-      lastMessageAt: json['last_message_at'] != null ? DateTime.tryParse(json['last_message_at'] as String) : null,
+      lastMessageAt: DateTime.tryParse(
+        (json['last_message'] is Map
+                    ? (json['last_message'] as Map)['created_at']
+                    : json['last_message_at'])
+                as String? ??
+            '',
+      ),
       unreadCount: (json['unread_count'] as num?)?.toInt() ?? 0,
-      participants: (json['participants'] as List<dynamic>?)
+      participants:
+          (json['participants'] as List<dynamic>?)
               ?.map((e) => ChatParticipant.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
@@ -76,11 +85,15 @@ class ChatParticipant {
     return ChatParticipant(
       id: json['id'] as String,
       userId: userData?['id'] as String? ?? (json['user'] as String?) ?? '',
-      userName: userData?['full_name'] as String?,
+      userName:
+          json['user_name'] as String? ?? userData?['full_name'] as String?,
       userEmail: userData?['email'] as String?,
-      userAvatar: userData?['avatar'] as String?,
+      userAvatar:
+          json['user_avatar'] as String? ?? userData?['avatar'] as String?,
       joinedAt: DateTime.parse(json['joined_at'] as String),
-      lastReadAt: json['last_read_at'] != null ? DateTime.parse(json['last_read_at'] as String) : null,
+      lastReadAt: json['last_read_at'] != null
+          ? DateTime.parse(json['last_read_at'] as String)
+          : null,
     );
   }
 }
@@ -125,16 +138,21 @@ class Message {
     return Message(
       id: json['id'] as String,
       chatId: json['chat'] as String? ?? '',
-      senderId: senderData?['id'] as String? ?? (json['sender'] as String?) ?? '',
-      senderName: senderData?['full_name'] as String?,
-      senderAvatar: senderData?['avatar'] as String?,
+      senderId:
+          senderData?['id'] as String? ?? (json['sender'] as String?) ?? '',
+      senderName:
+          json['sender_name'] as String? ?? senderData?['full_name'] as String?,
+      senderAvatar:
+          json['sender_avatar'] as String? ?? senderData?['avatar'] as String?,
       content: json['content'] as String? ?? '',
       fileUrl: json['file_url'] as String?,
       fileName: json['file_name'] as String?,
       voiceUrl: json['voice_url'] as String?,
       voiceDuration: (json['voice_duration'] as num?)?.toInt(),
       replyToId: json['reply_to'] as String?,
-      editedAt: json['edited_at'] != null ? DateTime.parse(json['edited_at'] as String) : null,
+      editedAt: json['edited_at'] != null
+          ? DateTime.parse(json['edited_at'] as String)
+          : null,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }

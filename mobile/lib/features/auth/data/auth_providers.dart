@@ -2,9 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/auth_api.dart';
 import '../../../entities/user.dart';
 
-final authStateProvider = StateNotifierProvider<AuthNotifier, AsyncValue<User?>>((ref) {
-  return AuthNotifier(ref);
+final authBootstrapProvider = FutureProvider<void>((ref) async {
+  await ref.read(authStateProvider.notifier).loadUser();
 });
+
+final authStateProvider =
+    StateNotifierProvider<AuthNotifier, AsyncValue<User?>>((ref) {
+      return AuthNotifier(ref);
+    });
 
 class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   final Ref _ref;
@@ -33,6 +38,16 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     }
   }
 
+  Future<void> verifyLogin(String challenge, String code) async {
+    state = const AsyncValue.loading();
+    try {
+      final response = await _auth.verifyLogin(challenge, code);
+      state = AsyncValue.data(response.user);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
   Future<void> loadUser() async {
     try {
       final isAuth = await _auth.isAuthenticated();
@@ -45,6 +60,10 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     } catch (e, st) {
       state = const AsyncValue.data(null);
     }
+  }
+
+  void clearSession() {
+    state = const AsyncValue.data(null);
   }
 
   Future<void> logout() async {

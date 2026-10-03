@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'hive_cache_service.dart';
@@ -33,11 +34,30 @@ class CacheInterceptor extends Interceptor {
   String _cacheKey(RequestOptions options) {
     // Use full URL + query params as cache key
     final uri = options.uri;
-    return '${uri.path}?${uri.query}';
+    var identity = 'anonymous';
+    final authorization = options.headers['Authorization']?.toString();
+    if (authorization != null) {
+      try {
+        final payload = authorization.split(' ').last.split('.')[1];
+        final claims =
+            jsonDecode(
+                  utf8.decode(base64Url.decode(base64Url.normalize(payload))),
+                )
+                as Map;
+        identity = '${claims['user_id'] ?? claims['sub']}';
+      } catch (_) {
+        identity = 'invalid-session';
+      }
+    }
+    return '$identity:${uri.origin}${uri.path}?${uri.query}';
   }
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
+    if (response.requestOptions.method != 'GET' &&
+        (response.statusCode ?? 500) < 400) {
+      _cache.clearAll();
+    }
     // Cache successful GET responses
     if (_shouldCache(response.requestOptions) &&
         response.statusCode == 200 &&
@@ -58,15 +78,20 @@ class CacheInterceptor extends Interceptor {
       final options = err.requestOptions;
       if (_shouldCache(options)) {
         final key = _cacheKey(options);
-        final cached = _cache.getRawWithStatus(key, ttl: const Duration(days: 30));
+        final cached = _cache.getRawWithStatus(
+          key,
+          ttl: const Duration(days: 30),
+        );
         if (cached.found && cached.data != null) {
           debugPrint('[Cache] Serving stale for: $key (offline fallback)');
-          handler.resolve(Response(
-            requestOptions: options,
-            data: cached.data,
-            statusCode: 200,
-            statusMessage: 'Cached (offline)',
-          ));
+          handler.resolve(
+            Response(
+              requestOptions: options,
+              data: cached.data,
+              statusCode: 200,
+              statusMessage: 'Cached (offline)',
+            ),
+          );
           return;
         }
       }

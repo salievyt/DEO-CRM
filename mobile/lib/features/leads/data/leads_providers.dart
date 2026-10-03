@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/leads_api.dart';
+import '../../../core/api/api_service.dart';
 import '../../../entities/lead.dart';
 
 final leadsListProvider = FutureProvider.autoDispose<List<Lead>>((ref) async {
@@ -7,28 +8,37 @@ final leadsListProvider = FutureProvider.autoDispose<List<Lead>>((ref) async {
   return await api.list();
 });
 
-final leadsStagesProvider = FutureProvider.autoDispose<List<LeadStage>>((ref) async {
+final leadsStagesProvider = FutureProvider.autoDispose<List<LeadStage>>((
+  ref,
+) async {
   final api = ref.read(leadsApiProvider);
   return await api.getStages();
 });
 
-final leadsKanbanProvider = FutureProvider.autoDispose<LeadKanbanData>((ref) async {
-  final api = ref.read(leadsApiProvider);
-  final results = await Future.wait([
-    api.getStages(),
-    api.list(),
-  ]);
-
-  final stages = results[0] as List<LeadStage>;
-  final leads = results[1] as List<Lead>;
-
+final leadsKanbanProvider = FutureProvider.autoDispose<LeadKanbanData>((
+  ref,
+) async {
+  final response = await ApiService(ref).get('/leads/kanban/');
+  final columns = response.data as List<dynamic>;
+  final stages = <LeadStage>[];
   final leadsByStage = <String, List<Lead>>{};
-  for (final stage in stages) {
-    leadsByStage[stage.id] = [];
-  }
-  for (final lead in leads) {
-    leadsByStage.putIfAbsent(lead.currentStageId, () => []);
-    leadsByStage[lead.currentStageId]!.add(lead);
+  for (var index = 0; index < columns.length; index++) {
+    final column = columns[index] as Map<String, dynamic>;
+    final stage = LeadStage.fromJson({
+      'id': column['id'],
+      'name': column['title'],
+      'color': column['color'],
+      'order': index,
+    });
+    stages.add(stage);
+    leadsByStage[stage.id] = (column['leads'] as List<dynamic>)
+        .map(
+          (item) => Lead.fromJson({
+            ...Map<String, dynamic>.from(item as Map),
+            'current_stage': stage.id,
+          }),
+        )
+        .toList();
   }
 
   return LeadKanbanData(stages: stages, leadsByStage: leadsByStage);

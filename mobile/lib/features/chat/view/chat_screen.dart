@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/chat_providers.dart';
+import '../../workspace/crm_form.dart';
 
 class ChatScreen extends ConsumerWidget {
   const ChatScreen({super.key});
@@ -18,7 +19,15 @@ class ChatScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),
-            onPressed: () {},
+            onPressed: () async {
+              if (await editCrmRecord(
+                context,
+                title: 'Новый чат',
+                path: '/messenger/chats/',
+              )) {
+                ref.invalidate(chatListProvider);
+              }
+            },
           ),
         ],
       ),
@@ -28,7 +37,11 @@ class ChatScreen extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: Color(0xFFEF4444)),
+              const Icon(
+                Icons.error_outline,
+                size: 48,
+                color: Color(0xFFEF4444),
+              ),
               const SizedBox(height: 16),
               const Text('Не удалось загрузить чаты'),
               const SizedBox(height: 12),
@@ -45,7 +58,11 @@ class ChatScreen extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey[300]),
+                  Icon(
+                    Icons.chat_bubble_outline,
+                    size: 64,
+                    color: Colors.grey[300],
+                  ),
                   const SizedBox(height: 16),
                   const Text(
                     'Нет чатов',
@@ -69,10 +86,7 @@ class ChatScreen extends ConsumerWidget {
                 final chat = chats[index];
                 return _ChatCard(
                   chat: chat,
-                  onTap: () => context.go(
-                    '/chat/${chat.id}',
-                    extra: chat,
-                  ),
+                  onTap: () => context.go('/chat/${chat.id}', extra: chat),
                 );
               },
             ),
@@ -132,15 +146,23 @@ class _ChatCard extends StatelessWidget {
                           width: 48,
                           height: 48,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Text(
+                          errorBuilder: (_, _, _) => Text(
                             initial,
-                            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16),
+                            style: TextStyle(
+                              color: color,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
                       )
                     : Text(
                         initial,
-                        style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16),
+                        style: TextStyle(
+                          color: color,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
               ),
               const SizedBox(width: 12),
@@ -154,14 +176,20 @@ class _ChatCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             chat.name.isNotEmpty ? chat.name : 'Без названия',
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (chat.lastMessageTime != null)
                           Text(
                             chat.lastMessageTime!,
-                            style: const TextStyle(color: AppColors.surface400, fontSize: 12),
+                            style: const TextStyle(
+                              color: AppColors.surface400,
+                              fontSize: 12,
+                            ),
                           ),
                       ],
                     ),
@@ -171,8 +199,12 @@ class _ChatCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: chat.unreadCount > 0 ? AppColors.surface900 : AppColors.surface500,
-                        fontWeight: chat.unreadCount > 0 ? FontWeight.w500 : FontWeight.normal,
+                        color: chat.unreadCount > 0
+                            ? AppColors.surface900
+                            : AppColors.surface500,
+                        fontWeight: chat.unreadCount > 0
+                            ? FontWeight.w500
+                            : FontWeight.normal,
                         fontSize: 13,
                       ),
                     ),
@@ -190,7 +222,11 @@ class _ChatCard extends StatelessWidget {
                   child: Center(
                     child: Text(
                       '${chat.unreadCount}',
-                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),

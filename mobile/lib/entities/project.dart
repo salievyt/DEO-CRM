@@ -79,22 +79,42 @@ class Project {
     return Project(
       id: json['id'] as String,
       name: json['name'] as String,
-      clientId: clientData?['id'] as String? ?? (json['client'] as String?) ?? '',
-      clientName: clientData?['full_name'] as String? ?? clientData?['company_name'] as String?,
-      serviceTypeId: serviceData?['id'] as String?,
+      clientId:
+          clientData?['id'] as String? ?? (json['client'] as String?) ?? '',
+      clientName:
+          json['client_name'] as String? ??
+          clientData?['full_name'] as String? ??
+          clientData?['company_name'] as String?,
+      serviceTypeId:
+          serviceData?['id'] as String? ??
+          (json['service_type'] is String
+              ? json['service_type'] as String
+              : null),
       serviceTypeName: serviceData?['name'] as String?,
-      budget: json['budget'] is String ? double.tryParse(json['budget'] as String) : (json['budget'] as num?)?.toDouble(),
-      cost: json['cost'] is String ? double.tryParse(json['cost'] as String) : (json['cost'] as num?)?.toDouble(),
-      deadline: json['deadline'] != null ? DateTime.tryParse(json['deadline'] as String) : null,
-      statusId: statusData?['id'] as String? ?? (json['status'] as String?) ?? '',
-      statusName: statusData?['name'] as String?,
-      statusColor: statusData?['color'] as String?,
+      budget: json['budget'] is String
+          ? double.tryParse(json['budget'] as String)
+          : (json['budget'] as num?)?.toDouble(),
+      cost: json['cost'] is String
+          ? double.tryParse(json['cost'] as String)
+          : (json['cost'] as num?)?.toDouble(),
+      deadline: json['deadline'] != null
+          ? DateTime.tryParse(json['deadline'] as String)
+          : null,
+      statusId:
+          statusData?['id'] as String? ?? (json['status'] as String?) ?? '',
+      statusName:
+          json['status_name'] as String? ?? statusData?['name'] as String?,
+      statusColor:
+          json['status_color'] as String? ?? statusData?['color'] as String?,
       progress: (json['progress'] as num?)?.toInt() ?? 0,
       description: json['description'] as String?,
       createdBy: json['created_by'] as String?,
-      tasksCount: (json['tasks_count'] as num?)?.toInt() ?? 0,
+      tasksCount:
+          ((json['task_count'] ?? json['tasks_count']) as num?)?.toInt() ?? 0,
       createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      updatedAt: DateTime.parse(
+        (json['updated_at'] ?? json['created_at']) as String,
+      ),
     );
   }
 }
@@ -130,8 +150,11 @@ class ProjectTeamMember {
       id: json['id'] as String,
       projectId: json['project'] as String? ?? '',
       userId: userData?['id'] as String? ?? (json['user'] as String?) ?? '',
-      userName: userData?['full_name'] as String? ?? userData?['email'] as String?,
-      userEmail: userData?['email'] as String?,
+      userName:
+          json['user_name'] as String? ??
+          userData?['full_name'] as String? ??
+          userData?['email'] as String?,
+      userEmail: json['user_email'] as String? ?? userData?['email'] as String?,
       userAvatar: userData?['avatar'] as String?,
       roleInProject: json['role_in_project'] as String,
       assignedAt: DateTime.parse(json['assigned_at'] as String),

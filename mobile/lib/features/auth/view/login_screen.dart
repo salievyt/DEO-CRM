@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../data/auth_providers.dart';
+import '../../../core/api/auth_api.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -25,10 +26,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _handleLogin() async {
     setState(() => _errorMessage = null);
-    await ref.read(authStateProvider.notifier).login(
-      _emailController.text.trim(),
-      _passwordController.text,
-    );
+    await ref
+        .read(authStateProvider.notifier)
+        .login(_emailController.text.trim(), _passwordController.text);
+    final error = ref.read(authStateProvider).error;
+    if (error is TwoFactorRequired && mounted) {
+      final controller = TextEditingController();
+      final code = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Двухфакторная проверка'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Код приложения или резервный код',
+            ),
+            onSubmitted: (value) => Navigator.pop(context, value.trim()),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Отмена'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, controller.text.trim()),
+              child: const Text('Подтвердить'),
+            ),
+          ],
+        ),
+      );
+      if (code != null && code.isNotEmpty && mounted) {
+        await ref
+            .read(authStateProvider.notifier)
+            .verifyLogin(error.challenge, code);
+      }
+    }
   }
 
   @override
@@ -43,7 +76,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           }
         },
         error: (error, _) {
-          setState(() => _errorMessage = error.toString().replaceAll('Exception: ', ''));
+          if (error is TwoFactorRequired) return;
+          setState(
+            () =>
+                _errorMessage = error.toString().replaceAll('Exception: ', ''),
+          );
         },
       );
     });
@@ -75,19 +112,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ],
                   ),
                   child: const Center(
-                    child: Text('D', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.white)),
+                    child: Text(
+                      'D',
+                      style: TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
-                const Text('DEO STUDIO CRM', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+                const Text(
+                  'DEO STUDIO CRM',
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
-                const Text('Войдите в свою учётную запись', style: TextStyle(fontSize: 16, color: Color(0xFF64748B))),
+                const Text(
+                  'Войдите в свою учётную запись',
+                  style: TextStyle(fontSize: 16, color: Color(0xFF64748B)),
+                ),
                 const SizedBox(height: 48),
 
                 TextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    prefixIcon: Icon(Icons.email_outlined),
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -98,8 +151,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     labelText: 'Пароль',
                     prefixIcon: const Icon(Icons.lock_outlined),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
                 ),
@@ -107,7 +165,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 Align(
                   alignment: Alignment.centerRight,
-                  child: TextButton(onPressed: () {}, child: const Text('Забыли пароль?')),
+                  child: TextButton(
+                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Для восстановления доступа обратитесь к администратору студии.',
+                        ),
+                      ),
+                    ),
+                    child: const Text('Забыли пароль?'),
+                  ),
                 ),
                 const SizedBox(height: 24),
 
@@ -120,7 +187,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: const Color(0xFFFECACA)),
                     ),
-                    child: Text(_errorMessage!, style: const TextStyle(color: Color(0xFFEF4444), fontSize: 14)),
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(
+                        color: Color(0xFFEF4444),
+                        fontSize: 14,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -131,19 +204,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: ElevatedButton(
                     onPressed: authState.isLoading ? null : _handleLogin,
                     child: authState.isLoading
-                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
                         : const Text('Войти', style: TextStyle(fontSize: 16)),
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                Row(
-                  children: [
-                    Expanded(child: OutlinedButton.icon(onPressed: () {}, icon: const Icon(Icons.g_mobiledata), label: const Text('Google'))),
-                    const SizedBox(width: 12),
-                    Expanded(child: OutlinedButton.icon(onPressed: () {}, icon: const Icon(Icons.apple), label: const Text('Apple'))),
-                  ],
-                ),
               ],
             ),
           ),

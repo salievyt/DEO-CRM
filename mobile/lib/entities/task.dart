@@ -114,26 +114,46 @@ class Task {
     return Task(
       id: json['id'] as String,
       parentTaskId: json['parent_task'] as String?,
-      projectId: projectData?['id'] as String? ?? (json['project'] as String?) ?? '',
-      projectName: projectData?['name'] as String?,
+      projectId:
+          projectData?['id'] as String? ?? (json['project'] as String?) ?? '',
+      projectName:
+          json['project_name'] as String? ?? projectData?['name'] as String?,
       title: json['title'] as String,
       description: json['description'] as String? ?? '',
       assigneeId: assigneeData?['id'] as String? ?? json['assignee'] as String?,
-      assigneeName: assigneeData?['full_name'] as String?,
+      assigneeName:
+          json['assignee_name'] as String? ??
+          assigneeData?['full_name'] as String?,
       reviewerId: json['reviewer'] as String?,
-      statusId: statusData?['id'] as String? ?? (json['status'] as String?) ?? '',
-      statusName: statusData?['name'] as String?,
-      statusColor: statusData?['color'] as String?,
-      priorityId: priorityData?['id'] as String?,
-      priorityName: priorityData?['name'] as String?,
+      statusId:
+          statusData?['id'] as String? ?? (json['status'] as String?) ?? '',
+      statusName:
+          json['status_name'] as String? ?? statusData?['name'] as String?,
+      statusColor:
+          json['status_color'] as String? ?? statusData?['color'] as String?,
+      priorityId:
+          priorityData?['id'] as String? ??
+          (json['priority'] is String ? json['priority'] as String : null),
+      priorityName:
+          json['priority_name'] as String? ?? priorityData?['name'] as String?,
       priorityLevel: (priorityData?['level'] as num?)?.toInt(),
-      priorityColor: priorityData?['color'] as String?,
-      deadline: json['deadline'] != null ? DateTime.tryParse(json['deadline'] as String) : null,
-      estimatedHours: json['estimated_hours'] is String ? double.tryParse(json['estimated_hours'] as String) : (json['estimated_hours'] as num?)?.toDouble(),
-      actualHours: json['actual_hours'] is String ? double.tryParse(json['actual_hours'] as String) : (json['actual_hours'] as num?)?.toDouble(),
+      priorityColor:
+          json['priority_color'] as String? ??
+          priorityData?['color'] as String?,
+      deadline: json['deadline'] != null
+          ? DateTime.tryParse(json['deadline'] as String)
+          : null,
+      estimatedHours: json['estimated_hours'] is String
+          ? double.tryParse(json['estimated_hours'] as String)
+          : (json['estimated_hours'] as num?)?.toDouble(),
+      actualHours: json['actual_hours'] is String
+          ? double.tryParse(json['actual_hours'] as String)
+          : (json['actual_hours'] as num?)?.toDouble(),
       createdBy: json['created_by'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      updatedAt: DateTime.parse(
+        (json['updated_at'] ?? json['created_at']) as String,
+      ),
     );
   }
 }
@@ -171,12 +191,15 @@ class TaskComment {
       id: json['id'] as String,
       taskId: json['task'] as String? ?? '',
       userId: userData?['id'] as String? ?? (json['user'] as String?) ?? '',
-      userName: userData?['full_name'] as String? ?? userData?['email'] as String?,
+      userName:
+          userData?['full_name'] as String? ?? userData?['email'] as String?,
       userAvatar: userData?['avatar'] as String?,
       content: json['content'] as String,
       parentCommentId: json['parent_comment'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      updatedAt: DateTime.parse(
+        (json['updated_at'] ?? json['created_at']) as String,
+      ),
     );
   }
 }

@@ -4,17 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../entities/chat.dart';
 import '../data/chat_providers.dart';
+import '../../workspace/crm_form.dart';
+import '../../workspace/crm_resources.dart';
+import '../../workspace/crm_workspace.dart';
+import '../../workspace/crm_api.dart';
 import '../../auth/data/auth_providers.dart';
 
 class ChatDetailScreen extends ConsumerStatefulWidget {
   final String chatId;
   final String chatName;
 
-  const ChatDetailScreen({
-    super.key,
-    required this.chatId,
-    this.chatName = '',
-  });
+  const ChatDetailScreen({super.key, required this.chatId, this.chatName = ''});
 
   @override
   ConsumerState<ChatDetailScreen> createState() => _ChatDetailScreenState();
@@ -28,8 +28,15 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   @override
   void initState() {
     super.initState();
+    ref
+        .read(crmApiProvider)
+        .save('/messenger/chats/${widget.chatId}/read/', {})
+        .catchError((_) => null);
     // Listen for new messages to auto-scroll
-    ref.listen(wsChatProvider(widget.chatId), (AsyncValue<List<Message>>? prev, AsyncValue<List<Message>> next) {
+    ref.listenManual(wsChatProvider(widget.chatId), (
+      AsyncValue<List<Message>>? prev,
+      AsyncValue<List<Message>> next,
+    ) {
       final prevCount = prev?.valueOrNull?.length ?? 0;
       final nextCount = next.valueOrNull?.length ?? 0;
       if (nextCount > prevCount) {
@@ -68,6 +75,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
       Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
     } catch (e) {
       if (mounted) {
+        _messageController.text = text;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Не удалось отправить сообщение')),
         );
@@ -108,7 +116,28 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.more_vert),
-            onPressed: () {},
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CrmRecordScreen(
+                  resource: const CrmResource(
+                    'chat_info',
+                    'Чат',
+                    '/messenger/chats/',
+                    actions: [
+                      CrmAction(
+                        'Добавить участников',
+                        'participants/',
+                        fields: {
+                          'user_ids': {'type': 'list', 'required': true},
+                        },
+                      ),
+                    ],
+                  ),
+                  row: {'id': widget.chatId, 'name': widget.chatName},
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -122,12 +151,17 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline, size: 48, color: AppColors.danger),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: AppColors.danger,
+                    ),
                     const SizedBox(height: 16),
                     const Text('Ошибка загрузки сообщений'),
                     const SizedBox(height: 12),
                     OutlinedButton(
-                      onPressed: () => ref.refresh(wsChatProvider(widget.chatId)),
+                      onPressed: () =>
+                          ref.refresh(wsChatProvider(widget.chatId)),
                       child: const Text('Повторить'),
                     ),
                   ],
@@ -139,16 +173,26 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey[300]),
+                        Icon(
+                          Icons.chat_bubble_outline,
+                          size: 64,
+                          color: Colors.grey[300],
+                        ),
                         const SizedBox(height: 16),
                         const Text(
                           'Нет сообщений',
-                          style: TextStyle(color: AppColors.surface500, fontSize: 16),
+                          style: TextStyle(
+                            color: AppColors.surface500,
+                            fontSize: 16,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         const Text(
                           'Напишите первое сообщение',
-                          style: TextStyle(color: AppColors.surface400, fontSize: 13),
+                          style: TextStyle(
+                            color: AppColors.surface400,
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ),
@@ -158,16 +202,16 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                 return ListView.builder(
                   controller: _scrollController,
                   reverse: true,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index];
                     final isMe = message.senderId == currentUser?.id;
 
-                    return _MessageBubble(
-                      message: message,
-                      isMe: isMe,
-                    );
+                    return _MessageBubble(message: message, isMe: isMe);
                   },
                 );
               },
@@ -177,7 +221,10 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
           // Typing indicator
           ref.watch(typingIndicatorProvider(widget.chatId))
               ? Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   child: Row(
                     children: [
                       SizedBox(
@@ -191,7 +238,10 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                       const SizedBox(width: 8),
                       const Text(
                         'Кто-то печатает...',
-                        style: TextStyle(color: AppColors.surface400, fontSize: 12),
+                        style: TextStyle(
+                          color: AppColors.surface400,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -216,8 +266,24 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                 child: Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.attach_file, color: AppColors.surface500),
-                      onPressed: () {},
+                      icon: const Icon(
+                        Icons.attach_file,
+                        color: AppColors.surface500,
+                      ),
+                      onPressed: () async {
+                        if (await editCrmRecord(
+                          context,
+                          title: 'Вложение',
+                          path: '/messenger/chats/${widget.chatId}/messages/',
+                          fields: const {
+                            'content': {'type': 'string'},
+                            'file_url': {'type': 'string', 'required': true},
+                            'file_name': {'type': 'string'},
+                          },
+                        )) {
+                          ref.invalidate(wsChatProvider(widget.chatId));
+                        }
+                      },
                     ),
                     Expanded(
                       child: TextField(
@@ -256,7 +322,11 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                                   color: Colors.white,
                                 ),
                               )
-                            : const Icon(Icons.send, size: 18, color: Colors.white),
+                            : const Icon(
+                                Icons.send,
+                                size: 18,
+                                color: Colors.white,
+                              ),
                         onPressed: _isSending ? null : _sendMessage,
                       ),
                     ),
@@ -282,7 +352,9 @@ class _MessageBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Column(
-        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: isMe
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
           // Sender name (for group chats)
           if (!isMe && message.senderName != null)
@@ -301,7 +373,9 @@ class _MessageBubble extends StatelessWidget {
           // Message bubble
           Row(
             mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            mainAxisAlignment: isMe
+                ? MainAxisAlignment.end
+                : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               if (!isMe)

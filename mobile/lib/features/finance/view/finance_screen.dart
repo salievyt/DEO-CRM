@@ -106,10 +106,12 @@ class FinanceScreen extends ConsumerWidget {
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => const Text('Ошибка'),
                 data: (invoices) {
-                  if (invoices.isEmpty) return const Padding(
+                  if (invoices.isEmpty) {
+                    return const Padding(
                     padding: EdgeInsets.all(24),
                     child: Center(child: Text('Нет счетов', style: TextStyle(color: Color(0xFF64748B)))),
                   );
+                  }
                   return Column(
                     children: invoices.take(5).map((invoice) => _InvoiceCard(invoice: invoice)).toList(),
                   );

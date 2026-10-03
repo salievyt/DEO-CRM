@@ -2,60 +2,79 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/view/login_screen.dart';
+import '../../features/focus/focus_screen.dart';
 import '../../features/dashboard/view/dashboard_screen.dart';
-import '../../features/projects/view/projects_screen.dart';
-import '../../features/projects/view/project_detail_screen.dart';
-import '../../features/tasks/view/tasks_screen.dart';
-import '../../features/leads/view/leads_screen.dart';
 import '../../features/chat/view/chat_screen.dart';
 import '../../features/chat/view/chat_detail_screen.dart';
-import '../../features/finance/view/finance_screen.dart';
-import '../../features/documents/view/documents_screen.dart';
 import '../../features/analytics/view/analytics_screen.dart';
 import '../../features/settings/view/settings_screen.dart';
-import '../../features/cabinet/view/cabinet_screen.dart';
 import '../../features/ai_assistant/view/ai_screen.dart';
 import '../../entities/chat.dart';
+import '../../features/auth/data/auth_providers.dart';
+import '../../features/workspace/crm_workspace.dart';
+import '../../features/workspace/crm_resources.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  return GoRouter(
+  final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/login',
+    redirect: (context, state) {
+      final auth = ref.read(authStateProvider);
+      final loggedIn = auth.valueOrNull != null;
+      if (!loggedIn && state.uri.path != '/login') return '/login';
+      if (loggedIn && state.uri.path == '/login') return '/dashboard';
+      return null;
+    },
     routes: [
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
         builder: (context, state, child) => MainShell(child: child),
         routes: [
+          GoRoute(
+            path: '/focus',
+            builder: (context, state) => const FocusScreen(),
+          ),
+          GoRoute(
+            path: '/workspace',
+            builder: (context, state) => const CrmWorkspaceMenu(),
+          ),
+          GoRoute(
+            path: '/workspace/:module',
+            builder: (context, state) => CrmResourceScreen(
+              resource: crmResource(state.pathParameters['module']!),
+            ),
+          ),
           GoRoute(
             path: '/dashboard',
             builder: (context, state) => const DashboardScreen(),
           ),
           GoRoute(
             path: '/projects',
-            builder: (context, state) => const ProjectsScreen(),
+            builder: (context, state) =>
+                CrmResourceScreen(resource: crmResource('projects')),
             routes: [
               GoRoute(
                 path: ':id',
-                builder: (context, state) => ProjectDetailScreen(
-                  projectId: state.pathParameters['id'] ?? '',
+                builder: (context, state) => CrmRecordScreen(
+                  resource: crmResource('projects'),
+                  row: {'id': state.pathParameters['id']},
                 ),
               ),
             ],
           ),
           GoRoute(
             path: '/tasks',
-            builder: (context, state) => const TasksScreen(),
+            builder: (context, state) =>
+                CrmResourceScreen(resource: crmResource('tasks')),
           ),
           GoRoute(
             path: '/leads',
-            builder: (context, state) => const LeadsScreen(),
+            builder: (context, state) =>
+                CrmResourceScreen(resource: crmResource('leads')),
           ),
           GoRoute(
             path: '/chat',
@@ -76,32 +95,35 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/finance',
-            builder: (context, state) => const FinanceScreen(),
+            builder: (context, state) =>
+                const CrmWorkspaceMenu(group: 'finance'),
           ),
           GoRoute(
             path: '/documents',
-            builder: (context, state) => const DocumentsScreen(),
+            builder: (context, state) =>
+                CrmResourceScreen(resource: crmResource('documents')),
           ),
           GoRoute(
             path: '/analytics',
             builder: (context, state) => const AnalyticsScreen(),
           ),
-          GoRoute(
-            path: '/ai',
-            builder: (context, state) => const AIScreen(),
-          ),
+          GoRoute(path: '/ai', builder: (context, state) => const AIScreen()),
           GoRoute(
             path: '/settings',
             builder: (context, state) => const SettingsScreen(),
           ),
           GoRoute(
             path: '/cabinet',
-            builder: (context, state) => const CabinetScreen(),
+            builder: (context, state) =>
+                const CrmWorkspaceMenu(group: 'cabinet'),
           ),
         ],
       ),
     ],
   );
+  ref.listen(authStateProvider, (_, next) => router.refresh());
+  ref.onDispose(router.dispose);
+  return router;
 });
 
 class MainShell extends StatelessWidget {
@@ -156,11 +178,16 @@ class MainShell extends StatelessWidget {
 
   void _onItemTapped(int index, BuildContext context) {
     switch (index) {
-      case 0: context.go('/dashboard');
-      case 1: context.go('/projects');
-      case 2: context.go('/tasks');
-      case 3: context.go('/leads');
-      case 4: _showMoreMenu(context);
+      case 0:
+        context.go('/dashboard');
+      case 1:
+        context.go('/projects');
+      case 2:
+        context.go('/tasks');
+      case 3:
+        context.go('/leads');
+      case 4:
+        _showMoreMenu(context);
     }
   }
 
@@ -171,45 +198,84 @@ class MainShell extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _MenuItem(
-              icon: Icons.chat,
-              label: 'Чат',
-              onTap: () { Navigator.pop(context); context.go('/chat'); },
-            ),
-            _MenuItem(
-              icon: Icons.attach_money,
-              label: 'Финансы',
-              onTap: () { Navigator.pop(context); context.go('/finance'); },
-            ),
-            _MenuItem(
-              icon: Icons.description,
-              label: 'Документы',
-              onTap: () { Navigator.pop(context); context.go('/documents'); },
-            ),
-            _MenuItem(
-              icon: Icons.analytics,
-              label: 'Аналитика',
-              onTap: () { Navigator.pop(context); context.go('/analytics'); },
-            ),
-            _MenuItem(
-              icon: Icons.auto_awesome,
-              label: 'DEO AI',
-              onTap: () { Navigator.pop(context); context.go('/ai'); },
-            ),
-            _MenuItem(
-              icon: Icons.settings,
-              label: 'Настройки',
-              onTap: () { Navigator.pop(context); context.go('/settings'); },
-            ),
-            _MenuItem(
-              icon: Icons.person,
-              label: 'Мой кабинет',
-              onTap: () { Navigator.pop(context); context.go('/cabinet'); },
-            ),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _MenuItem(
+                icon: Icons.timer_outlined,
+                label: 'DEO Focus',
+                onTap: () {
+                  Navigator.pop(context);
+                  context.go('/focus');
+                },
+              ),
+              _MenuItem(
+                icon: Icons.apps,
+                label: 'Все разделы CRM',
+                onTap: () {
+                  Navigator.pop(context);
+                  context.go('/workspace');
+                },
+              ),
+              _MenuItem(
+                icon: Icons.chat,
+                label: 'Чат',
+                onTap: () {
+                  Navigator.pop(context);
+                  context.go('/chat');
+                },
+              ),
+              _MenuItem(
+                icon: Icons.attach_money,
+                label: 'Финансы',
+                onTap: () {
+                  Navigator.pop(context);
+                  context.go('/finance');
+                },
+              ),
+              _MenuItem(
+                icon: Icons.description,
+                label: 'Документы',
+                onTap: () {
+                  Navigator.pop(context);
+                  context.go('/documents');
+                },
+              ),
+              _MenuItem(
+                icon: Icons.analytics,
+                label: 'Аналитика',
+                onTap: () {
+                  Navigator.pop(context);
+                  context.go('/analytics');
+                },
+              ),
+              _MenuItem(
+                icon: Icons.auto_awesome,
+                label: 'DEO AI',
+                onTap: () {
+                  Navigator.pop(context);
+                  context.go('/ai');
+                },
+              ),
+              _MenuItem(
+                icon: Icons.settings,
+                label: 'Настройки',
+                onTap: () {
+                  Navigator.pop(context);
+                  context.go('/settings');
+                },
+              ),
+              _MenuItem(
+                icon: Icons.person,
+                label: 'Мой кабинет',
+                onTap: () {
+                  Navigator.pop(context);
+                  context.go('/cabinet');
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -221,7 +287,11 @@ class _MenuItem extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _MenuItem({required this.icon, required this.label, required this.onTap});
+  const _MenuItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {

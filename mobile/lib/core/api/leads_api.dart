@@ -41,7 +41,7 @@ class LeadsApi {
   Future<void> move(String id, String stageId, {String? notes}) async {
     await _api.post('/leads/$id/move/', data: {
       'stage_id': stageId,
-      if (notes != null) 'notes': notes,
+      'notes': ?notes,
     });
   }
 

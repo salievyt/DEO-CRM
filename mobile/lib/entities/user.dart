@@ -38,7 +38,7 @@ class User {
       phone: json['phone'] as String?,
       avatar: json['avatar'] as String?,
       roleName: json['role_name'] as String?,
-      roleId: json['role_id'] as String?,
+      roleId: json['role_id']?.toString(),
       isActive: json['is_active'] as bool? ?? true,
       is2faEnabled: json['is_2fa_enabled'] as bool? ?? false,
       lastLogin: json['last_login'] != null ? DateTime.parse(json['last_login'] as String) : null,

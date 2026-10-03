@@ -34,7 +34,9 @@ class Invoice {
   });
 
   double get remainingAmount => amount - paidAmount;
-  bool get isOverdue => status == 'overdue' || (status != 'paid' && dueDate.isBefore(DateTime.now()));
+  bool get isOverdue =>
+      status == 'overdue' ||
+      (status != 'paid' && dueDate.isBefore(DateTime.now()));
 
   factory Invoice.fromJson(Map<String, dynamic> json) {
     Map<String, dynamic>? clientData;
@@ -50,16 +52,23 @@ class Invoice {
       id: json['id'] as String,
       number: json['number'] as String,
       projectId: projectData?['id'] as String?,
-      projectName: projectData?['name'] as String?,
-      clientId: clientData?['id'] as String? ?? (json['client'] as String?) ?? '',
-      clientName: clientData?['full_name'] as String? ?? clientData?['company_name'] as String?,
-      amount: (json['amount'] as num).toDouble(),
-      paidAmount: (json['paid_amount'] as num?)?.toDouble() ?? 0,
+      projectName:
+          json['project_name'] as String? ?? projectData?['name'] as String?,
+      clientId:
+          clientData?['id'] as String? ?? (json['client'] as String?) ?? '',
+      clientName:
+          json['client_name'] as String? ??
+          clientData?['full_name'] as String? ??
+          clientData?['company_name'] as String?,
+      amount: double.parse(json['amount'].toString()),
+      paidAmount: double.tryParse('${json['paid_amount']}') ?? 0,
       status: json['status'] as String? ?? 'draft',
       description: json['description'] as String?,
       issuedDate: DateTime.parse(json['issued_date'] as String),
       dueDate: DateTime.parse(json['due_date'] as String),
-      paidAt: json['paid_at'] != null ? DateTime.parse(json['paid_at'] as String) : null,
+      paidAt: json['paid_at'] != null
+          ? DateTime.parse(json['paid_at'] as String)
+          : null,
       createdBy: json['created_by'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
@@ -99,10 +108,12 @@ class Expense {
 
     return Expense(
       id: json['id'] as String,
-      categoryId: categoryData?['id'] as String? ?? (json['category'] as String?) ?? '',
-      categoryName: categoryData?['name'] as String?,
+      categoryId:
+          categoryData?['id'] as String? ?? (json['category'] as String?) ?? '',
+      categoryName:
+          json['category_name'] as String? ?? categoryData?['name'] as String?,
       projectId: json['project'] as String?,
-      amount: (json['amount'] as num).toDouble(),
+      amount: double.parse(json['amount'].toString()),
       description: json['description'] as String,
       expenseDate: DateTime.parse(json['expense_date'] as String),
       createdBy: json['created_by'] as String?,
@@ -132,13 +143,25 @@ class FinanceSummary {
 
   factory FinanceSummary.fromJson(Map<String, dynamic> json) {
     return FinanceSummary(
-      totalRevenue: (json['total_revenue'] as num?)?.toDouble() ?? 0,
-      totalExpenses: (json['total_expenses'] as num?)?.toDouble() ?? 0,
-      totalProfit: (json['total_profit'] as num?)?.toDouble() ?? 0,
-      monthlyRevenue: (json['monthly_revenue'] as num?)?.toDouble() ?? 0,
-      monthlyExpenses: (json['monthly_expenses'] as num?)?.toDouble() ?? 0,
+      totalRevenue:
+          double.tryParse('${json['total_revenue'] ?? json['total_income']}') ??
+          0,
+      totalExpenses:
+          double.tryParse('${json['total_expenses'] ?? json['expenses']}') ?? 0,
+      totalProfit:
+          double.tryParse('${json['total_profit'] ?? json['profit']}') ?? 0,
+      monthlyRevenue:
+          double.tryParse(
+            '${json['monthly_revenue'] ?? json['total_income']}',
+          ) ??
+          0,
+      monthlyExpenses:
+          double.tryParse('${json['monthly_expenses'] ?? json['expenses']}') ??
+          0,
       pendingInvoices: (json['pending_invoices'] as num?)?.toInt() ?? 0,
-      overdueAmount: (json['overdue_amount'] as num?)?.toDouble() ?? 0,
+      overdueAmount:
+          double.tryParse('${json['overdue_amount'] ?? json['outstanding']}') ??
+          0,
     );
   }
 }

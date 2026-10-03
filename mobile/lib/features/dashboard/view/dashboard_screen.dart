@@ -17,21 +17,24 @@ class DashboardScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          authAsync.whenOrNull(data: (user) => user?.firstName ?? 'Главная') ?? 'Главная',
+          authAsync.whenOrNull(data: (user) => user?.firstName ?? 'Главная') ??
+              'Главная',
           style: const TextStyle(fontSize: 22),
         ),
         actions: [
           Consumer(
             builder: (context, ref, _) {
               final notifCount = ref.watch(
-                FutureProvider.autoDispose((r) => r.read(notificationsApiProvider).getUnreadCount()),
+                FutureProvider.autoDispose(
+                  (r) => r.read(notificationsApiProvider).getUnreadCount(),
+                ),
               );
               final notifData = notifCount.asData?.value;
               return Stack(
                 children: [
                   IconButton(
                     icon: const Icon(Icons.notifications_outlined),
-                    onPressed: () {},
+                    onPressed: () => context.go('/workspace/notifications'),
                   ),
                   if (notifData != null && notifData > 0)
                     Positioned(
@@ -45,7 +48,10 @@ class DashboardScreen extends ConsumerWidget {
                         ),
                         child: Text(
                           '$notifData',
-                          style: const TextStyle(color: Colors.white, fontSize: 10),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                          ),
                         ),
                       ),
                     ),
@@ -61,9 +67,16 @@ class DashboardScreen extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: Color(0xFFEF4444)),
+              const Icon(
+                Icons.error_outline,
+                size: 48,
+                color: Color(0xFFEF4444),
+              ),
               const SizedBox(height: 16),
-              Text('Ошибка загрузки', style: TextStyle(color: Colors.grey[600])),
+              Text(
+                'Ошибка загрузки',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
               const SizedBox(height: 16),
               OutlinedButton(
                 onPressed: () => ref.refresh(dashboardProvider),
@@ -146,15 +159,17 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                 )
               else
-                ...data.recentProjects.take(3).map(
-                  (project) => _ProjectCard(
-                    name: project.name,
-                    client: project.clientName ?? '',
-                    progress: project.progress / 100.0,
-                    status: project.statusName ?? 'Активен',
-                    onTap: () => context.go('/projects/${project.id}'),
-                  ),
-                ),
+                ...data.recentProjects
+                    .take(3)
+                    .map(
+                      (project) => _ProjectCard(
+                        name: project.name,
+                        client: project.clientName ?? '',
+                        progress: project.progress / 100.0,
+                        status: project.statusName ?? 'Активен',
+                        onTap: () => context.go('/projects/${project.id}'),
+                      ),
+                    ),
             ],
           ),
         ),
@@ -180,13 +195,12 @@ class _GreetingText extends StatelessWidget {
     final name = user?.firstName ?? '';
     return Text(
       'Доброе утро, $name! 👋',
-      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+      style: Theme.of(
+        context,
+      ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
     );
   }
 }
-
 
 class _StatCard extends StatelessWidget {
   final IconData icon;
@@ -268,23 +282,42 @@ class _ProjectCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                        Text(
+                          name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                        ),
                         if (client.isNotEmpty) ...[
                           const SizedBox(height: 2),
-                          Text(client, style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                          Text(
+                            client,
+                            style: const TextStyle(
+                              color: Color(0xFF64748B),
+                              fontSize: 13,
+                            ),
+                          ),
                         ],
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF22C55E).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       status,
-                      style: const TextStyle(color: Color(0xFF22C55E), fontSize: 12, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                        color: Color(0xFF22C55E),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ],
@@ -304,7 +337,10 @@ class _ProjectCard extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 child: Text(
                   '${(progress * 100).toInt()}%',
-                  style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                  style: const TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 12,
+                  ),
                 ),
               ),
             ],

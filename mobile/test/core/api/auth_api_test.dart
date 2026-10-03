@@ -21,10 +21,12 @@ void main() {
     mockDio = MockDio();
     mockStorage = MockFlutterSecureStorage();
 
-    container = ProviderContainer(overrides: [
-      dioProvider.overrideWithValue(mockDio as Dio),
-      secureStorageProvider.overrideWithValue(mockStorage),
-    ]);
+    container = ProviderContainer(
+      overrides: [
+        dioProvider.overrideWithValue(mockDio as Dio),
+        secureStorageProvider.overrideWithValue(mockStorage),
+      ],
+    );
 
     authApi = container.read(authApiProvider);
   });
@@ -46,22 +48,27 @@ void main() {
         },
       };
 
-      when(mockDio.post(
-        any,
-        data: anyNamed('data'),
-        options: anyNamed('options'),
-        queryParameters: anyNamed('queryParameters'),
-        cancelToken: anyNamed('cancelToken'),
-        onSendProgress: anyNamed('onSendProgress'),
-        onReceiveProgress: anyNamed('onReceiveProgress'),
-      )).thenAnswer((_) async => Response(
-        requestOptions: RequestOptions(path: '/auth/login/'),
-        data: responseData,
-        statusCode: 200,
-      ));
+      when(
+        mockDio.post(
+          any,
+          data: anyNamed('data'),
+          options: anyNamed('options'),
+          queryParameters: anyNamed('queryParameters'),
+          cancelToken: anyNamed('cancelToken'),
+          onSendProgress: anyNamed('onSendProgress'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: '/auth/login/'),
+          data: responseData,
+          statusCode: 200,
+        ),
+      );
 
-      when(mockStorage.write(key: anyNamed('key'), value: anyNamed('value')))
-          .thenAnswer((_) async => {});
+      when(
+        mockStorage.write(key: anyNamed('key'), value: anyNamed('value')),
+      ).thenAnswer((_) async => {});
 
       final result = await authApi.login('test@deostudio.com', 'securePass123');
 
@@ -69,22 +76,81 @@ void main() {
       expect(result.refresh, 'refresh-token-456');
       expect(result.user.email, 'test@deostudio.com');
       expect(result.user.firstName, 'Иван');
-      verify(mockStorage.write(key: 'access_token', value: 'access-token-123')).called(1);
-      verify(mockStorage.write(key: 'refresh_token', value: 'refresh-token-456')).called(1);
+      verify(
+        mockStorage.write(key: 'access_token', value: 'access-token-123'),
+      ).called(1);
+      verify(
+        mockStorage.write(key: 'refresh_token', value: 'refresh-token-456'),
+      ).called(1);
     });
 
+    test(
+      'loads profile after the backend returns tokens without user',
+      () async {
+        when(mockDio.post(any, data: anyNamed('data'))).thenAnswer(
+          (_) async => Response(
+            requestOptions: RequestOptions(path: '/auth/login/'),
+            data: {'access': 'access', 'refresh': 'refresh'},
+            statusCode: 200,
+          ),
+        );
+        when(
+          mockDio.get(
+            '/auth/me/',
+            queryParameters: anyNamed('queryParameters'),
+          ),
+        ).thenAnswer(
+          (_) async => Response(
+            requestOptions: RequestOptions(path: '/auth/me/'),
+            data: {'id': 'real-user', 'email': 'test@example.com'},
+            statusCode: 200,
+          ),
+        );
+        when(
+          mockStorage.write(key: anyNamed('key'), value: anyNamed('value')),
+        ).thenAnswer((_) async {});
+        final result = await authApi.login('test@example.com', 'password');
+        expect(result.user.id, 'real-user');
+        verify(
+          mockDio.get(
+            '/auth/me/',
+            queryParameters: anyNamed('queryParameters'),
+          ),
+        ).called(1);
+      },
+    );
+
+    test(
+      'does not persist tokens before completing a two-factor challenge',
+      () async {
+        when(mockDio.post(any, data: anyNamed('data'))).thenAnswer(
+          (_) async => Response(
+            requestOptions: RequestOptions(path: '/auth/login/'),
+            data: {'requires_2fa': true, 'challenge': 'signed-challenge'},
+            statusCode: 200,
+          ),
+        );
+        await expectLater(
+          authApi.login('test@example.com', 'password'),
+          throwsA(isA<TwoFactorRequired>()),
+        );
+        verifyNever(
+          mockStorage.write(key: anyNamed('key'), value: anyNamed('value')),
+        );
+      },
+    );
+
     test('throws on invalid credentials', () async {
-      when(mockDio.post(
-        any,
-        data: anyNamed('data'),
-      )).thenThrow(DioException(
-        requestOptions: RequestOptions(path: '/auth/login/'),
-        response: Response(
+      when(mockDio.post(any, data: anyNamed('data'))).thenThrow(
+        DioException(
           requestOptions: RequestOptions(path: '/auth/login/'),
-          statusCode: 401,
-          data: {'detail': 'Неверные учетные данные'},
+          response: Response(
+            requestOptions: RequestOptions(path: '/auth/login/'),
+            statusCode: 401,
+            data: {'detail': 'Неверные учетные данные'},
+          ),
         ),
-      ));
+      );
 
       expect(
         () => authApi.login('wrong@email.com', 'wrong'),
@@ -104,17 +170,21 @@ void main() {
         'is_active': true,
       };
 
-      when(mockDio.get(
-        any,
-        options: anyNamed('options'),
-        queryParameters: anyNamed('queryParameters'),
-        cancelToken: anyNamed('cancelToken'),
-        onReceiveProgress: anyNamed('onReceiveProgress'),
-      )).thenAnswer((_) async => Response(
-        requestOptions: RequestOptions(path: '/auth/me/'),
-        data: responseData,
-        statusCode: 200,
-      ));
+      when(
+        mockDio.get(
+          any,
+          options: anyNamed('options'),
+          queryParameters: anyNamed('queryParameters'),
+          cancelToken: anyNamed('cancelToken'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: '/auth/me/'),
+          data: responseData,
+          statusCode: 200,
+        ),
+      );
 
       final user = await authApi.getMe();
 
@@ -126,17 +196,17 @@ void main() {
 
   group('AuthApi.logout', () {
     test('clears tokens on logout', () async {
-      when(mockStorage.read(key: 'refresh_token'))
-          .thenAnswer((_) async => 'refresh-token-456');
+      when(
+        mockStorage.read(key: 'refresh_token'),
+      ).thenAnswer((_) async => 'refresh-token-456');
 
-      when(mockDio.post(
-        any,
-        data: anyNamed('data'),
-      )).thenAnswer((_) async => Response(
-        requestOptions: RequestOptions(path: '/auth/logout/'),
-        data: {},
-        statusCode: 200,
-      ));
+      when(mockDio.post(any, data: anyNamed('data'))).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: '/auth/logout/'),
+          data: {},
+          statusCode: 200,
+        ),
+      );
 
       when(mockStorage.deleteAll()).thenAnswer((_) async => {});
 
@@ -146,8 +216,9 @@ void main() {
     });
 
     test('handles logout when no refresh token', () async {
-      when(mockStorage.read(key: 'refresh_token'))
-          .thenAnswer((_) async => null);
+      when(
+        mockStorage.read(key: 'refresh_token'),
+      ).thenAnswer((_) async => null);
 
       when(mockStorage.deleteAll()).thenAnswer((_) async => {});
 
@@ -159,8 +230,9 @@ void main() {
 
   group('AuthApi.isAuthenticated', () {
     test('returns true when token exists', () async {
-      when(mockStorage.read(key: 'access_token'))
-          .thenAnswer((_) async => 'valid-token');
+      when(
+        mockStorage.read(key: 'access_token'),
+      ).thenAnswer((_) async => 'valid-token');
 
       final result = await authApi.isAuthenticated();
 
@@ -168,8 +240,7 @@ void main() {
     });
 
     test('returns false when no token', () async {
-      when(mockStorage.read(key: 'access_token'))
-          .thenAnswer((_) async => null);
+      when(mockStorage.read(key: 'access_token')).thenAnswer((_) async => null);
 
       final result = await authApi.isAuthenticated();
 

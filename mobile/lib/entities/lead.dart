@@ -82,24 +82,39 @@ class Lead {
 
     return Lead(
       id: json['id'] as String,
-      clientId: json['client'] is Map ? (json['client'] as Map)['id'] as String : json['client'] as String?,
+      clientId: json['client'] is Map
+          ? (json['client'] as Map)['id'] as String
+          : json['client'] as String?,
       contactName: json['contact_name'] as String? ?? '',
       companyName: json['company_name'] as String? ?? '',
       phone: json['phone'] as String? ?? '',
       email: json['email'] as String? ?? '',
       telegram: json['telegram'] as String?,
       source: json['source'] as String? ?? 'other',
-      budget: (json['budget'] as num?)?.toDouble(),
-      currentStageId: stageData?['id'] as String? ?? (json['current_stage'] as String?) ?? '',
-      currentStageName: stageData?['name'] as String?,
-      currentStageColor: stageData?['color'] as String?,
-      assignedTo: assigneeData?['id'] as String? ?? json['assigned_to'] as String?,
-      assignedToName: assigneeData?['full_name'] as String? ?? assigneeData?['email'] as String?,
+      budget: json['budget'] is String
+          ? double.tryParse(json['budget'] as String)
+          : (json['budget'] as num?)?.toDouble(),
+      currentStageId:
+          stageData?['id'] as String? ??
+          (json['current_stage'] as String?) ??
+          '',
+      currentStageName:
+          json['stage_name'] as String? ?? stageData?['name'] as String?,
+      currentStageColor:
+          json['stage_color'] as String? ?? stageData?['color'] as String?,
+      assignedTo:
+          assigneeData?['id'] as String? ?? json['assigned_to'] as String?,
+      assignedToName:
+          json['assigned_to_name'] as String? ??
+          assigneeData?['full_name'] as String? ??
+          assigneeData?['email'] as String?,
       createdBy: json['created_by'] as String?,
       notes: json['notes'] as String?,
       isActive: json['is_active'] as bool? ?? true,
       createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      updatedAt: DateTime.parse(
+        (json['updated_at'] ?? json['created_at']) as String,
+      ),
     );
   }
 }
