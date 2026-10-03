@@ -1,3 +1,5 @@
+from django.db import transaction
+from django.contrib.auth import get_user_model
 import uuid
 from datetime import datetime, timedelta
 
@@ -137,7 +139,12 @@ class TaskTimerStartView(views.APIView):
     """Start timer for a task."""
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request, pk):
+        get_user_model().objects.select_for_update().get(pk=request.user.pk)
+        from .focus.views import active, snapshot
+        if snapshot(active(request.user)) or TaskTimer.objects.filter(user=request.user, is_running=True).exists():
+            return Response({"detail": "У вас уже есть активный таймер или фокус-сессия."}, status=409)
         try:
             task = Task.objects.get(pk=pk)
         except Task.DoesNotExist:
@@ -156,7 +163,9 @@ class TaskTimerStopView(views.APIView):
     """Stop running timer for a task."""
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request, pk):
+        get_user_model().objects.select_for_update().get(pk=request.user.pk)
         timer = TaskTimer.objects.filter(
             task_id=pk, user=request.user, is_running=True
         ).first()
@@ -170,24 +179,8 @@ class TaskTimerStopView(views.APIView):
         timer.is_running = False
         timer.save()
 
-        # Update task actual hours
-        task = timer.task
-        total = TaskTimer.objects.filter(task=task).aggregate(
-            total=Sum("duration_seconds")
-        )["total"] or 0
-        task.actual_hours = round(total / 3600, 1)
-        task.save()
-
-        # Keep the project's time budget in sync
-        if task.project_id:
-            from apps.projects.models import Project
-
-            project_total = TaskTimer.objects.filter(
-                task__project_id=task.project_id, is_running=False
-            ).aggregate(total=Sum("duration_seconds"))["total"] or 0
-            Project.objects.filter(pk=task.project_id).update(
-                tracked_hours=round(project_total / 3600, 2)
-            )
+        from .time_tracking import recalculate_task_time
+        recalculate_task_time(timer.task)
 
         return Response(TaskTimerSerializer(timer).data)
 

@@ -178,3 +178,6 @@ class TaskTimer(models.Model):
         verbose_name = "Таймер"
         verbose_name_plural = "Таймеры"
         ordering = ["-start_time"]
+
+# Focus uses the existing tasks app so its migrations ship with CRM.
+from .focus.models import FocusNote, FocusProfile, FocusSession  # noqa: E402, F401
