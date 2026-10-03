@@ -50,6 +50,7 @@ import {
   ClipboardList,
 } from "lucide-react";
 import type { Notification } from "@/entities/notification/types";
+import { FocusBar } from "@/features/focus/FocusBar";
 import type { Task } from "@/entities/task/types";
 
 const NAV_CATEGORIES = [
@@ -68,6 +69,7 @@ const NAV_CATEGORIES = [
     items: [
       { name: "Клиенты", href: "/clients", icon: Users, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
       { name: "Проекты", href: "/projects", icon: FolderKanban, roles: ["superadmin", "owner", "project_manager", "developer", "designer"], matchSubRoutes: true },
+      { name: "DEO Focus", href: "/focus", icon: Sparkles, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer"] },
       { name: "Задачи", href: "/tasks", icon: CheckSquare, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer"], countKey: "tasks" as const, matchSubRoutes: true },
       { name: "Каталог", href: "/catalog", icon: Package, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
       { name: "Финансы", href: "/finance", icon: DollarSign, roles: ["superadmin", "owner", "project_manager"], matchSubRoutes: true },
@@ -493,6 +495,7 @@ export default function DashboardLayout({
           {/* Page Content with enter animation */}
           <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 scrollbar-thin">
             <div className="mx-auto w-full max-w-7xl animate-fade-in-up">
+              <FocusBar />
               {children}
             </div>
           </main>

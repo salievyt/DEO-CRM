@@ -19,9 +19,11 @@ import {
   Settings,
   LogOut,
   ChevronLeft,
+  Timer,
 } from "lucide-react";
 
 const navigation = [
+  { name: "DEO Focus", href: "/focus", icon: Timer },
   { name: "Дашборд", href: "/dashboard", icon: LayoutDashboard },
   { name: "Клиенты", href: "/clients", icon: Users },
   { name: "Лиды", href: "/leads", icon: TrendingUp },
