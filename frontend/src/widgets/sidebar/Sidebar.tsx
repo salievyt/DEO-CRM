@@ -26,6 +26,9 @@ import {
 const navigation = [
   { name: "DEO Focus", href: "/focus", icon: Timer },
   { name: "Дашборд", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Партнёры", href: "/partners", icon: Users },
+  { name: "Inbox", href: "/inbox", icon: MessageSquare },
+  { name: "Follow-up", href: "/leads/follow-up", icon: CheckSquare },
   { name: "Клиенты", href: "/clients", icon: Users },
   { name: "Лиды", href: "/leads", icon: TrendingUp },
   { name: "Проекты", href: "/projects", icon: FolderKanban },
