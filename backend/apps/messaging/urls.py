@@ -1,4 +1,5 @@
 from django.urls import path
+from .deal_link import ConversationDealView
 
 from .views.accounts import (
     WhatsAppAccountCreateView,
@@ -31,6 +32,7 @@ from .views.messages import (
 from .views.templates import WhatsAppTemplateListView
 
 urlpatterns = [
+    path("conversations/<uuid:pk>/deal/", ConversationDealView.as_view()),
     path("conversations/", ConversationListCreateView.as_view(), name="messaging-conversation-list"),
     path("conversations/from-lead/", ConversationFromLeadView.as_view(), name="messaging-conversation-from-lead"),
     path("conversations/<uuid:pk>/", ConversationDetailView.as_view(), name="messaging-conversation-detail"),
