@@ -215,6 +215,23 @@ class _CrmFormScreenState extends ConsumerState<CrmFormScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(widget.title)),
+    bottomNavigationBar: _fields == null
+        ? null
+        : SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              child: FilledButton(
+                onPressed: _saving ? null : _save,
+                child: _saving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Сохранить'),
+              ),
+            ),
+          ),
     body: _fields == null
         ? Center(
             child: _error == null
@@ -236,41 +253,37 @@ class _CrmFormScreenState extends ConsumerState<CrmFormScreen> {
           )
         : Form(
             key: _form,
-            child: ListView(
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.all(16),
-              children: [
-                ..._fields!.entries
-                    .where((entry) => (entry.value as Map)['read_only'] != true)
-                    .map(
-                      (entry) => Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: _field(
-                          entry.key,
-                          Map<String, dynamic>.from(entry.value as Map),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ..._fields!.entries
+                      .where(
+                        (entry) => (entry.value as Map)['read_only'] != true,
+                      )
+                      .map(
+                        (entry) => Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: _field(
+                            entry.key,
+                            Map<String, dynamic>.from(entry.value as Map),
+                          ),
+                        ),
+                      ),
+                  if (_error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Text(
+                        _error!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
                         ),
                       ),
                     ),
-                if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Text(
-                      _error!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  ),
-                FilledButton(
-                  onPressed: _saving ? null : _save,
-                  child: _saving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Сохранить'),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
   );
@@ -589,6 +602,8 @@ class _CrmFormScreenState extends ConsumerState<CrmFormScreen> {
                 ),
                 Expanded(
                   child: ListView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
                     children: items
                         .where(
                           (e) => '${e['display_name']}'.toLowerCase().contains(

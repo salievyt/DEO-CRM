@@ -1,4 +1,7 @@
 import 'dart:typed_data';
+import 'dart:async';
+import 'package:go_router/go_router.dart';
+import 'crm_record_card.dart';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -12,75 +15,236 @@ import 'crm_resources.dart';
 import 'crm_planning.dart';
 import '../focus/focus_screen.dart';
 
-class CrmWorkspaceMenu extends StatelessWidget {
+class CrmWorkspaceMenu extends StatefulWidget {
   const CrmWorkspaceMenu({super.key, this.group});
   final String? group;
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: Text(
-        group == 'finance'
-            ? 'Финансы'
-            : group == 'analytics'
-            ? 'Аналитика'
-            : group == 'cabinet'
-            ? 'Кабинет клиента'
-            : 'Разделы CRM',
+  State<CrmWorkspaceMenu> createState() => _CrmWorkspaceMenuState();
+}
+
+class _CrmWorkspaceMenuState extends State<CrmWorkspaceMenu> {
+  String _search = '';
+  final _searchController = TextEditingController();
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  String _category(CrmResource r) {
+    if ([
+      'project_statuses',
+      'service_types',
+      'lead_stages',
+      'client_statuses',
+      'client_tags',
+      'catalog_categories',
+      'ai_settings',
+      'whatsapp',
+      'telegram',
+    ].contains(r.key)) {
+      return 'Настройки и справочники';
+    }
+    if (r.path.startsWith('/finance/')) return 'Финансы';
+    if (r.path.startsWith('/analytics/')) return 'Аналитика';
+    if (r.path.startsWith('/cabinet/')) return 'Кабинет клиента';
+    if (['clients', 'leads', 'deals', 'catalog', 'inbox'].contains(r.key)) {
+      return 'Клиенты и продажи';
+    }
+    if ([
+      'projects',
+      'tasks',
+      'documents',
+      'reminders',
+      'notifications',
+    ].contains(r.key)) {
+      return 'Работа';
+    }
+    if ([
+      '/mentorship/',
+      '/structure/',
+      '/learning/',
+      '/auth/',
+    ].any(r.path.startsWith)) {
+      return 'Команда и обучение';
+    }
+    return 'Инструменты';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final resources = crmResources
+        .where(
+          (r) =>
+              (widget.group == null ||
+                  r.path.startsWith('/${widget.group}/')) &&
+              r.title.toLowerCase().contains(_search.trim().toLowerCase()),
+        )
+        .toList();
+    final categories = [
+      'Работа',
+      'Клиенты и продажи',
+      'Команда и обучение',
+      'Финансы',
+      'Аналитика',
+      'Инструменты',
+      'Кабинет клиента',
+      'Настройки и справочники',
+    ];
+    Widget tile(IconData icon, String title, VoidCallback onTap) => ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(9),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primaryContainer.withValues(alpha: .45),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, size: 21, color: theme.colorScheme.primary),
       ),
-    ),
-    body: ListView(
-      children: [
-        if (group == null)
-          ListTile(
-            leading: const Icon(Icons.timer_outlined),
-            title: const Text('DEO Focus'),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const FocusScreen()),
+      title: Text(title, style: theme.textTheme.titleSmall),
+      trailing: const Icon(Icons.chevron_right, size: 18),
+      onTap: onTap,
+    );
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          widget.group == 'finance'
+              ? 'Финансы'
+              : widget.group == 'analytics'
+              ? 'Аналитика'
+              : widget.group == 'cabinet'
+              ? 'Кабинет клиента'
+              : 'Рабочее пространство',
+        ),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        children: [
+          TextField(
+            controller: _searchController,
+            onChanged: (value) => setState(() => _search = value),
+            decoration: InputDecoration(
+              hintText: 'Найти раздел',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _search.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Очистить поиск',
+                      icon: const Icon(Icons.close),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _search = '');
+                      },
+                    ),
             ),
           ),
-        if (group == null)
-          ListTile(
-            leading: const Icon(Icons.calendar_month),
-            title: const Text('Календарь'),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CrmCalendarScreen()),
-            ),
-          ),
-        if (group == null || group == 'analytics')
-          ListTile(
-            leading: const Icon(Icons.grid_on),
-            title: const Text('Тепловая карта загрузки'),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CrmHeatmapScreen()),
-            ),
-          ),
-        ...crmResources
-            .where(
-              (r) =>
-                  group == null ||
-                  (group == 'finance' && r.path.startsWith('/finance/')) ||
-                  (group == 'analytics' && r.path.startsWith('/analytics/')) ||
-                  (group == 'cabinet' && r.path.startsWith('/cabinet/')),
-            )
-            .map(
-              (r) => ListTile(
-                leading: Icon(r.icon),
-                title: Text(r.title),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => CrmResourceScreen(resource: r),
+          const SizedBox(height: 20),
+          if (_search.isEmpty) ...[
+            if (widget.group == null)
+              Card(
+                child: Column(
+                  children: [
+                    tile(
+                      Icons.timer_outlined,
+                      'DEO Focus',
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const FocusScreen()),
+                      ),
+                    ),
+                    tile(
+                      Icons.calendar_month_outlined,
+                      'Календарь',
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CrmCalendarScreen(),
+                        ),
+                      ),
+                    ),
+                    tile(
+                      Icons.auto_awesome_outlined,
+                      'DEO AI',
+                      () => context.go('/ai'),
+                    ),
+                    tile(
+                      Icons.settings_outlined,
+                      'Профиль и настройки',
+                      () => context.go('/settings'),
+                    ),
+                  ],
+                ),
+              ),
+            if (widget.group == null || widget.group == 'analytics')
+              Card(
+                child: tile(
+                  Icons.grid_on,
+                  'Тепловая карта загрузки',
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CrmHeatmapScreen()),
                   ),
                 ),
               ),
+            if (widget.group == null)
+              Card(
+                child: tile(
+                  Icons.insights_outlined,
+                  'Обзор аналитики',
+                  () => context.go('/analytics'),
+                ),
+              ),
+          ],
+          for (final category in categories)
+            if (resources.any((r) => _category(r) == category)) ...[
+              Padding(
+                padding: const EdgeInsets.only(top: 12, bottom: 12),
+                child: Text(category, style: theme.textTheme.titleMedium),
+              ),
+              Card(
+                child: Column(
+                  children: resources
+                      .where((r) => _category(r) == category)
+                      .map(
+                        (r) => tile(
+                          r.icon,
+                          r.title,
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => CrmResourceScreen(resource: r),
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+            ],
+          if (resources.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.search_off,
+                    size: 40,
+                    color: theme.colorScheme.outline,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('Раздел не найден'),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Попробуйте другое название',
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class CrmResourceScreen extends ConsumerStatefulWidget {
@@ -103,6 +267,23 @@ class _CrmResourceScreenState extends ConsumerState<CrmResourceScreen> {
   bool _loading = true;
   bool _moreLoading = false;
   var _query = '';
+  final _searchController = TextEditingController();
+  Timer? _searchDelay;
+  int _requestVersion = 0;
+  @override
+  void dispose() {
+    _searchDelay?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _search(String value) {
+    _searchDelay?.cancel();
+    _requestVersion++;
+    setState(() => _query = value.trim());
+    _searchDelay = Timer(const Duration(milliseconds: 350), _load);
+  }
+
   DateTimeRange? _period;
   Map<String, dynamic> get _params => {
     ...widget.params,
@@ -127,10 +308,13 @@ class _CrmResourceScreenState extends ConsumerState<CrmResourceScreen> {
   }
 
   Future<void> _load() async {
+    _searchDelay?.cancel();
+    final requestVersion = ++_requestVersion;
     setState(() {
       _loading = true;
       _error = null;
       _page = 1;
+      _moreLoading = false;
     });
     try {
       final api = ref.read(crmApiProvider);
@@ -144,7 +328,7 @@ class _CrmResourceScreenState extends ConsumerState<CrmResourceScreen> {
           widget.resource.createPath ?? widget.resource.path,
         );
       } catch (_) {}
-      if (mounted) {
+      if (mounted && requestVersion == _requestVersion) {
         setState(() {
           _data = widget.resource.dataKey == null
               ? data
@@ -156,13 +340,18 @@ class _CrmResourceScreenState extends ConsumerState<CrmResourceScreen> {
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _error = crmError(e));
+      if (mounted && requestVersion == _requestVersion) {
+        setState(() => _error = crmError(e));
+      }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && requestVersion == _requestVersion) {
+        setState(() => _loading = false);
+      }
     }
   }
 
   Future<void> _more() async {
+    final requestVersion = _requestVersion;
     if (_moreLoading || _next == null) return;
     setState(() => _moreLoading = true);
     try {
@@ -177,7 +366,7 @@ class _CrmResourceScreenState extends ConsumerState<CrmResourceScreen> {
               'page': _page + 1,
             },
           );
-      if (mounted) {
+      if (mounted && requestVersion == _requestVersion) {
         setState(() {
           final old = _data as Map;
           _data = {
@@ -193,9 +382,13 @@ class _CrmResourceScreenState extends ConsumerState<CrmResourceScreen> {
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _error = crmError(e));
+      if (mounted && requestVersion == _requestVersion) {
+        setState(() => _error = crmError(e));
+      }
     } finally {
-      if (mounted) setState(() => _moreLoading = false);
+      if (mounted && requestVersion == _requestVersion) {
+        setState(() => _moreLoading = false);
+      }
     }
   }
 
@@ -223,23 +416,6 @@ class _CrmResourceScreenState extends ConsumerState<CrmResourceScreen> {
                 _board = !_board;
                 _load();
               },
-            ),
-          if (r.key == 'tasks')
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.filter_list),
-              onSelected: (value) {
-                _taskView = value;
-                _board = false;
-                _load();
-              },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: '', child: Text('Все задачи')),
-                PopupMenuItem(value: 'my', child: Text('Мои задачи')),
-                PopupMenuItem(
-                  value: 'upcoming',
-                  child: Text('Ближайшие сроки'),
-                ),
-              ],
             ),
           if (r.key == 'catalog')
             PopupMenuButton<String>(
@@ -377,14 +553,51 @@ class _CrmResourceScreenState extends ConsumerState<CrmResourceScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: TextField(
-                decoration: const InputDecoration(
+                controller: _searchController,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
                   hintText: 'Поиск',
-                  prefixIcon: Icon(Icons.search),
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchController.text.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Очистить поиск',
+                          icon: const Icon(Icons.close),
+                          onPressed: () {
+                            _searchController.clear();
+                            _search('');
+                            _load();
+                          },
+                        ),
                 ),
-                onSubmitted: (v) {
-                  _query = v;
-                  _load();
-                },
+                onChanged: _search,
+                onSubmitted: (_) => _load(),
+              ),
+            ),
+          if (r.key == 'tasks')
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  for (final filter in const {
+                    '': 'Все задачи',
+                    'my': 'Мои задачи',
+                    'upcoming': 'Ближайшие сроки',
+                  }.entries)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(filter.value),
+                        selected: !_board && _taskView == filter.key,
+                        onSelected: (_) {
+                          _taskView = filter.key;
+                          _board = false;
+                          _load();
+                        },
+                      ),
+                    ),
+                ],
               ),
             ),
           Expanded(
@@ -542,9 +755,29 @@ class _CrmResourceScreenState extends ConsumerState<CrmResourceScreen> {
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
         if (items.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(child: Text('Записей пока нет')),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 16),
+            child: Column(
+              children: [
+                Icon(
+                  _query.isEmpty ? r.icon : Icons.search_off,
+                  size: 40,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  _query.isEmpty ? 'Записей пока нет' : 'Ничего не найдено',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _query.isEmpty
+                      ? 'Новые записи появятся здесь'
+                      : 'Измените запрос или очистите поиск',
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ...items.whereType<Map>().map((item) {
           final row = Map<String, dynamic>.from(item);
@@ -556,27 +789,18 @@ class _CrmResourceScreenState extends ConsumerState<CrmResourceScreen> {
               ),
             );
           }
-          return Card(
-            child: ListTile(
-              title: Text(recordTitle(row)),
-              subtitle: Text(
-                [
-                  row['status_name'] ?? row['stage_name'] ?? row['status'],
-                  row['client_name'] ?? row['email'] ?? row['phone'],
-                  row['amount'] ?? row['total'] ?? row['budget'],
-                ].where((e) => e != null && '$e'.isNotEmpty).join(' · '),
-              ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () async {
-                await Navigator.push<void>(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => CrmRecordScreen(resource: r, row: row),
-                  ),
-                );
-                if (mounted) _load();
-              },
-            ),
+          return CrmRecordCard(
+            row: row,
+            icon: r.icon,
+            onTap: () async {
+              await Navigator.push<void>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CrmRecordScreen(resource: r, row: row),
+                ),
+              );
+              if (mounted) _load();
+            },
           );
         }),
         if (_next != null)
