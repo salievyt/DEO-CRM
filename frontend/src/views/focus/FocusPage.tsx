@@ -65,6 +65,8 @@ export function FocusPage() {
   const root = useRef<HTMLDivElement>(null);
   const audio = useRef<HTMLAudioElement | null>(null);
   const previous = useRef<FocusSession | null>(null);
+  const starting = useRef(false);
+  const channel = useRef<BroadcastChannel | null>(null);
 
   const [now, setNow] = useState(Date.now());
   const [phase, setPhase] = useState<Phase>("work");
@@ -147,20 +149,41 @@ export function FocusPage() {
     await client.invalidateQueries({ queryKey: ["focus"] });
     client.invalidateQueries({ queryKey: ["tasks"] });
   }, [client]);
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") { return; }
+    const bus = new BroadcastChannel("deo-focus");
+    channel.current = bus;
+    bus.onmessage = (event) => {
+      if (event.data?.type === "focus-changed") {
+        void client.invalidateQueries({ queryKey: ["focus"] });
+      }
+    };
+    return () => { bus.close(); channel.current = null; };
+  }, [client]);
+  const broadcast = useCallback(() => {
+    channel.current?.postMessage({ type: "focus-changed" });
+  }, []);
   const run = useCallback(async (fn: () => Promise<unknown>) => {
     setBusy(true);
     setError("");
     try {
       await fn();
       await refresh();
+      broadcast();
     } catch (e) {
       setError(focusError(e));
     } finally {
       setBusy(false);
     }
-  }, [refresh]);
+  }, [broadcast, refresh]);
   const start = useCallback(async (nextPhase: Phase = phase) => {
-    return focusApi.start({ phase: nextPhase, task: task || null, goal });
+    if (starting.current) { return null; }
+    starting.current = true;
+    try {
+      return await focusApi.start({ phase: nextPhase, task: task || null, goal });
+    } finally {
+      starting.current = false;
+    }
   }, [phase, task, goal]);
   const toggleZen = useCallback(() => {
     const next = !zen;
@@ -196,6 +219,9 @@ export function FocusPage() {
         setResultSession(state.data.last_session);
         setResult(state.data.last_session.result);
       }
+      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+        new Notification("Сессия завершена", { body: old.phase === "work" ? "Время сделать перерыв." : "Готовы вернуться к фокусу?" });
+      }
       void focusApi
         .stats()
         .then((fresh) => {
@@ -213,6 +239,12 @@ export function FocusPage() {
       setSoundOn(false);
     }
   }, [active, state.data, state.isFetching, profile?.auto_advance, profile?.cycles, run, start]);
+  useEffect(() => {
+    if (typeof Notification === "undefined" || Notification.permission !== "default") { return; }
+    const ask = () => void Notification.requestPermission();
+    window.addEventListener("pointerdown", ask, { once: true });
+    return () => window.removeEventListener("pointerdown", ask);
+  }, []);
   useEffect(() => {
     if (active?.status === "running" && seconds === 0 && !state.isFetching) {void state.refetch();}
   }, [seconds, active?.status, state]);

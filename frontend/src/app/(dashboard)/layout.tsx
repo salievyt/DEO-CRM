@@ -48,9 +48,9 @@ import {
   BookOpen,
   FileEdit,
   ClipboardList,
+  Timer,
 } from "lucide-react";
 import type { Notification } from "@/entities/notification/types";
-import { FocusLogo } from "@/features/focus/FocusLogo";
 import { FocusBar } from "@/features/focus/FocusBar";
 import type { Task } from "@/entities/task/types";
 
@@ -70,7 +70,7 @@ const NAV_CATEGORIES = [
     items: [
       { name: "Клиенты", href: "/clients", icon: Users, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
       { name: "Проекты", href: "/projects", icon: FolderKanban, roles: ["superadmin", "owner", "project_manager", "developer", "designer"], matchSubRoutes: true },
-      { name: "DEO Focus", href: "/focus", icon: Sparkles, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer"] },
+      { name: "DEO Focus", href: "/focus", icon: Timer, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer"] },
       { name: "Задачи", href: "/tasks", icon: CheckSquare, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer"], countKey: "tasks" as const, matchSubRoutes: true },
       { name: "Каталог", href: "/catalog", icon: Package, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
       { name: "Финансы", href: "/finance", icon: DollarSign, roles: ["superadmin", "owner", "project_manager"], matchSubRoutes: true },
@@ -346,9 +346,7 @@ export default function DashboardLayout({
                               "h-4 w-4 flex-shrink-0 transition-transform duration-150",
                               active ? "scale-110" : "group-hover:scale-105"
                             )} />
-                              <span className="truncate" title={item.name}>
-                                {item.href === "/focus" ? <FocusLogo className="h-5 w-auto max-w-full" /> : item.name}
-                              </span>
+                              <span className="truncate" title={item.name}>{item.name}</span>
                               {badgeCount > 0 && (
                                 <span className="ml-auto flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-bold leading-none text-white dark:bg-brand-500">
                                   {badgeCount > 99 ? "99+" : badgeCount}
