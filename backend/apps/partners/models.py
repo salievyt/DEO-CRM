@@ -24,6 +24,7 @@ class Partner(models.Model):
 
 
 class Referral(models.Model):
+    public_request_id = models.UUIDField(null=True, blank=True, unique=True, editable=False)
     partner = models.ForeignKey(Partner, on_delete=models.PROTECT, related_name="referrals")
     lead = models.OneToOneField("leads.Lead", on_delete=models.PROTECT, related_name="referral")
     project = models.ForeignKey("projects.Project", on_delete=models.SET_NULL, null=True, blank=True)
