@@ -129,19 +129,38 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 class MainShell extends StatelessWidget {
   final Widget child;
   const MainShell({super.key, required this.child});
+  static const paths = [
+    '/dashboard',
+    '/tasks',
+    '/projects',
+    '/chat',
+    '/workspace',
+  ];
 
   @override
   Widget build(BuildContext context) {
+    final location = GoRouterState.of(context).uri.path;
+    final index = paths
+        .take(4)
+        .toList()
+        .indexWhere(
+          (path) => location == path || location.startsWith('$path/'),
+        );
     return Scaffold(
       body: child,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _calculateSelectedIndex(context),
-        onDestinationSelected: (index) => _onItemTapped(index, context),
+        selectedIndex: index < 0 ? 4 : index,
+        onDestinationSelected: (index) => context.go(paths[index]),
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
-            label: 'Главная',
+            icon: Icon(Icons.wb_sunny_outlined),
+            selectedIcon: Icon(Icons.wb_sunny),
+            label: 'Сегодня',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.task_alt_outlined),
+            selectedIcon: Icon(Icons.task_alt),
+            label: 'Задачи',
           ),
           NavigationDestination(
             icon: Icon(Icons.folder_outlined),
@@ -149,156 +168,17 @@ class MainShell extends StatelessWidget {
             label: 'Проекты',
           ),
           NavigationDestination(
-            icon: Icon(Icons.checklist_outlined),
-            selectedIcon: Icon(Icons.checklist),
-            label: 'Задачи',
+            icon: Icon(Icons.chat_bubble_outline),
+            selectedIcon: Icon(Icons.chat_bubble),
+            label: 'Чаты',
           ),
           NavigationDestination(
-            icon: Icon(Icons.trending_up_outlined),
-            selectedIcon: Icon(Icons.trending_up),
-            label: 'Лиды',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.more_horiz),
-            selectedIcon: Icon(Icons.more_horiz),
-            label: 'Ещё',
+            icon: Icon(Icons.grid_view_outlined),
+            selectedIcon: Icon(Icons.grid_view_rounded),
+            label: 'Меню',
           ),
         ],
       ),
-    );
-  }
-
-  int _calculateSelectedIndex(BuildContext context) {
-    final location = GoRouterState.of(context).uri.toString();
-    if (location.startsWith('/projects')) return 1;
-    if (location.startsWith('/tasks')) return 2;
-    if (location.startsWith('/leads')) return 3;
-    return 0;
-  }
-
-  void _onItemTapped(int index, BuildContext context) {
-    switch (index) {
-      case 0:
-        context.go('/dashboard');
-      case 1:
-        context.go('/projects');
-      case 2:
-        context.go('/tasks');
-      case 3:
-        context.go('/leads');
-      case 4:
-        _showMoreMenu(context);
-    }
-  }
-
-  void _showMoreMenu(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _MenuItem(
-                icon: Icons.timer_outlined,
-                label: 'DEO Focus',
-                onTap: () {
-                  Navigator.pop(context);
-                  context.go('/focus');
-                },
-              ),
-              _MenuItem(
-                icon: Icons.apps,
-                label: 'Все разделы CRM',
-                onTap: () {
-                  Navigator.pop(context);
-                  context.go('/workspace');
-                },
-              ),
-              _MenuItem(
-                icon: Icons.chat,
-                label: 'Чат',
-                onTap: () {
-                  Navigator.pop(context);
-                  context.go('/chat');
-                },
-              ),
-              _MenuItem(
-                icon: Icons.attach_money,
-                label: 'Финансы',
-                onTap: () {
-                  Navigator.pop(context);
-                  context.go('/finance');
-                },
-              ),
-              _MenuItem(
-                icon: Icons.description,
-                label: 'Документы',
-                onTap: () {
-                  Navigator.pop(context);
-                  context.go('/documents');
-                },
-              ),
-              _MenuItem(
-                icon: Icons.analytics,
-                label: 'Аналитика',
-                onTap: () {
-                  Navigator.pop(context);
-                  context.go('/analytics');
-                },
-              ),
-              _MenuItem(
-                icon: Icons.auto_awesome,
-                label: 'DEO AI',
-                onTap: () {
-                  Navigator.pop(context);
-                  context.go('/ai');
-                },
-              ),
-              _MenuItem(
-                icon: Icons.settings,
-                label: 'Настройки',
-                onTap: () {
-                  Navigator.pop(context);
-                  context.go('/settings');
-                },
-              ),
-              _MenuItem(
-                icon: Icons.person,
-                label: 'Мой кабинет',
-                onTap: () {
-                  Navigator.pop(context);
-                  context.go('/cabinet');
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MenuItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _MenuItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: const Color(0xFF6366F1)),
-      title: Text(label),
-      onTap: onTap,
     );
   }
 }

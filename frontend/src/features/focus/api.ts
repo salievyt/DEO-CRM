@@ -35,6 +35,9 @@ export interface FocusStats {
   streak: number;
   daily_goal: number;
   daily: { date: string; seconds: number; sessions: number }[];
+  completion_rate?: number;
+  task_breakdown?: { task_id: string; title: string; seconds: number; sessions: number }[];
+  productive_hours?: Record<string, number>;
   achievements: { id: string; title: string; unlocked: boolean }[];
 }
 export interface RunningTimer {

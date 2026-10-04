@@ -244,9 +244,11 @@ class FocusStatsView(views.APIView):
                 user=request.user, phase="work", status__in=["completed", "cancelled"]
             )
             .order_by("-started_at")
-            .values("elapsed_seconds", "status", "finished_at")
+            .values("elapsed_seconds", "status", "finished_at", "started_at", "task_id", "task__title")
         )
         days = {}
+        task_breakdown = {}
+        productive_hours = {}
         completed = total = 0
         for row in sessions:
             key = timezone.localtime(row["finished_at"]).date().isoformat()
@@ -256,6 +258,14 @@ class FocusStatsView(views.APIView):
             if row["status"] == "completed":
                 daily["sessions"] += 1
                 completed += 1
+                hour = timezone.localtime(row["started_at"]).hour
+                productive_hours[str(hour)] = productive_hours.get(str(hour), 0) + row["elapsed_seconds"]
+            if row["task_id"]:
+                task_key = str(row["task_id"])
+                item = task_breakdown.setdefault(task_key, {"task_id": task_key, "title": row["task__title"], "seconds": 0, "sessions": 0})
+                item["seconds"] += row["elapsed_seconds"]
+                if row["status"] == "completed":
+                    item["sessions"] += 1
         today = days.get(now.isoformat(), {"seconds": 0, "sessions": 0})
         streak = 0
         day = now if today["sessions"] else now - timedelta(days=1)
@@ -279,6 +289,9 @@ class FocusStatsView(views.APIView):
                 "today_sessions": today["sessions"],
                 "total_seconds": total,
                 "total_sessions": completed,
+                "completion_rate": round(completed / len(sessions) * 100) if sessions else 0,
+                "task_breakdown": sorted(task_breakdown.values(), key=lambda item: item["seconds"], reverse=True),
+                "productive_hours": productive_hours,
                 "streak": streak,
                 "level": 1 + total // 7200,
                 "xp": total // 60,

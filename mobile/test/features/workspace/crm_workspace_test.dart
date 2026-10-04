@@ -50,6 +50,35 @@ void main() {
     child: MaterialApp(home: child),
   );
 
+  testWidgets('search waits for typing and clear reloads the full list', (
+    tester,
+  ) async {
+    backend.responses['GET /clients/'] = {'results': [], 'next': null};
+    await tester.pumpWidget(
+      host(CrmResourceScreen(resource: crmResource('clients'))),
+    );
+    await tester.pumpAndSettle();
+    final before = backend.requests.where((r) => r.method == 'GET').length;
+    await tester.enterText(find.byType(TextField), 'Алина');
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(backend.requests.where((r) => r.method == 'GET').length, before);
+    await tester.pumpAndSettle(const Duration(milliseconds: 400));
+    expect(
+      backend.requests
+          .lastWhere((r) => r.method == 'GET')
+          .queryParameters['search'],
+      'Алина',
+    );
+    await tester.tap(find.byTooltip('Очистить поиск'));
+    await tester.pumpAndSettle();
+    expect(
+      backend.requests
+          .lastWhere((r) => r.method == 'GET')
+          .queryParameters['search'],
+      '',
+    );
+  });
+
   testWidgets('server form posts entered data and omits read-only fields', (
     tester,
   ) async {
@@ -77,6 +106,28 @@ void main() {
     final request = backend.requests.singleWhere((r) => r.method == 'POST');
     expect(request.path, '/clients/');
     expect(request.data, {'first_name': 'Алина', 'email': 'alina@example.com'});
+  });
+
+  testWidgets('sticky save validates required fields below the viewport', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      host(
+        CrmFormScreen(
+          title: 'Длинная форма',
+          path: '/tasks/',
+          fields: {
+            for (var i = 0; i < 15; i++) 'field_$i': {'type': 'string'},
+            'title': {'type': 'string', 'required': true},
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Сохранить'));
+    await tester.pumpAndSettle();
+    expect(backend.requests.where((r) => r.method == 'POST'), isEmpty);
+    expect(find.text('Заполните поле'), findsOneWidget);
   });
 
   testWidgets('required fields prevent sending an empty record', (

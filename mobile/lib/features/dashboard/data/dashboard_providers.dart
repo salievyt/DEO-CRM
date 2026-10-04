@@ -6,7 +6,9 @@ import '../../../entities/analytics.dart';
 import '../../../entities/project.dart';
 import '../../../entities/task.dart';
 
-final dashboardProvider = FutureProvider.autoDispose<DashboardData>((ref) async {
+final dashboardProvider = FutureProvider.autoDispose<DashboardData>((
+  ref,
+) async {
   final analytics = ref.read(analyticsApiProvider);
   final projectsApi = ref.read(projectsApiProvider);
   final tasksApi = ref.read(tasksApiProvider);
@@ -39,3 +41,13 @@ class DashboardData {
     required this.upcomingTasks,
   });
 }
+
+// Sections load independently: analytics permissions must not block daily work.
+final homeTasksProvider = FutureProvider.autoDispose<List<Task>>(
+  (ref) => ref.read(tasksApiProvider).my(),
+);
+final homeProjectsProvider = FutureProvider.autoDispose<List<Project>>(
+  (ref) => ref
+      .read(projectsApiProvider)
+      .list(params: {'ordering': '-created_at', 'page_size': '5'}),
+);
