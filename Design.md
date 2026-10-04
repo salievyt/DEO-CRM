@@ -26,6 +26,7 @@ colors:
   on-primary: "#ffffff"
   on-dark: "#ffffff"
 
+
 typography:
   hero-display:
     fontFamily: "SF Pro Display, system-ui, -apple-system, sans-serif"
