@@ -1,4 +1,5 @@
 "use client";
+import { LeadQualification } from "@/features/growth/LeadQualification";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -140,6 +141,7 @@ export function LeadDetailPage() {
 
   return (
     <div className="space-y-6">
+      <LeadQualification id={id} />
       <PageHeader
         title={lead.contact_name}
         description={lead.company_name || "Лид"}
