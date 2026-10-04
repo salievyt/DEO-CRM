@@ -1,8 +1,12 @@
 from django.urls import path
 
 from . import views
+from .followups import FollowUpList, FollowUpDetail, ProposalFollowUp
 
 urlpatterns = [
+    path("followups/", FollowUpList.as_view()),
+    path("followups/proposal/", ProposalFollowUp.as_view()),
+    path("followups/<uuid:pk>/", FollowUpDetail.as_view()),
     path("", views.ReminderListView.as_view(), name="reminder-list"),
     path("summary/", views.ReminderSummaryView.as_view(), name="reminder-summary"),
     path("logs/", views.ReminderLogListView.as_view(), name="reminder-logs"),

@@ -1,4 +1,5 @@
 "use client";
+import { FollowUpPanel } from "@/features/growth/FollowUpPanel";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -65,6 +66,7 @@ export function FollowUpPage() {
 
   return (
     <div className="space-y-6">
+      <FollowUpPanel />
       <PageHeader
         title="Задачи / Follow-up"
         description="Напоминания, просроченные задачи и план на день"

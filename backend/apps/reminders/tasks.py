@@ -18,3 +18,9 @@ def expire_orphaned_reminder_records():
     """Expire reminders whose related entity (client/deal/task/invoice)
     no longer exists."""
     return {"expired": expire_orphaned_reminders()}
+
+
+@shared_task
+def process_followups():
+    from .followups import sync_followups
+    return sync_followups()

@@ -472,3 +472,5 @@ LOGGING = {
         "level": "INFO",
     },
 }
+
+CELERY_BEAT_SCHEDULE["crm-followups"] = {"task": "apps.reminders.tasks.process_followups", "schedule": 900.0}

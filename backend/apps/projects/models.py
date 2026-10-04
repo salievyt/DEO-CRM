@@ -69,6 +69,7 @@ class Project(models.Model):
         ProjectStatus, on_delete=models.PROTECT, related_name="projects",
         verbose_name="Статус"
     )
+    completed_at = models.DateTimeField(null=True, blank=True, editable=False)
     progress = models.IntegerField(default=0, verbose_name="Прогресс (%)")
     description = models.TextField(blank=True, verbose_name="Описание")
     created_by = models.ForeignKey(
@@ -86,6 +87,16 @@ class Project(models.Model):
             models.Index(fields=["status", "progress"]),
             models.Index(fields=["client"]),
         ]
+
+    def save(self, *args, **kwargs):
+        from django.utils import timezone
+        if self.progress == 100 and self.completed_at is None:
+            self.completed_at = timezone.now()
+        elif self.progress < 100:
+            self.completed_at = None
+        if kwargs.get("update_fields") is not None:
+            kwargs["update_fields"] = set(kwargs["update_fields"]) | {"completed_at"}
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name

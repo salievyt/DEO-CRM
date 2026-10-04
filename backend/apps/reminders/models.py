@@ -235,3 +235,18 @@ class ReminderLog(models.Model):
 
     def __str__(self):
         return f"{self.get_action_display()} — {self.reminder.title}"
+
+
+class FollowUp(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    client = models.ForeignKey("clients.Client", on_delete=models.CASCADE)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    source_key = models.CharField(max_length=200, unique=True)
+    reason = models.CharField(max_length=30, choices=[("no_reply", "Нет ответа 2 дня"), ("proposal", "КП отправлено 3 дня назад"), ("reactivation", "30 дней после проекта")])
+    due_at = models.DateTimeField(db_index=True)
+    status = models.CharField(max_length=20, default="pending", choices=[("pending", "Ожидает"), ("completed", "Выполнено"), ("cancelled", "Отменено")])
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["due_at", "id"]
