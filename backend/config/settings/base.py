@@ -475,3 +475,5 @@ LOGGING = {
 }
 
 CELERY_BEAT_SCHEDULE["crm-followups"] = {"task": "apps.reminders.tasks.process_followups", "schedule": 900.0}
+
+CRM_BASE_CURRENCY = os.getenv("CRM_BASE_CURRENCY", "KGS")

@@ -1,4 +1,5 @@
 "use client";
+import { FinancialControl } from "@/features/growth/FinancialControl";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -79,6 +80,7 @@ export function FinancePage() {
 
   return (
     <div className="space-y-6">
+      <FinancialControl />
       <PageHeader
         title="Финансы"
         description="Управление финансами компании"

@@ -1,8 +1,10 @@
 from django.urls import path
 
 from . import views
+from .control import FinancialControl
 
 urlpatterns = [
+    path("control/", FinancialControl.as_view()),
     path("invoices/", views.InvoiceListCreateView.as_view(), name="invoice-list"),
     path("invoices/<uuid:pk>/", views.InvoiceDetailView.as_view(), name="invoice-detail"),
     path(
