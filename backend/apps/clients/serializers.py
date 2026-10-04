@@ -171,12 +171,12 @@ class ClientOverviewSerializer(serializers.Serializer):
 class ActivityItemSerializer(serializers.Serializer):
     """A single entry of the unified activity timeline."""
 
-    id = serializers.UUIDField(read_only=True)
+    id = serializers.CharField(read_only=True)
     entity_type = serializers.CharField(read_only=True)
     title = serializers.CharField(read_only=True)
     description = serializers.CharField(read_only=True, allow_blank=True)
     actor = serializers.CharField(read_only=True, allow_blank=True)
-    ref_id = serializers.UUIDField(read_only=True, allow_null=True)
+    ref_id = serializers.CharField(read_only=True, allow_null=True)
     ref_label = serializers.CharField(read_only=True, allow_blank=True)
     timestamp = serializers.DateTimeField(read_only=True)
     meta = serializers.DictField(read_only=True, required=False)
