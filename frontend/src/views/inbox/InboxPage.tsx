@@ -1,4 +1,5 @@
 "use client";
+import { InboxDealLink } from "@/features/growth/InboxDealLink";
 
 import {
   useCallback,
@@ -210,6 +211,8 @@ export function InboxPage() {
 
         {/* Chat pane */}
         {selected ? (
+          <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <InboxDealLink id={selected.id} />
           <ChatPane
             key={selected.id}
             conversation={selected}
@@ -217,6 +220,7 @@ export function InboxPage() {
               queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INBOX_UNREAD] })
             }
           />
+          </div>
         ) : (
           <Card className="flex flex-1 flex-col items-center justify-center">
             <div className="text-center">

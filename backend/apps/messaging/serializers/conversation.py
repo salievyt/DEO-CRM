@@ -17,7 +17,7 @@ class ConversationListSerializer(serializers.ModelSerializer):
         model = Conversation
         fields = [
             "id", "contact_id", "contact_name", "contact_phone", "company_name",
-            "channel", "status", "assigned_user", "assigned_user_name",
+            "channel", "status", "deal", "assigned_user", "assigned_user_name",
             "unread_count", "last_message_at", "last_message_preview",
             "telegram_account_id", "telegram_account_name",
             "created_at", "updated_at",

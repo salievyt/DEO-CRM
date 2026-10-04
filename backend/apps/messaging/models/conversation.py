@@ -23,6 +23,7 @@ class Conversation(models.Model):
         related_name="messaging_conversations",
         verbose_name="Клиент",
     )
+    deal = models.ForeignKey("deals.Deal", on_delete=models.SET_NULL, null=True, blank=True, related_name="conversations")
     channel = models.CharField(
         max_length=20, choices=Channel.choices, default=Channel.WHATSAPP,
         verbose_name="Канал",
