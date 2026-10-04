@@ -11,6 +11,12 @@ import {
   Users,
   CheckSquare,
   Clock,
+  Download,
+  ExternalLink,
+  File,
+  FileText,
+  Image as ImageIcon,
+  Link2,
   Pencil,
   Plus,
   Search,
@@ -25,11 +31,12 @@ import { Button } from "@/shared/ui/Button";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
 import { ProgressBar } from "@/shared/ui/ProgressBar";
 import { LoadingSpinner } from "@/shared/ui/LoadingSpinner";
-import { projectsApi, tasksApi, authApi } from "@/shared/api/base";
+import { projectsApi, tasksApi, authApi, documentsApi } from "@/shared/api/base";
 import { QUERY_KEYS } from "@/shared/constants";
 import { formatDate, formatCurrency } from "@/shared/utils/formatters";
 import type { Project } from "@/entities/project/types";
 import type { Task } from "@/entities/task/types";
+import type { Document } from "@/entities/document/types";
 
 const ROLE_LABELS: Record<string, string> = {
   pm: "Project Manager",
@@ -39,6 +46,37 @@ const ROLE_LABELS: Record<string, string> = {
   marketer: "Маркетолог",
   seo: "SEO специалист",
 };
+
+const DOC_STATUS_LABELS: Record<string, string> = {
+  draft: "Черновик",
+  review: "На согласовании",
+  changes_requested: "Нужны правки",
+  approved: "Согласован",
+  signed: "Подписан",
+  archived: "Архив",
+};
+
+function formatFileSize(bytes: number) {
+  if (!bytes) {
+    return "0 КБ";
+  }
+  return bytes < 1024 * 1024
+    ? `${Math.round(bytes / 1024)} КБ`
+    : `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
+}
+
+function DocIcon({ mime, source }: { mime: string; source?: string }) {
+  if (source === "google_docs") {
+    return <Link2 className="h-4 w-4 text-brand-500" />;
+  }
+  if (mime?.startsWith("image/")) {
+    return <ImageIcon className="h-4 w-4 text-success-500" />;
+  }
+  if (mime === "application/pdf") {
+    return <FileText className="h-4 w-4 text-danger-500" />;
+  }
+  return <File className="h-4 w-4 text-surface-500" />;
+}
 
 // User search combobox for adding team members
 function UserSearchSelect({
@@ -173,6 +211,14 @@ export function ProjectDetailPage() {
     enabled: !!id,
   });
 
+  const { data: documents, isLoading: docsLoading } = useQuery({
+    queryKey: [QUERY_KEYS.DOCUMENTS, "project", id],
+    queryFn: () => documentsApi.list({ project: id, page_size: 100 }),
+    select: (res) =>
+      ((res.data as any)?.results || res.data || []) as Document[],
+    enabled: !!id,
+  });
+
   const { data: allUsers } = useQuery({
     queryKey: [QUERY_KEYS.USERS],
     queryFn: () => authApi.users.list(),
@@ -213,6 +259,26 @@ export function ProjectDetailPage() {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PROJECT, id] });
     },
   });
+
+  const openDocument = async (doc: Document) => {
+    if (doc.source === "google_docs") {
+      if (doc.external_url) {
+        window.open(doc.external_url, "_blank", "noopener,noreferrer");
+      }
+      return;
+    }
+    try {
+      const response = await documentsApi.download(doc.id);
+      const url = response.data?.url || doc.file;
+      if (url) {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+    } catch {
+      if (doc.file) {
+        window.open(doc.file, "_blank", "noopener,noreferrer");
+      }
+    }
+  };
 
   if (isLoading) {
     return (
@@ -371,6 +437,76 @@ export function ProjectDetailPage() {
               </div>
             ) : (
               <p className="py-4 text-center text-sm text-surface-400">Нет задач</p>
+            )}
+          </Card>
+
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-surface-700 dark:text-surface-200">
+                Документы проекта
+              </h3>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-surface-400">
+                  {documents?.length || 0}
+                </span>
+                <Link
+                  href="/documents"
+                  className="text-xs text-brand-600 hover:text-brand-700 dark:text-brand-400"
+                >
+                  Все документы →
+                </Link>
+              </div>
+            </div>
+            {docsLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <LoadingSpinner size="sm" />
+              </div>
+            ) : documents && documents.length > 0 ? (
+              <div className="space-y-2">
+                {documents.map((doc) => (
+                  <div
+                    key={doc.id}
+                    onClick={() => openDocument(doc)}
+                    className="group flex cursor-pointer items-center justify-between rounded-lg border border-surface-100 p-3 transition-colors hover:bg-surface-50 dark:border-surface-700 dark:hover:bg-surface-700/50"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <DocIcon mime={doc.mime_type} source={doc.source} />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-surface-900 dark:text-white">
+                          {doc.title}
+                        </p>
+                        <p className="truncate text-xs text-surface-400">
+                          {doc.source === "google_docs"
+                            ? "Google Docs"
+                            : `${doc.file_name} · ${formatFileSize(doc.file_size)}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="ml-3 flex shrink-0 items-center gap-3 text-xs text-surface-500">
+                      <span className="hidden sm:inline">
+                        {DOC_STATUS_LABELS[doc.status] || doc.status}
+                      </span>
+                      <span className="hidden md:inline">
+                        {formatDate(doc.created_at)}
+                      </span>
+                      <span
+                        className="text-surface-400 group-hover:text-brand-600"
+                        title={doc.source === "google_docs" ? "Открыть" : "Скачать"}
+                      >
+                        {doc.source === "google_docs" ? (
+                          <ExternalLink className="h-4 w-4" />
+                        ) : (
+                          <Download className="h-4 w-4" />
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="py-4 text-center text-sm text-surface-400">
+                Нет документов
+              </p>
             )}
           </Card>
         </div>
