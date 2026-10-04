@@ -12,7 +12,6 @@ import {
   Plus,
   RotateCcw,
   Settings2,
-  Sparkles,
   Square,
   StickyNote,
   Target,
@@ -34,6 +33,7 @@ import {
   phaseLabels,
   focusError,
 } from "@/features/focus/api";
+import { FocusLogo } from "@/features/focus/FocusLogo";
 import "./focus.css";
 
 const PHASE_TONE: Record<Phase, { text: string; orb: string; stroke: string }> = {
@@ -759,7 +759,7 @@ export function FocusPage() {
           </div>
           <header className="relative z-10 flex items-center justify-between p-5">
             <span className="flex items-center gap-2 text-sm font-semibold text-surface-500 dark:text-surface-400">
-              <Sparkles size={16} className="text-brand-500" /> DEO Focus
+              <FocusLogo className="h-5 w-auto" />
             </span>
             {tools}
           </header>
@@ -789,7 +789,7 @@ export function FocusPage() {
           <header className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">
-                DEO <span className="text-gradient-brand">Focus</span>
+                <FocusLogo />
               </h1>
               <p className="mt-1 text-sm text-surface-500 dark:text-surface-400">
                 Ваше пространство концентрации

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { FocusLogo } from "@/features/focus/FocusLogo";
 import { usePathname } from "next/navigation";
 import { cn } from "@/shared/utils/cn";
 import { useAuth } from "@/hooks/useAuth";
@@ -88,7 +89,9 @@ export function Sidebar({ onNavClick }: SidebarProps) {
             >
               <Icon className="h-5 w-5 flex-shrink-0" />
               {!sidebarCollapsed && (
-                <span className="text-sm font-medium truncate">{item.name}</span>
+                <span className="text-sm font-medium truncate">
+                  {item.href === "/focus" ? <FocusLogo className="h-5 w-auto max-w-full" /> : item.name}
+                </span>
               )}
             </Link>
           );
