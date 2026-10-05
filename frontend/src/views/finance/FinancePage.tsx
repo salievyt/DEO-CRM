@@ -1,4 +1,5 @@
 "use client";
+import { PaymentPlanning } from "@/features/growth/PaymentPlanning";
 import { FinancialControl } from "@/features/growth/FinancialControl";
 
 import { useState } from "react";
@@ -81,6 +82,7 @@ export function FinancePage() {
   return (
     <div className="space-y-6">
       <FinancialControl />
+      <PaymentPlanning />
       <PageHeader
         title="Финансы"
         description="Управление финансами компании"
