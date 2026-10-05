@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/shared/api/base";
 type Project = { id: string; name: string; budget: string | null };
-type Milestone = { id: number; project_name: string; title: string; percentage: string; amount: string; paid_amount: string; remaining: string; due_date: string; status: "planned" | "partial" | "overdue" | "paid" };
+type Milestone = { id: number; position: number; project_name: string; title: string; percentage: string; amount: string; paid_amount: string; remaining: string; due_date: string; status: "planned" | "partial" | "overdue" | "paid" };
 type Forecast = { currency: string; as_of: string; overdue: string; unforecasted_deals: number; windows: Record<string,{end_date:string;scheduled_invoices:string;weighted_open_deals:string;expected:string;deals_count:number}> };
 const today=(n:number)=>{ const d=new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
 export function PaymentPlanning() {
