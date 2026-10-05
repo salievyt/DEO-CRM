@@ -310,3 +310,15 @@ class Salary(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.amount} ₽ ({self.month}/{self.year})"
+
+
+class PaymentMilestone(models.Model):
+    project = models.ForeignKey("projects.Project", on_delete=models.CASCADE, related_name="payment_milestones")
+    invoice = models.OneToOneField(Invoice, on_delete=models.PROTECT, related_name="payment_milestone")
+    title = models.CharField(max_length=200)
+    percentage = models.DecimalField(max_digits=5, decimal_places=2)
+    position = models.PositiveSmallIntegerField()
+
+    class Meta:
+        ordering = ["project", "position"]
+        constraints = [models.UniqueConstraint(fields=["project", "position"], name="unique_project_payment_position")]

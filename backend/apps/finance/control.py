@@ -49,5 +49,5 @@ class FinancialControl(APIView):
         return Response({"currency": getattr(settings, "CRM_BASE_CURRENCY", "KGS"), "basis": "cash", "revenue": revenue,
                          "expenses": expenses, "salaries": salaries, "partner_payouts": partner_payouts,
                          "profit": revenue-expenses-salaries-partner_payouts,
-                         "receivables": sum((balance(i) for i in invoices if i.status not in ("draft", "paid")), ZERO),
+                         "receivables": sum((balance(i) for i in invoices if i.status != "paid" and (i.status != "draft" or hasattr(i, "payment_milestone"))), ZERO),
                          "projects": [project_finance(p) for p in Project.objects.all()]})

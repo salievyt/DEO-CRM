@@ -83,6 +83,8 @@ class DealListSerializer(serializers.ModelSerializer):
         model = Deal
         fields = (
             "id",
+            "project",
+            "expected_close_date",
             "number",
             "title",
             "status",
@@ -136,6 +138,8 @@ class DealWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Deal
         fields = (
+            "project",
+            "expected_close_date",
             "title",
             "description",
             "status",
