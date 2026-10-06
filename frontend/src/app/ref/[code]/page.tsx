@@ -13,7 +13,7 @@ export default function ReferralPage() {
     <label className="block">Телефон<input className="input mt-1 w-full" name="phone" type="tel" autoComplete="tel" minLength={6} maxLength={20} required /></label>
     <label className="block">Email<input className="input mt-1 w-full" name="email" type="email" autoComplete="email" /></label>
     <label className="block">Что нужно сделать?<textarea className="input mt-1 w-full" name="need" maxLength={5000} required /></label>
-    <label className="flex gap-2 text-sm"><input type="checkbox" name="consent" required /> Согласен на обработку данных заявки и обратную связь от DEO CORE.</label>
+    <label className="flex gap-2 text-sm"><input type="checkbox" name="consent" required /> Разрешаю DEO CORE использовать указанные имя, контакты и описание проекта для обработки этой заявки и связи со мной.</label>
     {error && <p role="alert">{error}</p>}<button className="btn-primary w-full" disabled={pending}>{pending ? "Отправляем…" : "Отправить заявку"}</button>
   </form>}</main>;
 }
