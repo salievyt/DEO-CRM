@@ -114,5 +114,6 @@ def apply() -> None:
     Context.__copy__ = _context_copy
     if RequestContext is not None:
         # RequestContext inherits Context.__copy__; nothing extra needed.
+        pass
 
     _PATCHED = True
