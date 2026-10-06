@@ -1,5 +1,7 @@
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Exists, OuterRef
+from django.utils import timezone
+from apps.messaging.models import Message
 from rest_framework import generics, permissions, serializers, status, views
 from rest_framework.response import Response
 
@@ -116,9 +118,13 @@ class LeadListCreateView(generics.ListCreateAPIView):
         return LeadListSerializer
 
     def get_queryset(self):
+        incoming = Message.objects.filter(
+            contact_id=OuterRef("client_id"), direction="incoming",
+            created_at__gte=timezone.now() - timezone.timedelta(days=30),
+        )
         qs = Lead.objects.select_related(
             "current_stage", "assigned_to"
-        ).all()
+        ).annotate(_recent_incoming=Exists(incoming)).all()
         stage = self.request.query_params.get("stage")
         assigned = self.request.query_params.get("assigned_to")
         client = self.request.query_params.get("client")
@@ -158,10 +164,14 @@ class LeadKanbanView(views.APIView):
     def get(self, request):
         stages = LeadStage.objects.all().order_by("order")
         columns = []
+        incoming = Message.objects.filter(
+            contact_id=OuterRef("client_id"), direction="incoming",
+            created_at__gte=timezone.now() - timezone.timedelta(days=30),
+        )
         for stage in stages:
             leads = Lead.objects.filter(
                 current_stage=stage, is_active=True
-            ).select_related("assigned_to")
+            ).select_related("assigned_to").annotate(_recent_incoming=Exists(incoming))
             columns.append({
                 "id": str(stage.id),
                 "title": stage.name,

@@ -105,17 +105,7 @@ class PaymentListCreateView(generics.ListCreateAPIView):
         return qs
 
     def perform_create(self, serializer):
-        payment = serializer.save()
-        # Update invoice paid amount
-        invoice = payment.invoice
-        total_paid = Payment.objects.filter(invoice=invoice).aggregate(
-            total=Sum("amount")
-        )["total"] or 0
-        invoice.paid_amount = total_paid
-        if total_paid >= invoice.amount:
-            invoice.status = "paid"
-            invoice.paid_at = timezone.now()
-        invoice.save()
+        serializer.save()
 
 
 class IncomeListCreateView(generics.ListCreateAPIView):

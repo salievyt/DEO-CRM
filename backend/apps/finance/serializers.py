@@ -30,6 +30,35 @@ class PaymentSerializer(serializers.ModelSerializer):
         source="invoice.number", read_only=True, required=False
     )
 
+    def validate_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Сумма должна быть положительной")
+        return value
+
+    def create(self, validated_data):
+        from django.db import transaction
+        from django.utils import timezone
+        from .control import balance, received
+        with transaction.atomic():
+            invoice = Invoice.objects.select_for_update().get(pk=validated_data["invoice"].pk)
+            reference = validated_data.get("transaction_id", "")
+            if reference:
+                existing = invoice.payments.filter(transaction_id=reference).first()
+                if existing:
+                    if existing.amount != validated_data["amount"]:
+                        raise serializers.ValidationError("Номер платежа уже использован для другой суммы")
+                    return existing
+            if invoice.status == "cancelled" or validated_data["amount"] > balance(invoice):
+                raise serializers.ValidationError("Сумма превышает остаток счёта или счёт отменён")
+            paid = received(invoice) + validated_data["amount"]
+            validated_data["invoice"] = invoice
+            payment = super().create(validated_data)
+            invoice.paid_amount = paid
+            invoice.status = "paid" if paid >= invoice.amount else "sent"
+            invoice.paid_at = timezone.now() if invoice.status == "paid" else None
+            invoice.save(update_fields=["paid_amount", "status", "paid_at", "updated_at"])
+            return payment
+
     class Meta:
         model = Payment
         fields = [

@@ -1,4 +1,7 @@
 "use client";
+import { ProjectsHealthPanel } from "@/features/growth/ProjectsHealthPanel";
+import { FollowUpPanel } from "@/features/growth/FollowUpPanel";
+import { OverduePaymentsPanel } from "@/features/growth/OverduePaymentsPanel";
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -78,6 +81,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <FollowUpPanel />
+      <OverduePaymentsPanel />
+      <ProjectsHealthPanel />
       <div>
         <h1 className="text-2xl font-bold text-surface-900 dark:text-white">
           Доброго времени суток, {user?.first_name || "Пользователь"} 👋

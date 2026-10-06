@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { ProjectHealth } from "@/features/growth/ProjectHealth";
 import {
   ArrowLeft,
   Calendar,
@@ -322,6 +323,8 @@ export function ProjectDetailPage() {
           </Link>
         }
       />
+
+      <ProjectHealth id={id} />
 
       {/* Stats grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
