@@ -11,7 +11,7 @@ export function FollowUpPanel() {
   const [error, setError] = useState("");
   const event = useRef<string>();
   const query = useQuery({ queryKey: ["followups", all], queryFn: async () => (await api.get<{ results: FollowUp[] }>("/reminders/followups/", { params: { all, page_size: 100 } })).data });
-  const clients = useQuery({ queryKey: ["followup-clients"], queryFn: async () => (await api.get<{ results: { id: string; full_name: string }[] }>("/clients/", { params: { page_size: 100 } })).data.results });
+  const clients = useQuery({ queryKey: ["followup-clients"], queryFn: async () => (await api.get<{ results: { id: string; full_name: string }[] }>("/reminders/followups/clients/")).data.results });
   const mutation = useMutation({ mutationFn: async ({ path, data, patch = false }: { path: string; data?: object; patch?: boolean }) => patch ? api.patch(path, data) : api.post(path, data), onSuccess: () => { setError(""); event.current = undefined; cache.invalidateQueries({ queryKey: ["followups"] }); }, onError: () => setError("Не удалось сохранить. Повторите попытку.") });
   return <section className="card space-y-4"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold">С кем связаться сегодня</h2><button className="btn-secondary" disabled={mutation.isPending} onClick={() => mutation.mutate({ path: "/reminders/followups/" })}>Проверить события</button></div>
     <label className="block text-sm"><input type="checkbox" checked={all} onChange={e => setAll(e.target.checked)} /> Показать и будущие контакты</label>
