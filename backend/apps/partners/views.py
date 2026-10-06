@@ -1,6 +1,7 @@
 from django.db import transaction
+from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404
-from rest_framework import generics, serializers
+from rest_framework import generics, serializers, status
 from rest_framework.response import Response
 from common.permissions import IsOwner
 from .models import Partner, Referral, PartnerPayout
@@ -24,10 +25,37 @@ class PartnerList(generics.ListCreateAPIView):
     search_fields = ["name", "email", "phone"]
 
 
-class PartnerDetail(generics.RetrieveUpdateAPIView):
+class PartnerDetail(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsOwner]
     serializer_class = PartnerSerializer
     queryset = Partner.objects.all()
+
+    @transaction.atomic
+    def destroy(self, request, *args, **kwargs):
+        partner = self.get_object()
+        if partner.referrals.exists() or partner.payouts.exists():
+            return Response(
+                {
+                    "detail": (
+                        "Партнёра нельзя удалить: с ним связаны лиды или выплаты. "
+                        "Отключите его, чтобы сохранить финансовую историю."
+                    )
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        try:
+            self.perform_destroy(partner)
+        except ProtectedError:
+            return Response(
+                {
+                    "detail": (
+                        "Партнёра нельзя удалить, пока с ним связаны лиды или выплаты. "
+                        "Отключите его, чтобы сохранить финансовую историю."
+                    )
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ReferralSerializer(serializers.ModelSerializer):
