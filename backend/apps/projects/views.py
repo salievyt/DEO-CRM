@@ -210,3 +210,25 @@ class ProjectTimesheetView(APIView):
                 ],
             }
         )
+
+
+class ProjectHealthList(APIView):
+    """Explainable risk summary for the user's project set."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from .health import project_health
+        qs = Project.objects.select_related("client", "status").prefetch_related("tasks__status", "expenses")
+        if request.user.role and request.user.role.name == "client":
+            qs = qs.filter(client__user=request.user)
+        return Response([{"id": str(p.pk), "name": p.name, "health": project_health(p)} for p in qs])
+
+
+class ProjectHealthDetail(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request, pk):
+        from .health import project_health
+        project = get_object_or_404(Project.objects.prefetch_related("tasks__status", "expenses"), pk=pk)
+        if request.user.role and request.user.role.name == "client" and project.client.user_id != request.user.pk:
+            return Response({"detail": "Not found."}, status=404)
+        return Response(project_health(project))
