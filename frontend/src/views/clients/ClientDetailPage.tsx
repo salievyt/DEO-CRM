@@ -147,7 +147,7 @@ function ActivityIcon({ type }: { type: string }) {
 export function ClientDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? "";
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("activity");
   const [noteModal, setNoteModal] = useState(false);
   const [dealModal, setDealModal] = useState(false);
   const [taskModal, setTaskModal] = useState(false);
@@ -215,7 +215,7 @@ export function ClientDetailPage() {
     queryFn: ({ pageParam = 1 }) =>
       client360Api.activity(id, { page: pageParam }).then((res) => res.data),
     select: (data) => data.pages.flatMap((page) => page.results as ActivityItem[]),
-    getNextPageParam: (lastPage) => (lastPage.next ? lastPage.next : undefined),
+    getNextPageParam: (lastPage) => lastPage.next ? Number(new URL(lastPage.next, "https://crm.local").searchParams.get("page")) : undefined,
     initialPageParam: 1,
     enabled: !!id && activeTab === "activity",
   });

@@ -257,7 +257,7 @@ class ClientOverviewView(views.APIView):
         }).data)
 
 
-def _build_activity_items(client, limit_per_source=100):
+def _build_activity_items(client, limit_per_source=None):
     """Merge related activity sources into a unified timeline.
 
     Returns a plain list of dicts sorted by timestamp descending.
@@ -408,7 +408,9 @@ def _build_activity_items(client, limit_per_source=100):
             "meta": {"chat": str(obj.chat.id)},
         })
 
-    items.sort(key=lambda item: item["timestamp"], reverse=True)
+    from .timeline import extended_activity
+    items.extend(extended_activity(client))
+    items.sort(key=lambda item: (item["timestamp"], item["entity_type"], str(item["id"])), reverse=True)
     return items
 
 
