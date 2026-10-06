@@ -62,6 +62,10 @@ class Lead(models.Model):
         related_name="created_leads", verbose_name="Создал"
     )
     notes = models.TextField(blank=True, verbose_name="Заметки")
+    decision_maker = models.CharField(max_length=255, blank=True, verbose_name="ЛПР")
+    target_date = models.DateField(null=True, blank=True, verbose_name="Планируемый срок")
+    brief_completed = models.BooleanField(default=False, verbose_name="Анкета заполнена")
+    business_need = models.TextField(blank=True, verbose_name="Задача клиента")
     next_action = models.CharField(
         max_length=255, blank=True, verbose_name="Следующее действие"
     )

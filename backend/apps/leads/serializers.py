@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from .models import Lead, LeadFile, LeadHistory, LeadStage
+from .scoring import score_lead
 
 
 class LeadStageSerializer(serializers.ModelSerializer):
@@ -32,6 +33,11 @@ class LeadHistorySerializer(serializers.ModelSerializer):
 
 
 class LeadListSerializer(serializers.ModelSerializer):
+    qualification = serializers.SerializerMethodField()
+
+    def get_qualification(self, obj):
+        return score_lead(obj)
+
     assigned_to_name = serializers.CharField(
         source="assigned_to.get_full_name", read_only=True
     )
@@ -41,13 +47,18 @@ class LeadListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lead
         fields = [
-            "id", "contact_name", "company_name", "phone", "email",
+            "id", "qualification", "contact_name", "company_name", "phone", "email",
             "source", "budget", "stage_name", "stage_color",
             "assigned_to_name", "is_active", "created_at",
         ]
 
 
 class LeadDetailSerializer(serializers.ModelSerializer):
+    qualification = serializers.SerializerMethodField()
+
+    def get_qualification(self, obj):
+        return score_lead(obj)
+
     stage_name = serializers.CharField(source="current_stage.name", read_only=True)
     assigned_to_name = serializers.CharField(
         source="assigned_to.get_full_name", read_only=True
@@ -59,7 +70,7 @@ class LeadDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lead
         fields = [
-            "id", "client", "contact_name", "company_name", "phone",
+            "id", "qualification", "decision_maker", "target_date", "brief_completed", "business_need", "client", "contact_name", "company_name", "phone",
             "email", "telegram", "source", "budget", "current_stage",
             "stage_name", "assigned_to", "assigned_to_name",
             "created_by", "created_by_name", "notes", "is_active",
@@ -76,6 +87,7 @@ class LeadCreateSerializer(serializers.ModelSerializer):
             "client", "contact_name", "company_name", "phone", "email",
             "telegram", "source", "budget", "current_stage",
             "assigned_to", "notes", "next_action", "next_action_at",
+            "decision_maker", "target_date", "brief_completed", "business_need",
         ]
 
 
