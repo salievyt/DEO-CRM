@@ -4,10 +4,10 @@ from apps.messaging.models import Message
 
 
 def score_lead(lead):
-    replied = bool(lead.client_id and Message.objects.filter(
+    replied = bool(getattr(lead, "_recent_incoming", False) or (lead.client_id and Message.objects.filter(
         contact_id=lead.client_id, direction="incoming",
         created_at__gte=timezone.now() - timezone.timedelta(days=30),
-    ).exists())
+    ).exists()))
     factors = [
         ("budget", "Указан бюджет", 20, bool(lead.budget and lead.budget > 0)),
         ("decision_maker", "Известен ЛПР", 20, bool(lead.decision_maker.strip())),

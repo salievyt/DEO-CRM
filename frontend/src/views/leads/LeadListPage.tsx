@@ -293,6 +293,11 @@ export function LeadListPage() {
                   >
                     {lead.stage_name}
                   </Badge>
+                  {lead.qualification && (
+                    <span title="Заполнение и активность лида" className="rounded-lg bg-brand-50 px-2 py-1 text-sm font-semibold text-brand-700 dark:bg-brand-900/20 dark:text-brand-300">
+                      Приоритет {lead.qualification.score}/100
+                    </span>
+                  )}
                   {lead.budget && (
                     <span className="text-sm font-medium">
                       {formatCurrency(lead.budget)}

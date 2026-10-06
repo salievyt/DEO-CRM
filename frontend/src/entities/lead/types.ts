@@ -7,7 +7,14 @@ export interface LeadStage {
   lead_count?: number;
 }
 
+export interface LeadQualification {
+  score: number;
+  tier: "hot" | "warm" | "cold";
+  factors: { key: string; label: string; weight: number; met: boolean }[];
+}
+
 export interface Lead {
+  qualification?: LeadQualification;
   id: string;
   client: string | null;
   contact_name: string;
