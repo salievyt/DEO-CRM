@@ -69,6 +69,7 @@ const NAV_CATEGORIES = [
     icon: DollarSign,
     items: [
       { name: "Клиенты", href: "/clients", icon: Users, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
+      { name: "Партнёры", href: "/partners", icon: Handshake, roles: ["superadmin", "owner"], matchSubRoutes: true },
       { name: "Проекты", href: "/projects", icon: FolderKanban, roles: ["superadmin", "owner", "project_manager", "developer", "designer"], matchSubRoutes: true },
       { name: "DEO Focus", href: "/focus", icon: Sparkles, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer"] },
       { name: "Задачи", href: "/tasks", icon: CheckSquare, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer"], countKey: "tasks" as const, matchSubRoutes: true },
@@ -81,7 +82,8 @@ const NAV_CATEGORIES = [
     name: "Каналы связи",
     icon: MessageCircle,
     items: [
-      { name: "Мессенджер", href: "/messenger", icon: MessageSquare, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "client"], countKey: "messenger" as const, matchSubRoutes: true },
+      { name: "Inbox", href: "/inbox", icon: MessageSquare, roles: ["superadmin", "owner", "project_manager", "marketer"], countKey: "messenger" as const, matchSubRoutes: true },
+      { name: "Follow-up", href: "/leads/follow-up", icon: CheckSquare, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
       { name: "Звонки", href: "/calls", icon: PhoneCall, roles: ["superadmin", "owner", "project_manager"], matchSubRoutes: true },
       { name: "WhatsApp", href: "/integrations/whatsapp", icon: Phone, roles: ["superadmin", "owner"], matchSubRoutes: true },
       { name: "Telegram", href: "/integrations/telegram", icon: Send, roles: ["superadmin", "owner"], matchSubRoutes: true },
