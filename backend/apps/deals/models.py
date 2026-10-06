@@ -41,6 +41,7 @@ class Deal(models.Model):
         related_name="deals",
         verbose_name="Клиент",
     )
+    project = models.ForeignKey("projects.Project", on_delete=models.SET_NULL, null=True, blank=True, related_name="deals")
     title = models.CharField(max_length=255, verbose_name="Название")
     description = models.TextField(blank=True, verbose_name="Описание")
     status = models.CharField(

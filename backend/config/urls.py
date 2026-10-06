@@ -11,6 +11,7 @@ def health_check(request):
     return JsonResponse({"status": "ok", "service": "deo-crm-backend"})
 
 api_patterns = [
+    path("partners/", include("apps.partners.urls")),
     path("focus/", include("apps.tasks.focus.urls")),
     path("auth/", include("apps.accounts.urls")),
     path("clients/", include("apps.clients.urls")),

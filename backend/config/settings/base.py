@@ -64,6 +64,7 @@ LOCAL_APPS = [
     "apps.scenarios",
     "apps.learning",
     "apps.forms",
+    "apps.partners",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -474,3 +475,5 @@ LOGGING = {
 }
 
 CELERY_BEAT_SCHEDULE["crm-followups"] = {"task": "apps.reminders.tasks.process_followups", "schedule": 900.0}
+
+CRM_BASE_CURRENCY = os.getenv("CRM_BASE_CURRENCY", "KGS")
