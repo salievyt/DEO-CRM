@@ -194,15 +194,18 @@ class DealItem(models.Model):
 
     @property
     def line_subtotal(self):
-        return self.quantity * self.unit_price
+        return (self.quantity or Decimal("0")) * (self.unit_price or Decimal("0"))
 
     @property
     def line_total(self):
-        return max(self.line_subtotal - self.discount + self.tax, 0)
+        return max(
+            self.line_subtotal - (self.discount or Decimal("0")) + (self.tax or Decimal("0")),
+            Decimal("0"),
+        )
 
     @property
     def total_cost(self):
-        return self.quantity * self.cost_price
+        return (self.quantity or Decimal("0")) * (self.cost_price or Decimal("0"))
 
 
 class DealPayment(models.Model):
