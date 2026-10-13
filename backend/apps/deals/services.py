@@ -23,13 +23,18 @@ class DealError(ValueError):
 
 def convert_lead_to_deal(user, lead, items, discount=0, tax=0, description="", assigned_to=None):
     """Create a Deal from a lead with the given catalog items."""
-    if hasattr(lead, "deal"):
+    if Deal.objects.filter(lead=lead).exists():
         raise DealError("Лид уже конвертирован в сделку.")
 
     if not items:
         raise DealError("Добавьте хотя бы одну позицию в сделку.")
 
     with transaction.atomic():
+        from apps.leads.models import Lead
+
+        lead = Lead.objects.select_for_update().get(pk=lead.pk)
+        if Deal.objects.filter(lead=lead).exists():
+            raise DealError("Лид уже конвертирован в сделку.")
         deal = Deal.objects.create(
             lead=lead,
             client=lead.client,
@@ -56,12 +61,14 @@ def convert_lead_to_deal(user, lead, items, discount=0, tax=0, description="", a
     return deal
 
 
+@transaction.atomic
 def change_deal_status(user, deal, new_status):
     """Transition a deal between statuses; handles stock on won/reversal.
 
     Stock restoration and the status change happen in one transaction so a
     failed status save can never leave stock and status out of sync.
     """
+    deal = Deal.objects.select_for_update().get(pk=deal.pk)
     if new_status not in dict(Deal.STATUS_CHOICES):
         raise DealError("Неизвестный статус сделки.")
     if new_status == deal.status:
@@ -73,8 +80,7 @@ def change_deal_status(user, deal, new_status):
     with transaction.atomic():
         if deal.status == Deal.STATUS_WON:
             _reverse_stock(user, deal)
-        if new_status == Deal.STATUS_LOST:
-            deal.lost_at = timezone.now()
+        deal.lost_at = timezone.now() if new_status == Deal.STATUS_LOST else None
         deal.status = new_status
         if new_status != Deal.STATUS_WON:
             deal.won_at = None
@@ -85,6 +91,9 @@ def change_deal_status(user, deal, new_status):
 def delete_deal(user, deal):
     """Delete a deal, returning stock for products sold by a won deal."""
     with transaction.atomic():
+        deal = Deal.objects.select_for_update().get(pk=deal.pk)
+        if deal.payments.exists():
+            raise DealError("Нельзя удалить сделку с платежами: сохраните финансовую историю.")
         if deal.status == Deal.STATUS_WON:
             _reverse_stock(user, deal)
         deal.delete()
@@ -101,8 +110,14 @@ def _product_items(deal):
 def _mark_won(user, deal):
     """Validate stock, decrement it and mark the deal as won."""
     product_items = list(_product_items(deal))
+    locked_items = {item.pk: item for item in CatalogItem.objects.select_for_update().filter(
+        pk__in=[di.item_id for di in product_items]
+    ).order_by("pk")}
     shortages = []
+    quantities = {}
     for di in product_items:
+        di.item = locked_items[di.item_id]
+        quantities[di.item_id] = quantities.get(di.item_id, 0) + di.quantity
         if di.quantity != int(di.quantity):
             shortages.append(
                 {
@@ -110,11 +125,11 @@ def _mark_won(user, deal):
                     "error": "количество товара должно быть целым",
                 }
             )
-        elif di.quantity > di.item.stock:
+        elif quantities[di.item_id] > di.item.stock:
             shortages.append(
                 {
                     "name": di.name,
-                    "required": int(di.quantity),
+                    "required": int(quantities[di.item_id]),
                     "available": di.item.stock,
                     "error": "недостаточно на складе",
                 }
@@ -137,7 +152,8 @@ def _mark_won(user, deal):
             )
         deal.status = Deal.STATUS_WON
         deal.won_at = timezone.now()
-        deal.save(update_fields=["status", "won_at", "updated_at"])
+        deal.lost_at = None
+        deal.save(update_fields=["status", "won_at", "lost_at", "updated_at"])
 
     from apps.scenarios.events import emit_event
 
@@ -166,9 +182,20 @@ def _reverse_stock(user, deal):
             movement_type=InventoryMovement.TYPE_SALE,
         ).select_related("item")
     )
+    refunds = {}
+    for refund in InventoryMovement.objects.filter(
+        reference=f"сделка {deal.number} (возврат)",
+        movement_type=InventoryMovement.TYPE_REFUND,
+    ):
+        refunds[refund.item_id] = refunds.get(refund.item_id, 0) + refund.quantity
     for movement in movements:
-        item = movement.item
-        returned = abs(movement.quantity)
+        item = CatalogItem.objects.select_for_update().get(pk=movement.item_id)
+        sold = abs(movement.quantity)
+        already_returned = min(sold, refunds.get(item.pk, 0))
+        refunds[item.pk] = refunds.get(item.pk, 0) - already_returned
+        returned = sold - already_returned
+        if not returned:
+            continue
         CatalogItem.objects.filter(id=item.id).update(stock=F("stock") + returned)
         item.refresh_from_db()
         InventoryMovement.objects.create(

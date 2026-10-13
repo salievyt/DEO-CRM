@@ -75,6 +75,8 @@ export function DealsPage() {
   const pageCount = listData ? Math.max(1, Math.ceil(listData.count / 20)) : 1;
 
   const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["partners"] });
+    queryClient.invalidateQueries({ queryKey: ["partner-referrals"] });
     queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.DEALS] });
     queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.DEAL] });
     queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.DEAL_LEADS_AVAILABLE] });
@@ -107,6 +109,7 @@ export function DealsPage() {
       setDeleteDeal(null);
       setNotice("Сделка удалена");
     },
+    onError: (err) => setErrorNotice(extractError(err) || "Не удалось удалить сделку"),
   });
 
   const handleSearch = (value: string) => {
@@ -693,6 +696,8 @@ function DealDetailModal({ deal, onClose, onEdit, onStatus, statusPending }: {
       dealsApi.addPayment(d!.id, { amount, method: paymentMethod }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.DEAL, d!.id] });
+      queryClient.invalidateQueries({ queryKey: ["partners"] });
+      queryClient.invalidateQueries({ queryKey: ["partner-referrals"] });
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.DEALS] });
       setPaymentOpen(false);
       setPaymentAmount(0);
@@ -794,7 +799,8 @@ function DealDetailModal({ deal, onClose, onEdit, onStatus, statusPending }: {
                 className="w-32"
                 label="Сумма"
                 type="number"
-                min={0}
+                min={0.01}
+                max={Math.max(0, Number(d.total) - Number(d.paid_amount))}
                 step="0.01"
                 value={paymentAmount}
                 onChange={(e) => setPaymentAmount(Number(e.target.value) || 0)}
@@ -811,11 +817,12 @@ function DealDetailModal({ deal, onClose, onEdit, onStatus, statusPending }: {
                   { value: "crypto", label: "Криптовалюта" },
                 ]}
               />
-              <Button size="sm" disabled={paymentAmount <= 0 || addPayment.isPending} onClick={() => addPayment.mutate(paymentAmount)}>
+              <Button size="sm" disabled={paymentAmount <= 0 || paymentAmount > Number(d.total) - Number(d.paid_amount) || addPayment.isPending} onClick={() => addPayment.mutate(paymentAmount)}>
                 {addPayment.isPending ? "..." : "Записать"}
               </Button>
             </div>
           )}
+          {addPayment.isError && <p role="alert" className="mb-2 text-sm text-danger-600">{extractError(addPayment.error) || "Не удалось записать платёж"}</p>}
           {(d.payments || []).length > 0 ? (
             <div className="space-y-1.5">
               {(d.payments || []).map((p) => (

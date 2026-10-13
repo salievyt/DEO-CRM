@@ -1,5 +1,7 @@
 """API views for the deals app."""
 
+from django.db import transaction
+from rest_framework.exceptions import ValidationError
 from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as django_filters
@@ -119,7 +121,10 @@ class DealDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def perform_destroy(self, instance):
         # Return stock of products sold by a won deal before removal
-        delete_deal(self.request.user, instance)
+        try:
+            delete_deal(self.request.user, instance)
+        except DealError as exc:
+            raise ValidationError(str(exc)) from exc
 
 
 class DealStatusView(views.APIView):
@@ -146,8 +151,9 @@ class DealPaymentCreateView(views.APIView):
 
     permission_classes = [CanEditDeal]
 
+    @transaction.atomic
     def post(self, request, pk):
-        deal = get_object_or_404(Deal, pk=pk)
+        deal = get_object_or_404(Deal.objects.select_for_update(), pk=pk)
         serializer = DealPaymentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         remaining = deal.total - deal.paid_amount

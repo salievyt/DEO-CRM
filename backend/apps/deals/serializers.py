@@ -18,8 +18,8 @@ class DealItemWriteSerializer(serializers.Serializer):
 
     item = serializers.PrimaryKeyRelatedField(queryset=CatalogItem.objects.all())
     quantity = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal("0"))
-    discount = serializers.DecimalField(max_digits=14, decimal_places=2, required=False, default=0)
-    tax = serializers.DecimalField(max_digits=14, decimal_places=2, required=False, default=0)
+    discount = serializers.DecimalField(max_digits=14, decimal_places=2, required=False, default=0, min_value=Decimal("0"))
+    tax = serializers.DecimalField(max_digits=14, decimal_places=2, required=False, default=0, min_value=Decimal("0"))
 
     def validate_quantity(self, value):
         if value <= 0:
@@ -53,6 +53,8 @@ class DealItemSerializer(serializers.ModelSerializer):
 
 
 class DealPaymentSerializer(serializers.ModelSerializer):
+    amount = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0.01"))
+
     created_by_name = serializers.CharField(
         source="created_by.full_name", read_only=True, default=""
     )
@@ -165,17 +167,29 @@ class DealWriteSerializer(serializers.ModelSerializer):
             )
 
     def update(self, instance, validated_data):
+        from .services import DealError, change_deal_status
+
         items_data = validated_data.pop("items", None)
-        if items_data is not None and instance.status == Deal.STATUS_WON:
-            raise serializers.ValidationError(
-                "Нельзя менять позиции выигранной сделки — остатки уже списаны. "
-                "Сначала верните сделку в другой статус."
-            )
+        new_status = validated_data.pop("status", None)
         with transaction.atomic():
+            instance = Deal.objects.select_for_update().get(pk=instance.pk)
+            if items_data is not None and instance.status == Deal.STATUS_WON:
+                raise serializers.ValidationError(
+                    "Нельзя менять позиции выигранной сделки — остатки уже списаны. "
+                    "Сначала верните сделку в другой статус."
+                )
             instance = super().update(instance, validated_data)
             if items_data is not None:
                 self._replace_items(instance, items_data)
             instance.recalculate()
+            if instance.total < instance.paid_amount:
+                raise serializers.ValidationError("Сумма сделки не может быть меньше уже оплаченной.")
+            if new_status is not None:
+                try:
+                    instance = change_deal_status(self.context["request"].user, instance, new_status)
+                except DealError as exc:
+                    raise serializers.ValidationError(str(exc)) from exc
+
         return instance
 
 
@@ -184,8 +198,8 @@ class DealConvertSerializer(serializers.Serializer):
 
     lead = serializers.UUIDField()
     items = DealItemWriteSerializer(many=True)
-    discount = serializers.DecimalField(max_digits=14, decimal_places=2, required=False, default=0)
-    tax = serializers.DecimalField(max_digits=14, decimal_places=2, required=False, default=0)
+    discount = serializers.DecimalField(max_digits=14, decimal_places=2, required=False, default=0, min_value=Decimal("0"))
+    tax = serializers.DecimalField(max_digits=14, decimal_places=2, required=False, default=0, min_value=Decimal("0"))
     description = serializers.CharField(required=False, allow_blank=True)
     assigned_to = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(),

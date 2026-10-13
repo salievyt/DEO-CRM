@@ -65,6 +65,7 @@ export function PartnersPage() {
       ).data.results,
     enabled: !!selected,
   });
+  const selectedPartner = partners.data?.find((partner) => partner.id === selected);
   const save = useMutation({
     mutationFn: ({ path, data }: { path: string; data: object }) => api.post(path, data),
     onSuccess: () => {
@@ -72,7 +73,16 @@ export function PartnersPage() {
       for (const key of ["partners", "partner-referrals", "partner-payouts"])
         cache.invalidateQueries({ queryKey: [key] });
     },
-    onError: () => setError("Не удалось сохранить: проверьте сумму, уникальность записи и доступ."),
+    onError: (error) => {
+      const data = (error as { response?: { data?: Record<string, unknown> } }).response?.data;
+      const messages = (value: unknown): string[] => {
+        if (typeof value === "string") return [value];
+        if (Array.isArray(value)) return value.flatMap(messages);
+        if (value && typeof value === "object") return Object.values(value).flatMap(messages);
+        return [];
+      };
+      setError(messages(data).join(" ") || "Не удалось сохранить: проверьте данные и доступ.");
+    },
   });
   const remove = useMutation({
     mutationFn: (id: string) => api.delete(`/partners/${id}/`),
@@ -245,7 +255,7 @@ export function PartnersPage() {
                 </option>
               ))}
             </select>
-            <button className="btn-secondary" disabled={save.isPending}>
+            <button className="btn-secondary" disabled={save.isPending || !selectedPartner?.active}>
               Связать
             </button>
           </form>

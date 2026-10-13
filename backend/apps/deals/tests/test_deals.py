@@ -357,3 +357,110 @@ class TestPermissions:
         assert resp.status_code == 200
         deal.refresh_from_db()
         assert deal.title == "Новое название"
+
+class TestRegression:
+    def test_repeat_won_reversal_returns_only_current_sale(self, make_deal, make_item, manager):
+        product = make_item(stock=10)
+        deal = make_deal([{"item": product, "quantity": 3}], user=manager)
+        for _ in range(2):
+            deal = change_deal_status(manager, deal, "won")
+            deal = change_deal_status(manager, deal, "open")
+            product.refresh_from_db()
+            assert product.stock == 10
+
+    def test_duplicate_product_rows_check_combined_stock(self, make_deal, make_item, manager):
+        product = make_item(stock=5)
+        deal = make_deal([{"item": product, "quantity": 3}] * 2, user=manager)
+        with pytest.raises(DealError):
+            change_deal_status(manager, deal, "won")
+        product.refresh_from_db()
+        assert product.stock == 5
+
+    def test_patch_status_applies_stock_effects(self, api_client, manager, make_deal, make_item):
+        product = make_item(stock=10)
+        deal = make_deal([{"item": product, "quantity": 2}], user=manager)
+        api_client.force_authenticate(manager)
+        for new_status, stock in [("won", 8), ("open", 10)]:
+            response = api_client.patch(reverse("deal-detail", args=[deal.pk]),
+                                        {"status": new_status}, format="json")
+            assert response.status_code == 200, response.data
+            product.refresh_from_db()
+            assert product.stock == stock
+
+    def test_zero_payment_rejected(self, api_client, manager, make_deal, make_item):
+        deal = make_deal([{"item": make_item(), "quantity": 1}], user=manager)
+        api_client.force_authenticate(manager)
+        response = api_client.post(reverse("deal-payments", args=[deal.pk]),
+                                   {"amount": "0", "method": "card"}, format="json")
+        assert response.status_code == 400
+        assert not deal.payments.exists()
+
+    def test_paid_referral_deal_cannot_be_deleted(self, api_client, manager, make_deal, make_item):
+        from apps.partners.models import Partner, Referral
+        from apps.partners.services import partner_totals
+
+        deal = make_deal([{"item": make_item(price=1000), "quantity": 1}], user=manager)
+        partner = Partner.objects.create(name="Партнёр", commission_rate=10)
+        Referral.objects.create(partner=partner, lead=deal.lead, commission_rate=10)
+        api_client.force_authenticate(manager)
+        response = api_client.post(reverse("deal-payments", args=[deal.pk]),
+                                   {"amount": "400", "method": "card"}, format="json")
+        assert response.status_code == 201
+        assert partner_totals(partner)["payable"] == 40
+        response = api_client.delete(reverse("deal-detail", args=[deal.pk]))
+        assert response.status_code == 400
+        assert partner_totals(partner)["payable"] == 40
+
+    def test_referral_link_marks_source_and_freezes_rate(self, api_client, admin_user, make_lead):
+        from apps.partners.models import Partner, Referral
+
+        lead = make_lead()
+        partner = Partner.objects.create(name="Партнёр", commission_rate=15)
+        api_client.force_authenticate(admin_user)
+        response = api_client.post(f"/api/v1/partners/{partner.pk}/referrals/",
+                                   {"lead": str(lead.pk)}, format="json")
+        assert response.status_code == 201, response.data
+        lead.refresh_from_db()
+        assert lead.source == "referral"
+        partner.commission_rate = 20
+        partner.save()
+        assert Referral.objects.get(lead=lead).commission_rate == 15
+
+    def test_public_referral_retry_creates_one_lead(self, api_client, db):
+        import uuid
+        from apps.partners.models import Partner, Referral
+        from apps.leads.models import Lead
+
+        partner = Partner.objects.create(name="Партнёр", commission_rate=12)
+        payload = {"request_id": str(uuid.uuid4()), "contact_name": "Анна",
+                   "phone": "+996555123456", "email": "", "business_need": "Сайт",
+                   "consent": True}
+        url = f"/api/v1/partners/ref/{partner.code}/"
+        first = api_client.post(url, payload, format="json")
+        assert first.status_code == 201, first.data
+        second = api_client.post(url, payload, format="json")
+        assert second.status_code == 200, second.data
+        assert Referral.objects.filter(partner=partner).count() == 1
+        assert Lead.objects.filter(source="referral", contact_name="Анна").count() == 1
+
+    def test_payout_limits_and_retry(self, api_client, admin_user, make_deal, make_item):
+        from apps.partners.models import Partner, Referral, PartnerPayout
+
+        deal = make_deal([{"item": make_item(price=1000), "quantity": 1}], user=admin_user)
+        partner = Partner.objects.create(name="Партнёр", commission_rate=10)
+        Referral.objects.create(partner=partner, lead=deal.lead, commission_rate=10)
+        DealPayment.objects.create(deal=deal, amount=400, method="card", created_by=admin_user)
+        api_client.force_authenticate(admin_user)
+        url = f"/api/v1/partners/{partner.pk}/payouts/"
+        assert api_client.post(url, {"amount": "41", "reference": "over"}, format="json").status_code == 400
+        payload = {"amount": "40", "reference": "transfer-1"}
+        assert api_client.post(url, payload, format="json").status_code == 201
+        assert api_client.post(url, payload, format="json").status_code == 200
+        assert PartnerPayout.objects.filter(partner=partner).count() == 1
+
+    def test_line_discount_does_not_reduce_other_lines(self, make_deal, make_item, manager):
+        deal = make_deal([
+            {"item": make_item(price=100), "quantity": 1, "discount": 200},
+            {"item": make_item(price=300), "quantity": 1},
+        ], user=manager)
+        assert deal.total == 300

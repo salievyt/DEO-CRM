@@ -121,13 +121,10 @@ class Deal(models.Model):
         """Recompute all money fields from the line items (transactional)."""
         items = list(self.items.all())
         line_subtotal = sum((i.line_subtotal for i in items), 0)
-        line_discount = sum((i.discount for i in items), 0)
-        line_tax = sum((i.tax for i in items), 0)
+        line_total = sum((i.line_total for i in items), 0)
         cost = sum((i.total_cost for i in items), 0)
 
-        discount_total = line_discount + self.discount
-        tax_total = line_tax + self.tax
-        total = max(line_subtotal - discount_total + tax_total, 0)
+        total = max(line_total - self.discount + self.tax, 0)
         profit = total - cost
         margin = (profit / total * 100) if total else 0
 

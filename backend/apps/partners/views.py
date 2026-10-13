@@ -1,10 +1,11 @@
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, serializers, status
 from rest_framework.response import Response
 from common.permissions import IsOwner
 from .models import Partner, Referral, PartnerPayout
+from apps.leads.models import Lead
 from .services import partner_totals
 
 
@@ -79,9 +80,17 @@ class ReferralList(generics.ListCreateAPIView):
     serializer_class = ReferralSerializer
     def get_queryset(self):
         return Referral.objects.filter(partner_id=self.kwargs["pk"]).select_related("lead").order_by("-created_at")
+    @transaction.atomic
     def perform_create(self, serializer):
-        partner = get_object_or_404(Partner, pk=self.kwargs["pk"], active=True)
-        serializer.save(partner=partner, commission_rate=partner.commission_rate)
+        partner = get_object_or_404(Partner.objects.select_for_update(), pk=self.kwargs["pk"], active=True)
+        lead = Lead.objects.select_for_update().get(pk=serializer.validated_data["lead"].pk)
+        if Referral.objects.filter(lead=lead).exists():
+            raise serializers.ValidationError({"lead": "Лид уже связан с партнёром."})
+        serializer.save(partner=partner, lead=lead, commission_rate=partner.commission_rate)
+        if lead.source != "referral":
+            lead.source = "referral"
+            lead.save(update_fields=["source", "updated_at"])
+
 
 
 class PayoutSerializer(serializers.ModelSerializer):
@@ -114,5 +123,9 @@ class PayoutList(generics.ListCreateAPIView):
             return Response(self.get_serializer(existing).data)
         if data["amount"] > partner_totals(partner)["payable"]:
             raise serializers.ValidationError("Сумма превышает начисленную комиссию")
-        serializer.save(partner=partner, created_by=request.user)
+        try:
+            with transaction.atomic():
+                serializer.save(partner=partner, created_by=request.user)
+        except IntegrityError as exc:
+            raise serializers.ValidationError("Номер выплаты уже использован") from exc
         return Response(serializer.data, status=201)
