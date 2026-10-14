@@ -10,6 +10,14 @@ from apps.catalog.models import CatalogCategory, CatalogItem
 User = get_user_model()
 
 
+@pytest.fixture(autouse=True)
+def empty_catalog(db):
+    """CRUD tests build their own catalog independently of starter data."""
+    CatalogItem.objects.all().delete()
+    CatalogCategory.objects.all().delete()
+
+
+
 @pytest.fixture
 def roles(db):
     def make(name):
