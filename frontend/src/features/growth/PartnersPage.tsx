@@ -1,8 +1,9 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Power, Trash2 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { api } from "@/shared/api/base";
 
 type Partner = {
@@ -34,6 +35,8 @@ export function PartnersPage() {
   const cache = useQueryClient();
   const [selected, setSelected] = useState<string>("");
   const [error, setError] = useState("");
+  const [origin, setOrigin] = useState("");
+  useEffect(() => setOrigin(window.location.origin), []);
   const partners = useQuery({
     queryKey: ["partners"],
     queryFn: async () =>
@@ -223,12 +226,39 @@ export function PartnersPage() {
                     </div>
                   ))}
                 </dl>
-                <p className="break-all text-sm">
-                  Реферальная ссылка:{" "}
-                  <a className="text-brand-600" href={`/ref/${p.code}`}>
-                    {typeof window === "undefined" ? "" : window.location.origin}/ref/{p.code}
-                  </a>
-                </p>
+                <div className="flex flex-wrap items-center gap-4 rounded-lg bg-surface-50 p-3 dark:bg-surface-800">
+                  {origin ? (
+                    <QRCodeSVG
+                      value={`${origin}/ref/${encodeURIComponent(p.code)}`}
+                      size={112}
+                      level="M"
+                      marginSize={2}
+                      title={`QR-код реферальной формы партнёра ${p.name}`}
+                      className="shrink-0 rounded bg-white p-2"
+                    />
+                  ) : (
+                    <div className="h-32 w-32 shrink-0 animate-pulse rounded bg-surface-200 dark:bg-surface-700" />
+                  )}
+                  <div className="min-w-0 flex-1 text-sm">
+                    <p className="font-semibold">QR-код для заявки</p>
+                    <p className="mt-1 text-surface-500">
+                      Отсканируйте, чтобы открыть форму по ссылке партнёра.
+                    </p>
+                    <a
+                      className="mt-2 block break-all text-brand-600"
+                      href={`/ref/${encodeURIComponent(p.code)}`}
+                    >
+                      {origin
+                        ? `${origin}/ref/${encodeURIComponent(p.code)}`
+                        : `/ref/${encodeURIComponent(p.code)}`}
+                    </a>
+                    {!p.active && (
+                      <p className="mt-1 text-red-600">
+                        Партнёр отключён, ссылка не принимает заявки.
+                      </p>
+                    )}
+                  </div>
+                </div>
               </section>
             );
           })}

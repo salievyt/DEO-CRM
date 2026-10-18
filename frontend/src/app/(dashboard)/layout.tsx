@@ -107,7 +107,7 @@ const NAV_CATEGORIES = [
     items: [
       { name: "Сотрудники", href: "/employees", icon: UserCheck, roles: ["superadmin", "owner", "project_manager"], matchSubRoutes: true },
       { name: "Календарь", href: "/calendar", icon: CalendarDays, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "client"], matchSubRoutes: true },
-      { name: "Кабинет", href: "/cabinet", icon: UserCircle, roles: ["superadmin", "owner", "project_manager", "client"], matchSubRoutes: true },
+      { name: "Кабинет", href: "/cabinet", icon: UserCircle, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "client"], matchSubRoutes: true },
     ],
   },
   {

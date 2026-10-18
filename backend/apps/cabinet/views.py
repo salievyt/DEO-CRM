@@ -1,68 +1,190 @@
+from django.db.models import Q
 from django.utils import timezone
-from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from common.permissions import IsClient
-
 from .models import ClientFeedback, ProjectMilestone, ProjectShareLink
+
+# Statuses that mean a project is no longer active. The seeded data contains
+# both the "ё" and "е" spellings, so both variants are handled.
+FINISHED_STATUS_NAMES = ("Завершен", "Завершён", "Отменен", "Отменён")
+
+# Invoice statuses that are still open (i.e. not paid / cancelled).
+OPEN_INVOICE_STATUSES = ("draft", "sent", "overdue")
+
+
+def _is_client(user):
+    return bool(user.role and user.role.name == "client")
+
+
+def _get_client(user):
+    """Client profile linked to the user, if any.
+
+    Falls back to matching an unlinked client card by email so client accounts
+    still see their data when the link was not set explicitly.
+    """
+    from apps.clients.models import Client
+
+    client = Client.objects.filter(user=user).first()
+    if client is None and user.email:
+        client = Client.objects.filter(
+            user__isnull=True, email__iexact=user.email
+        ).first()
+    return client
+
+
+def _client_profile(user):
+    """Client profile for client-role users, otherwise ``None``."""
+    return _get_client(user) if _is_client(user) else None
+
+
+def _visible_projects(user):
+    """Projects a user may see in their cabinet.
+
+    - clients see only their own projects;
+    - project managers and above see the whole portfolio;
+    - other staff see projects they participate in or created.
+    """
+    from apps.projects.models import Project
+
+    if _is_client(user):
+        client = _get_client(user)
+        if not client:
+            return Project.objects.none()
+        return Project.objects.filter(client=client)
+
+    role = user.role.name if user.role else ""
+    if role in ("superadmin", "owner", "project_manager"):
+        return Project.objects.all()
+
+    return Project.objects.filter(
+        Q(team__user=user) | Q(created_by=user)
+    ).distinct()
+
+
+def _visible_documents(user):
+    """Documents a user may see in their cabinet."""
+    from apps.documents.models import Document
+
+    if _is_client(user):
+        client = _get_client(user)
+        if not client:
+            return Document.objects.none()
+        return Document.objects.filter(client=client, is_visible_to_client=True)
+
+    projects = _visible_projects(user)
+    qs = Document.objects.filter(
+        Q(project__in=projects) | Q(created_by=user)
+    ).distinct().select_related("document_type")
+    return qs
+
+
+def _visible_invoices(user):
+    """Invoices a user may see in their cabinet."""
+    from apps.finance.models import Invoice
+
+    if _is_client(user):
+        client = _get_client(user)
+        if not client:
+            return Invoice.objects.none()
+        return Invoice.objects.filter(client=client)
+
+    projects = _visible_projects(user)
+    return Invoice.objects.filter(
+        Q(project__in=projects) | Q(created_by=user)
+    ).distinct()
+
+
+def _visible_chats(user):
+    """Chats a user takes part in."""
+    from apps.messenger.models import Chat
+
+    if _is_client(user):
+        client = _get_client(user)
+        if not client:
+            return Chat.objects.none()
+        return Chat.objects.filter(participants__client=client).distinct()
+
+    return Chat.objects.filter(participants__user=user).distinct()
+
+
+def _unread_messages(user):
+    """Number of unread incoming messages for a user."""
+    from apps.messenger.models import ChatParticipant, Message
+
+    if _is_client(user):
+        client = _get_client(user)
+        if not client:
+            return 0
+        participants = ChatParticipant.objects.filter(client=client)
+        own = Q(client_sender=client)
+        if client.user_id:
+            own |= Q(sender_id=client.user_id)
+    else:
+        participants = ChatParticipant.objects.filter(user=user)
+        own = Q(sender=user)
+
+    total = 0
+    for participant in participants.select_related("chat"):
+        messages = Message.objects.filter(chat_id=participant.chat_id).exclude(own)
+        if participant.last_read_at:
+            messages = messages.filter(created_at__gt=participant.last_read_at)
+        total += messages.count()
+    return total
+
+
+def _message_sender_name(message):
+    if message.sender:
+        full_name = message.sender.get_full_name()
+        return full_name or message.sender.email
+    if message.client_sender:
+        return message.client_sender.full_name
+    return "Клиент"
 
 
 class CabinetDashboardView(APIView):
-    """Client's main dashboard."""
-    permission_classes = [IsAuthenticated, IsClient]
+    """Cabinet overview: numbers scoped to what the current user can see."""
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from apps.clients.models import Client
-        client = Client.objects.filter(user=request.user).first()
-        if not client:
-            return Response({"error": "Профиль клиента не найден"}, status=404)
-
-        from apps.projects.models import Project
         from apps.finance.models import Invoice
-        from apps.documents.models import Document
 
-        active_projects = Project.objects.filter(
-            client=client
-        ).exclude(status__name="Завершен").count()
+        projects = _visible_projects(request.user)
 
-        # Count pending approvals
+        active_projects = projects.exclude(
+            status__name__in=FINISHED_STATUS_NAMES
+        ).count()
+
         pending_approvals = ProjectMilestone.objects.filter(
-            project__client=client,
-            status="pending",
-        ).exclude(
-            project__status__name="Завершен"
+            project__in=projects,
+            status=ProjectMilestone.Status.PENDING,
         ).count()
 
         data = {
             "active_projects": active_projects,
-            "total_documents": Document.objects.filter(client=client).count(),
-            "open_invoices": Invoice.objects.filter(
-                client=client, status__in=["sent", "draft"]
+            "total_documents": _visible_documents(request.user).count(),
+            "open_invoices": _visible_invoices(request.user).filter(
+                status__in=OPEN_INVOICE_STATUSES
             ).count(),
-            "unread_messages": 0,
+            "unread_messages": _unread_messages(request.user),
             "pending_approvals": pending_approvals,
         }
         return Response(data)
 
 
 class CabinetProjectsView(APIView):
-    """Client's projects list."""
-    permission_classes = [IsAuthenticated, IsClient]
+    """Projects visible to the current user."""
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from apps.clients.models import Client
-        client = Client.objects.filter(user=request.user).first()
-        if not client:
-            return Response({"error": "Профиль клиента не найден"}, status=404)
-
-        from apps.projects.models import Project
-        projects = Project.objects.filter(client=client).select_related("status")
+        projects = _visible_projects(request.user).select_related("status")
         data = []
         for p in projects:
             milestones = p.milestones.all()
-            completed_milestones = milestones.filter(status="approved").count()
+            completed_milestones = milestones.filter(
+                status=ProjectMilestone.Status.APPROVED
+            ).count()
             total_milestones = milestones.count()
             data.append({
                 "id": str(p.id),
@@ -74,26 +196,23 @@ class CabinetProjectsView(APIView):
                 "milestones": {
                     "total": total_milestones,
                     "completed": completed_milestones,
-                    "pending": milestones.filter(status="pending").count(),
+                    "pending": milestones.filter(
+                        status=ProjectMilestone.Status.PENDING
+                    ).count(),
                 },
             })
         return Response(data)
 
 
 class CabinetProjectDetailView(APIView):
-    """Client's project detail with milestones and feedback."""
-    permission_classes = [IsAuthenticated, IsClient]
+    """Project detail with milestones and feedback."""
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
-        from apps.clients.models import Client
-        client = Client.objects.filter(user=request.user).first()
-        if not client:
-            return Response({"error": "Профиль клиента не найден"}, status=404)
-
-        from apps.projects.models import Project
         from apps.tasks.models import Task
-        project = Project.objects.filter(
-            pk=pk, client=client
+
+        project = _visible_projects(request.user).filter(
+            pk=pk
         ).select_related("status").first()
         if not project:
             return Response({"error": "Проект не найден"}, status=404)
@@ -148,17 +267,11 @@ class CabinetProjectDetailView(APIView):
 
 
 class CabinetMilestoneApproveView(APIView):
-    """Client approves a milestone."""
-    permission_classes = [IsAuthenticated, IsClient]
+    """Approve a milestone."""
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, pk, milestone_pk):
-        from apps.clients.models import Client
-        client = Client.objects.filter(user=request.user).first()
-        if not client:
-            return Response({"error": "Профиль клиента не найден"}, status=404)
-
-        from apps.projects.models import Project
-        project = Project.objects.filter(pk=pk, client=client).first()
+        project = _visible_projects(request.user).filter(pk=pk).first()
         if not project:
             return Response({"error": "Проект не найден"}, status=404)
 
@@ -168,7 +281,6 @@ class CabinetMilestoneApproveView(APIView):
             return Response({"error": "Этап не найден"}, status=404)
 
         milestone.status = ProjectMilestone.Status.APPROVED
-
         milestone.approved_by = request.user
         milestone.approved_at = timezone.now()
         milestone.completed_date = timezone.now().date()
@@ -183,17 +295,11 @@ class CabinetMilestoneApproveView(APIView):
 
 
 class CabinetMilestoneRejectView(APIView):
-    """Client rejects a milestone with reason."""
-    permission_classes = [IsAuthenticated, IsClient]
+    """Reject a milestone with reason."""
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, pk, milestone_pk):
-        from apps.clients.models import Client
-        client = Client.objects.filter(user=request.user).first()
-        if not client:
-            return Response({"error": "Профиль клиента не найден"}, status=404)
-
-        from apps.projects.models import Project
-        project = Project.objects.filter(pk=pk, client=client).first()
+        project = _visible_projects(request.user).filter(pk=pk).first()
         if not project:
             return Response({"error": "Проект не найден"}, status=404)
 
@@ -204,7 +310,6 @@ class CabinetMilestoneRejectView(APIView):
 
         reason = request.data.get("reason", "")
         milestone.status = ProjectMilestone.Status.REJECTED
-
         milestone.rejection_reason = reason
         milestone.save()
 
@@ -217,19 +322,21 @@ class CabinetMilestoneRejectView(APIView):
 
 
 class CabinetFeedbackCreateView(APIView):
-    """Client submits feedback."""
-    permission_classes = [IsAuthenticated, IsClient]
+    """Submit feedback on a project."""
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
-        from apps.clients.models import Client
-        client = Client.objects.filter(user=request.user).first()
-        if not client:
-            return Response({"error": "Профиль клиента не найден"}, status=404)
-
-        from apps.projects.models import Project
-        project = Project.objects.filter(pk=pk, client=client).first()
+        project = _visible_projects(request.user).filter(pk=pk).first()
         if not project:
             return Response({"error": "Проект не найден"}, status=404)
+
+        content = (request.data.get("content") or "").strip()
+        if not content:
+            return Response({"error": "Текст отзыва не может быть пустым"}, status=400)
+
+        # Client-role users are attributed to their own profile, staff feedback
+        # is attributed to the project's client.
+        client = _client_profile(request.user) or project.client
 
         milestone_pk = request.data.get("milestone_id")
         milestone = None
@@ -240,12 +347,11 @@ class CabinetFeedbackCreateView(APIView):
                 pass
 
         feedback = ClientFeedback.objects.create(
-
             project=project,
             milestone=milestone,
             client=client,
             feedback_type=request.data.get("feedback_type", "general"),
-            content=request.data.get("content", ""),
+            content=content,
             rating=request.data.get("rating"),
             attachment_url=request.data.get("attachment_url", ""),
         )
@@ -260,12 +366,11 @@ class CabinetFeedbackCreateView(APIView):
 
 
 class CabinetShareLinkView(APIView):
-    """Generate a shareable link for the project."""
+    """Generate a shareable link for a project the user can see."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
-        from apps.projects.models import Project
-        project = Project.objects.filter(pk=pk).first()
+        project = _visible_projects(request.user).filter(pk=pk).first()
         if not project:
             return Response({"error": "Проект не найден"}, status=404)
 
@@ -285,8 +390,7 @@ class CabinetShareLinkView(APIView):
         })
 
     def post(self, request, pk):
-        from apps.projects.models import Project
-        project = Project.objects.filter(pk=pk).first()
+        project = _visible_projects(request.user).filter(pk=pk).first()
         if not project:
             return Response({"error": "Проект не найден"}, status=404)
 
@@ -349,23 +453,21 @@ class CabinetSharedProjectView(APIView):
 
 
 class CabinetDocumentsView(APIView):
-    """Client's documents."""
-    permission_classes = [IsAuthenticated, IsClient]
+    """Documents visible to the current user."""
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from apps.clients.models import Client
-        client = Client.objects.filter(user=request.user).first()
-        if not client:
-            return Response({"error": "Профиль клиента не найден"}, status=404)
-
-        from apps.documents.models import Document
-        docs = Document.objects.filter(client=client).select_related("document_type")
+        docs = _visible_documents(request.user)
         return Response([
             {
                 "id": str(d.id),
                 "title": d.title,
                 "type_name": d.document_type.name,
                 "status": d.status,
+                "file": d.file.url if d.file else d.external_url,
+                "file_name": d.file_name,
+                "mime_type": d.mime_type,
+                "file_size": d.file_size,
                 "created_at": d.created_at,
             }
             for d in docs
@@ -373,43 +475,36 @@ class CabinetDocumentsView(APIView):
 
 
 class CabinetInvoicesView(APIView):
-    """Client's invoices."""
-    permission_classes = [IsAuthenticated, IsClient]
+    """Invoices visible to the current user."""
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from apps.clients.models import Client
-        client = Client.objects.filter(user=request.user).first()
-        if not client:
-            return Response({"error": "Профиль клиента не найден"}, status=404)
-
-        from apps.finance.models import Invoice
-        invoices = Invoice.objects.filter(client=client).order_by("-created_at")
+        invoices = _visible_invoices(request.user).order_by("-created_at")
         return Response([
             {
                 "id": str(i.id),
                 "number": i.number,
                 "amount": i.amount,
+                "paid_amount": i.paid_amount,
                 "status": i.status,
+                "description": i.description,
                 "issued_date": i.issued_date,
                 "due_date": i.due_date,
+                "paid_at": i.paid_at,
             }
             for i in invoices
         ])
 
 
 class CabinetPaymentsView(APIView):
-    """Client's payment history."""
-    permission_classes = [IsAuthenticated, IsClient]
+    """Payment history visible to the current user."""
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from apps.clients.models import Client
-        client = Client.objects.filter(user=request.user).first()
-        if not client:
-            return Response({"error": "Профиль клиента не найден"}, status=404)
-
         from apps.finance.models import Payment
+
         payments = Payment.objects.filter(
-            invoice__client=client
+            invoice__in=_visible_invoices(request.user)
         ).select_related("invoice").order_by("-paid_at")
         return Response([
             {
@@ -417,6 +512,7 @@ class CabinetPaymentsView(APIView):
                 "invoice_number": p.invoice.number,
                 "amount": p.amount,
                 "method": p.method,
+                "notes": p.notes,
                 "paid_at": p.paid_at,
             }
             for p in payments
@@ -424,60 +520,68 @@ class CabinetPaymentsView(APIView):
 
 
 class CabinetMessagesView(APIView):
-    """Client's messages with their manager."""
-    permission_classes = [IsAuthenticated, IsClient]
+    """Messages in the current user's chats."""
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from apps.clients.models import Client
-        client = Client.objects.filter(user=request.user).first()
-        if not client:
-            return Response({"error": "Профиль клиента не найден"}, status=404)
-
         from apps.messenger.models import Message
-        # Get messages where client is participant (via chat participants)
+
+        chats = _visible_chats(request.user)
         messages = Message.objects.filter(
-            chat__participants__client=client
-        ).select_related("sender").order_by("-created_at")[:50]
+            chat__in=chats
+        ).select_related("sender", "client_sender").order_by("-created_at")[:50]
 
         return Response([
             {
                 "id": str(m.id),
                 "content": m.content,
-                "sender_name": m.sender.get_full_name() if m.sender else "Клиент",
+                "sender_name": _message_sender_name(m),
                 "created_at": m.created_at,
             }
             for m in messages
         ])
 
     def post(self, request):
-        from apps.clients.models import Client
-        client = Client.objects.filter(user=request.user).first()
-        if not client:
-            return Response({"error": "Профиль клиента не найден"}, status=404)
+        from apps.messenger.models import Chat, ChatParticipant, Message
 
-        from apps.messenger.models import Chat, Message
-        # Find or create a chat with the client's PM
-        chat = Chat.objects.filter(
-            participants__client=client,
-            is_group=False,
-        ).first()
-        if not chat:
-            # Create a new chat for the client
-            chat = Chat.objects.create(
-                name=f"Чат с {client.full_name}",
+        content = (request.data.get("content") or "").strip()
+        if not content:
+            return Response({"error": "Сообщение не может быть пустым"}, status=400)
+
+        client = _client_profile(request.user)
+        if client is not None:
+            chat = Chat.objects.filter(
+                participants__client=client,
                 is_group=False,
+            ).first()
+            if not chat:
+                chat = Chat.objects.create(
+                    name=f"Чат с {client.full_name}",
+                    is_group=False,
+                )
+                ChatParticipant.objects.create(chat=chat, client=client)
+            message = Message.objects.create(
+                chat=chat,
+                client_sender=client,
+                content=content,
             )
-            from apps.messenger.models import ChatParticipant
-            # Add client as participant
-            ChatParticipant.objects.create(chat=chat, client=client)
+        else:
+            chat = Chat.objects.filter(
+                participants__user=request.user,
+                is_group=False,
+            ).first()
+            if not chat:
+                chat = Chat.objects.create(name="Чат", is_group=False)
+                ChatParticipant.objects.create(chat=chat, user=request.user)
+            message = Message.objects.create(
+                chat=chat,
+                sender=request.user,
+                content=content,
+            )
 
-        message = Message.objects.create(
-            chat=chat,
-            client_sender=client,
-            content=request.data.get("content", ""),
-        )
         return Response({
             "id": str(message.id),
             "content": message.content,
+            "sender_name": _message_sender_name(message),
             "created_at": message.created_at,
         }, status=201)

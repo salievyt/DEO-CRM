@@ -26,8 +26,14 @@ import { Button } from "@/shared/ui/Button";
 import { Badge } from "@/shared/ui/Badge";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
 import { LoadingSpinner } from "@/shared/ui/LoadingSpinner";
+import { Tabs } from "@/shared/ui/Tabs";
 import { cabinetApi } from "@/shared/api/base";
+import { useAuth } from "@/hooks/useAuth";
 import { formatDate, formatCurrency, cn } from "@/shared/utils/formatters";
+import { CabinetDocumentsTab } from "./CabinetDocumentsTab";
+import { CabinetInvoicesTab } from "./CabinetInvoicesTab";
+import { CabinetFinanceTab } from "./CabinetFinanceTab";
+import { CabinetMessagesTab } from "./CabinetMessagesTab";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400",
@@ -72,6 +78,9 @@ interface Project {
 
 export function CabinetPage() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isClient = (user?.role_name || "").toLowerCase() === "client";
+  const [activeTab, setActiveTab] = useState("overview");
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackRating, setFeedbackRating] = useState<number>(0);
@@ -83,7 +92,7 @@ export function CabinetPage() {
     select: (res) => res.data,
   });
 
-  const { data: projects } = useQuery({
+  const { data: projects, isLoading: projectsLoading } = useQuery({
     queryKey: ["cabinet-projects"],
     queryFn: () => cabinetApi.projects(),
     select: (res) => res.data as Project[],
@@ -156,9 +165,28 @@ export function CabinetPage() {
     <div className="space-y-6">
       <PageHeader
         title="Мой кабинет"
-        description="Личный кабинет клиента — управление проектами"
+        description="Ваши проекты, документы, счета и сообщения"
       />
 
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        tabs={[
+          { value: "overview", label: "Обзор" },
+          { value: "documents", label: "Документы" },
+          { value: "invoices", label: "Счета" },
+          { value: "payments", label: "Платежи" },
+          { value: "messages", label: "Сообщения" },
+        ]}
+      />
+
+      {activeTab === "documents" && <CabinetDocumentsTab />}
+      {activeTab === "invoices" && <CabinetInvoicesTab />}
+      {activeTab === "payments" && <CabinetFinanceTab />}
+      {activeTab === "messages" && <CabinetMessagesTab />}
+
+      {activeTab === "overview" && (
+        <>
       {/* Stats with Approval Count */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
@@ -175,21 +203,33 @@ export function CabinetPage() {
           </p>
           <p className="text-sm text-surface-500">Ожидают согласования</p>
         </Card>
-        <Card>
+        <Card
+          hover
+          className="cursor-pointer"
+          onClick={() => setActiveTab("documents")}
+        >
           <FileText className="h-5 w-5 text-purple-600" />
           <p className="mt-2 text-2xl font-bold text-surface-900 dark:text-white">
             {dashboard?.total_documents || 0}
           </p>
           <p className="text-sm text-surface-500">Документы</p>
         </Card>
-        <Card>
+        <Card
+          hover
+          className="cursor-pointer"
+          onClick={() => setActiveTab("invoices")}
+        >
           <DollarSign className="h-5 w-5 text-warning-600" />
           <p className="mt-2 text-2xl font-bold text-surface-900 dark:text-white">
             {dashboard?.open_invoices || 0}
           </p>
           <p className="text-sm text-surface-500">Открытые счета</p>
         </Card>
-        <Card>
+        <Card
+          hover
+          className="cursor-pointer"
+          onClick={() => setActiveTab("messages")}
+        >
           <MessageSquare className="h-5 w-5 text-success-600" />
           <p className="mt-2 text-2xl font-bold text-surface-900 dark:text-white">
             {dashboard?.unread_messages || 0}
@@ -198,7 +238,15 @@ export function CabinetPage() {
         </Card>
       </div>
 
+      {/* Projects loading */}
+      {projectsLoading && (
+        <div className="flex h-32 items-center justify-center">
+          <LoadingSpinner size="lg" />
+        </div>
+      )}
+
       {/* Projects Grid */}
+      {!projectsLoading && (
       <div className="grid gap-4 sm:grid-cols-2">
         {(projects || []).map((project) => (
           <button
@@ -257,6 +305,7 @@ export function CabinetPage() {
           </button>
         ))}
       </div>
+      )}
 
       {/* Project Detail Panel */}
       {selectedProject && projectDetail && (
@@ -379,8 +428,8 @@ export function CabinetPage() {
                           </div>
                         )}
 
-                        {/* Approval actions */}
-                        {ms.status === "pending" && (
+                        {/* Approval actions (client decision) */}
+                        {isClient && ms.status === "pending" && (
                           <div className="mt-3 flex items-center gap-2">
                             <button
                               onClick={() => approveMilestone.mutate(ms.id)}
@@ -415,7 +464,8 @@ export function CabinetPage() {
             )}
           </Card>
 
-          {/* Feedback Board */}
+          {/* Feedback Board (client review) */}
+          {isClient && (
           <Card>
             <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-surface-700 dark:text-surface-200">
               <MessageCircle className="h-4 w-4" />
@@ -494,6 +544,7 @@ export function CabinetPage() {
               </div>
             </div>
           </Card>
+          )}
 
           {/* Shareable Link */}
           <Card>
@@ -546,6 +597,23 @@ export function CabinetPage() {
             </p>
           </div>
         </Card>
+      )}
+
+      {/* Empty state */}
+      {!projectsLoading && (projects || []).length === 0 && (
+        <Card>
+          <div className="flex flex-col items-center py-10 text-center">
+            <FolderKanban className="mb-2 h-8 w-8 text-surface-300" />
+            <p className="text-sm font-medium text-surface-700 dark:text-surface-200">
+              Проектов пока нет
+            </p>
+            <p className="mt-1 text-sm text-surface-500">
+              Как только появятся проекты, информация по ним отобразится здесь.
+            </p>
+          </div>
+        </Card>
+      )}
+        </>
       )}
     </div>
   );
