@@ -1,10 +1,15 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Power, Trash2 } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
+import { Download, ImageDown, Power, Trash2 } from "lucide-react";
+import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import { api } from "@/shared/api/base";
+import {
+  downloadCanvasPng,
+  partnerAssetFilename,
+  renderPartnerPoster,
+} from "./partnerPoster";
 
 type Partner = {
   id: string;
@@ -31,12 +36,48 @@ type Referral = {
   commission_rate: string;
 };
 const money = (n: string) => Number(n).toLocaleString("ru-RU", { maximumFractionDigits: 2 });
+type ExportTask = { partner: Partner; kind: "qr" | "poster" };
 export function PartnersPage() {
   const cache = useQueryClient();
   const [selected, setSelected] = useState<string>("");
   const [error, setError] = useState("");
   const [origin, setOrigin] = useState("");
+  const [exportTask, setExportTask] = useState<ExportTask | null>(null);
+  const qrCanvasRef = useRef<HTMLCanvasElement | null>(null);
   useEffect(() => setOrigin(window.location.origin), []);
+  useEffect(() => {
+    if (!exportTask || !origin) return;
+    const qr = qrCanvasRef.current;
+    if (!qr) return;
+    let cancelled = false;
+    const run = async () => {
+      // Wait a frame so `QRCodeCanvas` has painted before we copy it.
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      if (cancelled) return;
+      const { partner, kind } = exportTask;
+      const link = `${origin}/ref/${encodeURIComponent(partner.code)}`;
+      try {
+        if (kind === "poster") {
+          const poster = renderPartnerPoster({
+            partnerName: partner.name,
+            url: link,
+            qr,
+          });
+          await downloadCanvasPng(poster, partnerAssetFilename(partner.code, "poster"));
+        } else {
+          await downloadCanvasPng(qr, partnerAssetFilename(partner.code, "qr"));
+        }
+      } catch {
+        setError("Не удалось сформировать файл. Попробуйте ещё раз.");
+      } finally {
+        if (!cancelled) setExportTask(null);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [exportTask, origin]);
   const partners = useQuery({
     queryKey: ["partners"],
     queryFn: async () =>
@@ -257,6 +298,34 @@ export function PartnersPage() {
                         Партнёр отключён, ссылка не принимает заявки.
                       </p>
                     )}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="btn-secondary inline-flex items-center gap-1.5 text-sm"
+                        disabled={!origin || exportTask !== null}
+                        onClick={() => {
+                          setError("");
+                          setExportTask({ partner: p, kind: "qr" });
+                        }}
+                      >
+                        <Download className="h-4 w-4" />
+                        Скачать QR
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-primary inline-flex items-center gap-1.5 text-sm"
+                        disabled={!origin || exportTask !== null}
+                        onClick={() => {
+                          setError("");
+                          setExportTask({ partner: p, kind: "poster" });
+                        }}
+                      >
+                        <ImageDown className="h-4 w-4" />
+                        {exportTask?.partner.id === p.id && exportTask.kind === "poster"
+                          ? "Готовим постер…"
+                          : "Скачать постер"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </section>
@@ -331,6 +400,19 @@ export function PartnersPage() {
             </p>
           ))}
         </section>
+      )}
+      {exportTask && origin && (
+        <div className="pointer-events-none fixed -left-[9999px] top-0" aria-hidden="true">
+          <QRCodeCanvas
+            ref={qrCanvasRef}
+            value={`${origin}/ref/${encodeURIComponent(exportTask.partner.code)}`}
+            size={512}
+            level="M"
+            marginSize={4}
+            bgColor="#ffffff"
+            fgColor="#0f172a"
+          />
+        </div>
       )}
     </main>
   );
