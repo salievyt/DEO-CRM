@@ -83,6 +83,11 @@ docker-compose logs -f frontend
 - **Файлы:** MinIO (S3-совместимое)
 - **Аутентификация:** JWT + OAuth2
 
+Для production-загрузки файлов настройте `AWS_STORAGE_BUCKET_NAME`,
+`AWS_ACCESS_KEY_ID` и `AWS_SECRET_ACCESS_KEY`. Для S3-совместимого хранилища,
+например MinIO, также задайте `AWS_S3_ENDPOINT_URL`; для AWS S3 оставьте его
+неустановленным, чтобы backend использовал стандартный endpoint AWS.
+
 ## 🧪 Тестирование
 
 ### Локальное тестирование

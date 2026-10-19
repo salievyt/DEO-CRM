@@ -2,6 +2,9 @@ from .base import *  # noqa: F403, F401
 
 DEBUG = False
 
+# Do not use the local MinIO endpoint in production when deploying to AWS S3.
+AWS_S3_ENDPOINT_URL = os.environ.get("AWS_S3_ENDPOINT_URL") or None  # noqa: F405
+
 ALLOWED_HOSTS = os.environ.get(  # noqa: F405
     "DJANGO_ALLOWED_HOSTS",
     "crm.backend.deo-core.codes,.vercel.app",

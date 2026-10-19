@@ -39,6 +39,36 @@ class DocumentWorkflowTest(TestCase):
         self.assertEqual(document.source, "google_docs")
         self.assertIn("/preview", document.preview_url)
 
+    def test_google_drive_document_can_be_added_without_file(self):
+        response = self.client.post(
+            "/api/v1/documents/",
+            {
+                "title": "Документ из Google Drive",
+                "document_type": self.document_type.pk,
+                "source": "google_docs",
+                "external_url": "https://drive.google.com/open?id=example",
+            },
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, 201)
+        document = Document.objects.get()
+        self.assertEqual(document.source, "google_docs")
+        self.assertEqual(document.external_url, "https://drive.google.com/open?id=example")
+
+    def test_google_document_rejects_non_google_host(self):
+        response = self.client.post(
+            "/api/v1/documents/",
+            {
+                "title": "Сторонняя ссылка",
+                "document_type": self.document_type.pk,
+                "source": "google_docs",
+                "external_url": "https://example.com/?next=docs.google.com",
+            },
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["external_url"], "Укажите ссылку Google Docs")
+
     def test_new_file_version_updates_document(self):
         first = SimpleUploadedFile("brief.txt", b"first", content_type="text/plain")
         document = Document.objects.create(

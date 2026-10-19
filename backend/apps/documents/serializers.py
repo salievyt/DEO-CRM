@@ -1,3 +1,5 @@
+from urllib.parse import urlsplit
+
 from rest_framework import serializers
 
 from .models import (Document, DocumentActivity, DocumentComment,
@@ -124,8 +126,10 @@ class DocumentUploadSerializer(serializers.ModelSerializer):
         source = attrs.get("source", "file")
         if source == "file" and not attrs.get("file"):
             raise serializers.ValidationError({"file": "Выберите файл"})
-        if source == "google_docs" and "docs.google.com" not in attrs.get("external_url", ""):
-            raise serializers.ValidationError({"external_url": "Укажите ссылку Google Docs"})
+        if source == "google_docs":
+            hostname = urlsplit(attrs.get("external_url", "")).hostname
+            if hostname not in {"docs.google.com", "drive.google.com"}:
+                raise serializers.ValidationError({"external_url": "Укажите ссылку Google Docs"})
         return attrs
 
     def create(self, validated_data):
