@@ -122,6 +122,7 @@ export const clientPurchasesApi = {
 };
 
 export const leadsApi = {
+  websiteAttachment: (id: string, part: number) => api.get<ArrayBuffer>(`/leads/${id}/website-attachment/`, { params: { part }, responseType: "arraybuffer" }),
   list: (params?: Record<string, unknown>) => api.get("/leads/", { params }),
   kanban: () => api.get("/leads/kanban/"),
   stats: () => api.get("/leads/stats/"),

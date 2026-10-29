@@ -5,6 +5,7 @@ from django.db import models
 
 class LeadStage(models.Model):
     """Sales pipeline stages."""
+
     name = models.CharField(max_length=100, verbose_name="Название")
     order = models.IntegerField(default=0, verbose_name="Порядок")
     probability = models.IntegerField(default=0, verbose_name="Вероятность (%)")
@@ -21,6 +22,7 @@ class LeadStage(models.Model):
 
 class Lead(models.Model):
     """Sales lead card."""
+
     SOURCE_CHOICES = [
         ("website", "Сайт"),
         ("referral", "Рекомендация"),
@@ -33,8 +35,12 @@ class Lead(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     client = models.ForeignKey(
-        "clients.Client", on_delete=models.SET_NULL, null=True, blank=True,
-        related_name="leads", verbose_name="Клиент"
+        "clients.Client",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="leads",
+        verbose_name="Клиент",
     )
     contact_name = models.CharField(max_length=255, verbose_name="Контактное имя")
     company_name = models.CharField(max_length=255, blank=True, verbose_name="Компания")
@@ -42,33 +48,35 @@ class Lead(models.Model):
     email = models.EmailField(blank=True, verbose_name="Email")
     telegram = models.CharField(max_length=100, blank=True, verbose_name="Telegram")
     source = models.CharField(
-        max_length=50, choices=SOURCE_CHOICES, default="other",
-        verbose_name="Источник"
+        max_length=50, choices=SOURCE_CHOICES, default="other", verbose_name="Источник"
     )
     budget = models.DecimalField(
-        max_digits=12, decimal_places=2, null=True, blank=True,
-        verbose_name="Бюджет"
+        max_digits=12, decimal_places=2, null=True, blank=True, verbose_name="Бюджет"
     )
     current_stage = models.ForeignKey(
-        LeadStage, on_delete=models.PROTECT, related_name="leads",
-        verbose_name="Текущий этап"
+        LeadStage, on_delete=models.PROTECT, related_name="leads", verbose_name="Текущий этап"
     )
     assigned_to = models.ForeignKey(
-        "accounts.User", on_delete=models.SET_NULL, null=True, blank=True,
-        related_name="assigned_leads", verbose_name="Ответственный"
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_leads",
+        verbose_name="Ответственный",
     )
     created_by = models.ForeignKey(
-        "accounts.User", on_delete=models.SET_NULL, null=True,
-        related_name="created_leads", verbose_name="Создал"
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="created_leads",
+        verbose_name="Создал",
     )
     notes = models.TextField(blank=True, verbose_name="Заметки")
     decision_maker = models.CharField(max_length=255, blank=True, verbose_name="ЛПР")
     target_date = models.DateField(null=True, blank=True, verbose_name="Планируемый срок")
     brief_completed = models.BooleanField(default=False, verbose_name="Анкета заполнена")
     business_need = models.TextField(blank=True, verbose_name="Задача клиента")
-    next_action = models.CharField(
-        max_length=255, blank=True, verbose_name="Следующее действие"
-    )
+    next_action = models.CharField(max_length=255, blank=True, verbose_name="Следующее действие")
     next_action_at = models.DateTimeField(
         null=True, blank=True, verbose_name="Когда следующее действие"
     )
@@ -93,21 +101,18 @@ class Lead(models.Model):
 
 class LeadHistory(models.Model):
     """History of lead stage changes."""
+
     lead = models.ForeignKey(
-        Lead, on_delete=models.CASCADE, related_name="history",
-        verbose_name="Лид"
+        Lead, on_delete=models.CASCADE, related_name="history", verbose_name="Лид"
     )
     from_stage = models.ForeignKey(
-        LeadStage, on_delete=models.SET_NULL, null=True,
-        related_name="+", verbose_name="С этапа"
+        LeadStage, on_delete=models.SET_NULL, null=True, related_name="+", verbose_name="С этапа"
     )
     to_stage = models.ForeignKey(
-        LeadStage, on_delete=models.SET_NULL, null=True,
-        related_name="+", verbose_name="На этап"
+        LeadStage, on_delete=models.SET_NULL, null=True, related_name="+", verbose_name="На этап"
     )
     user = models.ForeignKey(
-        "accounts.User", on_delete=models.SET_NULL, null=True,
-        verbose_name="Пользователь"
+        "accounts.User", on_delete=models.SET_NULL, null=True, verbose_name="Пользователь"
     )
     notes = models.TextField(blank=True, verbose_name="Заметки")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создан")
@@ -123,17 +128,21 @@ class LeadHistory(models.Model):
 
 class LeadFile(models.Model):
     """Files attached to a lead."""
+
     lead = models.ForeignKey(
         Lead, on_delete=models.CASCADE, related_name="files", verbose_name="Лид"
     )
     file_url = models.URLField(verbose_name="URL файла")
     file_name = models.CharField(max_length=255, verbose_name="Имя файла")
     uploaded_by = models.ForeignKey(
-        "accounts.User", on_delete=models.SET_NULL, null=True,
-        verbose_name="Загрузил"
+        "accounts.User", on_delete=models.SET_NULL, null=True, verbose_name="Загрузил"
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создан")
 
     class Meta:
         verbose_name = "Файл лида"
         verbose_name_plural = "Файлы лидов"
+
+
+# Register the integration's models with Django's app registry.
+from .website_models import WebsiteAttachmentChunk, WebsiteSubmission  # noqa: E402,F401

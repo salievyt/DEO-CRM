@@ -477,3 +477,7 @@ LOGGING = {
 CELERY_BEAT_SCHEDULE["crm-followups"] = {"task": "apps.reminders.tasks.process_followups", "schedule": 900.0}
 
 CRM_BASE_CURRENCY = os.getenv("CRM_BASE_CURRENCY", "KGS")
+
+# Scoped server-to-server website intake. Empty token keeps this endpoint disabled.
+WEBSITE_INGEST_TOKEN = os.environ.get("WEBSITE_INGEST_TOKEN", "")
+WEBSITE_LEAD_ASSIGNEE_ID = os.environ.get("WEBSITE_LEAD_ASSIGNEE_ID", "")

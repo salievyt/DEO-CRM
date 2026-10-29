@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from .models import Lead, LeadFile, LeadHistory, LeadStage
 from .scoring import score_lead
+from .website import WebsiteMetadataSerializer
 
 
 class LeadStageSerializer(serializers.ModelSerializer):
@@ -27,8 +28,15 @@ class LeadHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = LeadHistory
         fields = [
-            "id", "from_stage", "from_stage_name", "to_stage", "to_stage_name",
-            "user", "user_name", "notes", "created_at",
+            "id",
+            "from_stage",
+            "from_stage_name",
+            "to_stage",
+            "to_stage_name",
+            "user",
+            "user_name",
+            "notes",
+            "created_at",
         ]
 
 
@@ -38,44 +46,72 @@ class LeadListSerializer(serializers.ModelSerializer):
     def get_qualification(self, obj):
         return score_lead(obj)
 
-    assigned_to_name = serializers.CharField(
-        source="assigned_to.get_full_name", read_only=True
-    )
+    assigned_to_name = serializers.CharField(source="assigned_to.get_full_name", read_only=True)
     stage_name = serializers.CharField(source="current_stage.name", read_only=True)
     stage_color = serializers.CharField(source="current_stage.color", read_only=True)
 
     class Meta:
         model = Lead
         fields = [
-            "id", "qualification", "contact_name", "company_name", "phone", "email",
-            "source", "budget", "stage_name", "stage_color",
-            "assigned_to_name", "is_active", "created_at",
+            "id",
+            "qualification",
+            "contact_name",
+            "company_name",
+            "phone",
+            "email",
+            "source",
+            "budget",
+            "stage_name",
+            "stage_color",
+            "assigned_to_name",
+            "is_active",
+            "created_at",
         ]
 
 
 class LeadDetailSerializer(serializers.ModelSerializer):
+    website = WebsiteMetadataSerializer(
+        source="website_submission", read_only=True, allow_null=True
+    )
     qualification = serializers.SerializerMethodField()
 
     def get_qualification(self, obj):
         return score_lead(obj)
 
     stage_name = serializers.CharField(source="current_stage.name", read_only=True)
-    assigned_to_name = serializers.CharField(
-        source="assigned_to.get_full_name", read_only=True
-    )
-    created_by_name = serializers.CharField(
-        source="created_by.get_full_name", read_only=True
-    )
+    assigned_to_name = serializers.CharField(source="assigned_to.get_full_name", read_only=True)
+    created_by_name = serializers.CharField(source="created_by.get_full_name", read_only=True)
 
     class Meta:
         model = Lead
         fields = [
-            "id", "qualification", "decision_maker", "target_date", "brief_completed", "business_need", "client", "contact_name", "company_name", "phone",
-            "email", "telegram", "source", "budget", "current_stage",
-            "stage_name", "assigned_to", "assigned_to_name",
-            "created_by", "created_by_name", "notes", "is_active",
-            "next_action", "next_action_at",
-            "created_at", "updated_at",
+            "id",
+            "website",
+            "qualification",
+            "decision_maker",
+            "target_date",
+            "brief_completed",
+            "business_need",
+            "client",
+            "contact_name",
+            "company_name",
+            "phone",
+            "email",
+            "telegram",
+            "source",
+            "budget",
+            "current_stage",
+            "stage_name",
+            "assigned_to",
+            "assigned_to_name",
+            "created_by",
+            "created_by_name",
+            "notes",
+            "is_active",
+            "next_action",
+            "next_action_at",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
@@ -84,10 +120,23 @@ class LeadCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lead
         fields = [
-            "client", "contact_name", "company_name", "phone", "email",
-            "telegram", "source", "budget", "current_stage",
-            "assigned_to", "notes", "next_action", "next_action_at",
-            "decision_maker", "target_date", "brief_completed", "business_need",
+            "client",
+            "contact_name",
+            "company_name",
+            "phone",
+            "email",
+            "telegram",
+            "source",
+            "budget",
+            "current_stage",
+            "assigned_to",
+            "notes",
+            "next_action",
+            "next_action_at",
+            "decision_maker",
+            "target_date",
+            "brief_completed",
+            "business_need",
         ]
 
 

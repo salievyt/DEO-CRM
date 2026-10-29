@@ -14,6 +14,7 @@ export interface LeadQualification {
 }
 
 export interface Lead {
+  website?: WebsiteLeadSubmission | null;
   qualification?: LeadQualification;
   id: string;
   client: string | null;
@@ -62,4 +63,21 @@ export interface LeadStats {
   total: number;
   active: number;
   stages: LeadStage[];
+}
+
+export interface WebsiteLeadSubmission {
+  request_id: string;
+  project_type: string;
+  budget_label: string;
+  timeline_label: string;
+  original_contact: string;
+  locale: string;
+  referrer: string;
+  utm: Record<string, string>;
+  has_attachment: boolean;
+  attachment_name: string;
+  attachment_size: number;
+  attachment_sha256: string;
+  attachment_parts: number;
+  attachment_complete: boolean;
 }

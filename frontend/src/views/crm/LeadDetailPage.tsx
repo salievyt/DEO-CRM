@@ -1,4 +1,5 @@
 "use client";
+import { WebsiteLeadInfo } from "@/features/website-lead/WebsiteLeadInfo";
 import { LeadQualification } from "@/features/growth/LeadQualification";
 
 import { useState } from "react";
@@ -158,6 +159,8 @@ export function LeadDetailPage() {
         }
       />
 
+      <WebsiteLeadInfo lead={lead} />
+
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left column - Profile card */}
         <div className="lg:col-span-1 space-y-4">
@@ -177,7 +180,7 @@ export function LeadDetailPage() {
             <div className="mt-6 space-y-3">
               <div className="flex items-center gap-2 text-sm text-surface-600 dark:text-surface-300">
                 <Phone className="h-4 w-4 text-surface-400" />
-                <a href={`tel:${lead.phone}`} className="hover:text-brand-600">{lead.phone}</a>
+                {lead.phone ? <a href={`tel:${lead.phone}`} className="hover:text-brand-600">{lead.phone}</a> : <span>Номер не указан</span>}
               </div>
               {lead.email && (
                 <div className="flex items-center gap-2 text-sm text-surface-600 dark:text-surface-300">
