@@ -8,6 +8,7 @@ import { formsApi } from "@/shared/api/base";
 import { QUERY_KEYS } from "@/shared/constants";
 import { Button } from "@/shared/ui/Button";
 import type { FormField, PublicFormGetResponse } from "@/entities/forms/types";
+import { apiErrorMessage, httpStatusOf } from "@/shared/utils/apiError";
 
 export default function PublicFormPage({ params }: { params: { token: string } }) {
   const token = params.token;
@@ -30,9 +31,9 @@ export default function PublicFormPage({ params }: { params: { token: string } }
     onSuccess: () => setSubmitted(true),
   });
 
-  const httpStatus = (error as { response?: { status?: number } })?.response?.status || null;
-  const errorDetail =
-    (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail || "";
+  // Backend errors are `{ error, detail, status_code }`, `detail` may be an
+  // object: always render a plain string (an object crashes React, #31).
+  const httpStatus = httpStatusOf(error);
 
   if (isLoading) {
     return (
@@ -47,20 +48,25 @@ export default function PublicFormPage({ params }: { params: { token: string } }
 
   if (error || !form) {
     const gone = httpStatus === 410;
+    const denied = httpStatus === 401 || httpStatus === 403;
+    const title = gone
+      ? "Ссылка истекла"
+      : denied
+        ? "Не удалось открыть анкету"
+        : "Ссылка не найдена";
+    const text = gone
+      ? "Срок действия ссылки закончился. Обратитесь к владельцу анкеты."
+      : denied
+        ? "Доступ по этой ссылке не подтверждён. Обновите страницу или запросите новую ссылку у владельца анкеты."
+        : apiErrorMessage(error, "Анкета больше не доступна или ссылка указана неверно.");
     return (
       <PublicShell>
         <div className="text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-danger-50 text-danger-500 dark:bg-red-900/20">
             <ClipboardList className="h-8 w-8" />
           </div>
-          <h1 className="mt-4 text-xl font-bold text-surface-900 dark:text-white">
-            {gone ? "Ссылка истекла" : "Ссылка не найдена"}
-          </h1>
-          <p className="mt-2 text-sm text-surface-500">
-            {gone
-              ? "Срок действия ссылки закончился. Обратитесь к владельцу анкеты."
-              : errorDetail || "Анкета больше не доступна или ссылка указана неверно."}
-          </p>
+          <h1 className="mt-4 text-xl font-bold text-surface-900 dark:text-white">{title}</h1>
+          <p className="mt-2 text-sm text-surface-500">{text}</p>
         </div>
       </PublicShell>
     );
@@ -124,8 +130,7 @@ export default function PublicFormPage({ params }: { params: { token: string } }
 
       {submitMutation.error && (
         <p className="mt-4 text-center text-sm text-danger-600 dark:text-danger-400">
-          {(submitMutation.error as { response?: { data?: { detail?: string } } })?.response?.data
-            ?.detail || "Не удалось отправить ответы."}
+          {apiErrorMessage(submitMutation.error, "Не удалось отправить ответы.")}
         </p>
       )}
 

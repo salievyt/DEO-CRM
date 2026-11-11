@@ -17,6 +17,7 @@ class Command(BaseCommand):
             RoleChoices.DEVELOPER: "Доступ к назначенным задачам и проектам",
             RoleChoices.DESIGNER: "Работа с дизайн-задачами и макетами",
             RoleChoices.MARKETER: "Маркетинговые проекты и аналитика",
+            RoleChoices.HR: "Опросы сотрудников: создание, результаты, экспорт",
             RoleChoices.CLIENT: "Доступ к своим проектам, документам и счетам",
         }
 

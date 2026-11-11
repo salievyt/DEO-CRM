@@ -5,6 +5,42 @@ from rest_framework import serializers
 
 from .models import Role, User
 
+# Roles that grant access to company-wide data (finance, analytics, HR surveys).
+PRIVILEGED_ROLES = ("superadmin", "owner", "hr")
+ROLE_GRANTERS = ("superadmin", "owner")
+
+
+def _role_name(user):
+    role = getattr(user, "role", None)
+    return role.name if role is not None else None
+
+
+def role_change_error(actor, role_name, target=None):
+    """Why ``actor`` may not give ``role_name`` (to ``target``), or ``None`` if allowed.
+
+    * owner, hr, superadmin: only superadmin and owner may grant;
+    * superadmin: only another superadmin (owner is below superadmin, e.g.
+      ``IsAdmin`` is superadmin-only, so an owner must not mint one);
+    * a user who already has a privileged role can only be changed by
+      superadmin/owner (a PM must not demote the owner), and a superadmin
+      only by a superadmin;
+    * nobody changes their own role.
+    """
+    actor_role = _role_name(actor)
+    if target is not None and target.pk == actor.pk:
+        return "Нельзя менять роль самому себе."
+    if role_name in PRIVILEGED_ROLES and actor_role not in ROLE_GRANTERS:
+        return "Назначать эту роль могут только владелец и суперадмин."
+    if role_name == "superadmin" and actor_role != "superadmin":
+        return "Роль суперадмина может назначить только суперадмин."
+    if target is not None:
+        target_role = _role_name(target)
+        if target_role in PRIVILEGED_ROLES and actor_role not in ROLE_GRANTERS:
+            return "Роль этого пользователя могут менять только владелец и суперадмин."
+        if target_role == "superadmin" and actor_role != "superadmin":
+            return "Роль суперадмина может изменить только суперадмин."
+    return None
+
 
 class UserSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
@@ -51,7 +87,8 @@ class InviteUserSerializer(serializers.ModelSerializer):
     """Admin creates an employee account and receives temporary credentials."""
 
     # Roles an admin may invite. Superadmin and client are intentionally excluded.
-    INVITABLE_ROLES = ("owner", "project_manager", "developer", "designer", "marketer")
+    # owner and hr additionally require an owner/superadmin (see role_change_error).
+    INVITABLE_ROLES = ("owner", "project_manager", "developer", "designer", "marketer", "hr")
 
     role_name = serializers.CharField(write_only=True)
     temporary_password = serializers.CharField(read_only=True)
@@ -74,6 +111,10 @@ class InviteUserSerializer(serializers.ModelSerializer):
     def validate_role_name(self, value):
         if value not in self.INVITABLE_ROLES:
             raise serializers.ValidationError("Недопустимая роль для приглашения")
+        request = self.context.get("request")
+        error = role_change_error(request.user, value) if request is not None else None
+        if error:
+            raise serializers.ValidationError(error)
         if not Role.objects.filter(name=value).exists():
             raise serializers.ValidationError("Роль не найдена")
         return value

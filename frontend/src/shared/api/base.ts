@@ -7,6 +7,27 @@ export const api = axios.create({
   timeout: 30000,
 });
 
+/**
+ * Public respondent pages (survey / form links). They work without an account:
+ * no `/auth/me`, no redirect to /login. `/surveys` (plural) is the dashboard
+ * section and is NOT public.
+ */
+const PUBLIC_PAGE_PREFIXES = ["/survey/", "/forms/"];
+
+export const isPublicPagePath = (path: string | null | undefined): boolean =>
+  Boolean(path) && PUBLIC_PAGE_PREFIXES.some((prefix) => (path as string).startsWith(prefix));
+
+/**
+ * Bare client for public pages: no JWT interceptor and no refresh / redirect
+ * on 401, so a stale session can neither break the page nor reveal who the
+ * respondent is. Authorization is attached explicitly only where needed.
+ */
+export const publicApi = axios.create({
+  baseURL: API_URL,
+  headers: { "Content-Type": "application/json" },
+  timeout: 30000,
+});
+
 // Request interceptor - add JWT token
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
@@ -38,7 +59,9 @@ api.interceptors.response.use(
       } catch {
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
-        if (typeof window !== "undefined") {
+        // Public pages (survey / form links) work without an account:
+        // a stale session must not throw the respondent to the login page.
+        if (typeof window !== "undefined" && !isPublicPagePath(window.location.pathname)) {
           window.location.href = "/login";
         }
       }
@@ -638,9 +661,10 @@ export const formsApi = {
     remove: (id: string) => api.delete(`/forms/invitations/${id}/`),
   },
   public: {
-    get: (token: string) => api.get(`/forms/i/${token}/`),
+    // Invitation link is the credential: no JWT, no /login redirect.
+    get: (token: string) => publicApi.get(`/forms/i/${token}/`),
     submit: (token: string, response: Record<string, unknown>) =>
-      api.post(`/forms/i/${token}/`, { response }),
+      publicApi.post(`/forms/i/${token}/`, { response }),
   },
 };
 
@@ -655,4 +679,48 @@ export const notificationsApi = {
   archive: (data: Record<string, unknown>) => api.post("/notifications/archive/", data),
   archiveAll: () => api.post("/notifications/archive-all/"),
   archiveOne: (id: string) => api.post(`/notifications/${id}/archive/`),
+};
+
+// --- Surveys ---------------------------------------------------------------
+
+export const surveysApi = {
+  list: (params?: Record<string, unknown>) => api.get("/surveys/", { params }),
+  get: (id: string) => api.get(`/surveys/${id}/`),
+  create: (data: Record<string, unknown>) => api.post("/surveys/", data),
+  update: (id: string, data: Record<string, unknown>) => api.patch(`/surveys/${id}/`, data),
+  remove: (id: string) => api.delete(`/surveys/${id}/`),
+  activate: (id: string) => api.post(`/surveys/${id}/activate/`),
+  deactivate: (id: string) => api.post(`/surveys/${id}/deactivate/`),
+  publicLink: (id: string) => api.get(`/surveys/${id}/public-link/`),
+  regenerateLink: (id: string) => api.post(`/surveys/${id}/regenerate-link/`),
+  results: (id: string) => api.get(`/surveys/${id}/results/`),
+  responses: (id: string, params?: { page?: number; page_size?: number }) =>
+    api.get(`/surveys/${id}/responses/`, { params }),
+  exportCsv: (id: string) =>
+    api.get<Blob>(`/surveys/${id}/responses/export/`, { responseType: "blob" }),
+  sections: {
+    create: (data: Record<string, unknown>) => api.post("/surveys/sections/", data),
+    update: (id: string, data: Record<string, unknown>) =>
+      api.patch(`/surveys/sections/${id}/`, data),
+    remove: (id: string) => api.delete(`/surveys/sections/${id}/`),
+  },
+  questions: {
+    create: (data: Record<string, unknown>) => api.post("/surveys/questions/", data),
+    update: (id: string, data: Record<string, unknown>) =>
+      api.patch(`/surveys/questions/${id}/`, data),
+    remove: (id: string) => api.delete(`/surveys/questions/${id}/`),
+  },
+  public: {
+    get: (token: string) => publicApi.get(`/surveys/public/${token}/`),
+    /** `withAuth` only for named surveys: lets the backend attach the logged-in user. */
+    submit: (token: string, answers: unknown[], withAuth = false) => {
+      const access =
+        withAuth && typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      return publicApi.post(
+        `/surveys/public/${token}/`,
+        { answers },
+        access ? { headers: { Authorization: `Bearer ${access}` } } : undefined
+      );
+    },
+  },
 };

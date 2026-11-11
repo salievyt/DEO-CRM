@@ -64,6 +64,7 @@ LOCAL_APPS = [
     "apps.scenarios",
     "apps.learning",
     "apps.forms",
+    "apps.surveys",
     "apps.partners",
 ]
 
@@ -214,6 +215,8 @@ CORS_ALLOWED_ORIGINS = os.environ.get(
     "http://localhost:3000,http://localhost:3001,http://localhost:8000,http://localhost:8001",
 ).split(",")
 CORS_ALLOW_CREDENTIALS = True
+# Lets the frontend read the file name of downloads (e.g. survey CSV export).
+CORS_EXPOSE_HEADERS = ["Content-Disposition"]
 CSRF_TRUSTED_ORIGINS = os.environ.get(
     "CSRF_TRUSTED_ORIGINS",
     "http://localhost:3000,http://localhost:3001,http://localhost:8000,http://localhost:8001",

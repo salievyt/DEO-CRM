@@ -8,4 +8,5 @@ class RoleChoices(models.TextChoices):
     DEVELOPER = "developer", "Разработчик"
     DESIGNER = "designer", "Дизайнер"
     MARKETER = "marketer", "Маркетолог"
+    HR = "hr", "HR-менеджер"
     CLIENT = "client", "Клиент"

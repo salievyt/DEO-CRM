@@ -36,6 +36,7 @@ api_patterns = [
     path("scenarios/", include("apps.scenarios.urls")),
     path("learning/", include("apps.learning.urls")),
     path("forms/", include("apps.forms.urls")),
+    path("surveys/", include("apps.surveys.urls")),
 ]
 
 urlpatterns = [

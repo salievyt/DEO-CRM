@@ -3,7 +3,6 @@
 import { create } from "zustand";
 import { X, CheckCircle, AlertCircle, AlertTriangle, Info } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
-import { useEffect, useState } from "react";
 
 type ToastType = "success" | "error" | "warning" | "info";
 
@@ -69,12 +68,18 @@ export function ToastContainer() {
   const { toasts, removeToast } = useToastStore();
 
   return (
-    <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2">
+    <div
+      className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2"
+      role="region"
+      aria-label="Уведомления"
+      aria-live="polite"
+    >
       {toasts.map((t) => {
         const Icon = icons[t.type];
         return (
           <div
             key={t.id}
+            role={t.type === "error" ? "alert" : "status"}
             className={cn(
               "flex items-start gap-3 rounded-lg border p-4 shadow-lg transition-all duration-300 min-w-[320px] max-w-[420px]",
               styles[t.type]
@@ -92,6 +97,8 @@ export function ToastContainer() {
               )}
             </div>
             <button
+              type="button"
+              aria-label="Закрыть уведомление"
               onClick={() => removeToast(t.id)}
               className="flex-shrink-0 text-surface-400 hover:text-surface-600"
             >

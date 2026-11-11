@@ -120,4 +120,11 @@ export const QUERY_KEYS = {
   FORM_TEMPLATES: "form-templates",
   FORM_INVITATIONS: "form-invitations",
   FORM_PUBLIC: "form-public",
+
+  // Surveys (опросы сотрудников)
+  SURVEYS: "surveys",
+  SURVEY: "survey",
+  SURVEY_RESULTS: "survey-results",
+  SURVEY_RESPONSES: "survey-responses",
+  SURVEY_PUBLIC: "survey-public",
 };

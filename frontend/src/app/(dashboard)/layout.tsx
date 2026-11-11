@@ -48,6 +48,7 @@ import {
   BookOpen,
   FileEdit,
   ClipboardList,
+  ClipboardCheck,
   Timer,
 } from "lucide-react";
 import type { Notification } from "@/entities/notification/types";
@@ -106,22 +107,29 @@ const NAV_CATEGORIES = [
     icon: Users,
     items: [
       { name: "Сотрудники", href: "/employees", icon: UserCheck, roles: ["superadmin", "owner", "project_manager"], matchSubRoutes: true },
-      { name: "Календарь", href: "/calendar", icon: CalendarDays, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "client"], matchSubRoutes: true },
-      { name: "Кабинет", href: "/cabinet", icon: UserCircle, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "client"], matchSubRoutes: true },
+      { name: "Календарь", href: "/calendar", icon: CalendarDays, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "hr", "client"], matchSubRoutes: true },
+      { name: "Кабинет", href: "/cabinet", icon: UserCircle, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "hr", "client"], matchSubRoutes: true },
+    ],
+  },
+  {
+    name: "Опросы",
+    icon: ClipboardCheck,
+    items: [
+      { name: "Опросы", href: "/surveys", icon: ClipboardCheck, roles: ["superadmin", "owner", "hr"], matchSubRoutes: true },
     ],
   },
   {
     name: "Справка",
     icon: GraduationCap,
     items: [
-      { name: "Обучение", href: "/learning", icon: BookOpen, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "client"], matchSubRoutes: true },
+      { name: "Обучение", href: "/learning", icon: BookOpen, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "hr", "client"], matchSubRoutes: true },
     ],
   },
   {
     name: "Настройки",
     icon: Settings,
     items: [
-      { name: "Настройки", href: "/settings", icon: Settings, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "client"], matchSubRoutes: true },
+      { name: "Настройки", href: "/settings", icon: Settings, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "hr", "client"], matchSubRoutes: true },
       { name: "Админ", href: "/admin", icon: ShieldCheck, roles: ["superadmin", "owner"] },
       { name: "Статьи", href: "/admin/learning", icon: FileEdit, roles: ["superadmin", "owner"], matchSubRoutes: true },
       { name: "Анкеты", href: "/admin/forms", icon: ClipboardList, roles: ["superadmin", "owner"], matchSubRoutes: true },

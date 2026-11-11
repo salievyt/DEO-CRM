@@ -9,7 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from common.permissions import IsProjectManager
 
-from .serializers import InviteUserSerializer, RegisterSerializer, UserSerializer
+from .serializers import InviteUserSerializer, RegisterSerializer, UserSerializer, role_change_error
 from .two_factor import (
     build_setup_payload,
     clear_rate_limit,
@@ -171,19 +171,31 @@ class UserDetailView(generics.RetrieveUpdateAPIView):
 
 
 class AssignRoleView(APIView):
-    """Assign role to user (superadmin/owner/PM)."""
+    """Assign role to user (superadmin/owner/PM).
+
+    owner/hr/superadmin are granted only by owner or superadmin (superadmin
+    only by superadmin); own role cannot be changed. See ``role_change_error``.
+    """
     permission_classes = (IsProjectManager,)
 
     def post(self, request, pk):
         from .models import Role
         try:
-            user = User.objects.get(pk=pk)
+            user = User.objects.select_related("role").get(pk=pk)
             role = Role.objects.get(name=request.data.get("role"))
-            user.role = role
-            user.save()
-            return Response(UserSerializer(user).data)
         except (User.DoesNotExist, Role.DoesNotExist):
             return Response({"error": "Пользователь или роль не найдены"}, status=404)
+        if user.pk == request.user.pk:
+            return Response(
+                {"error": "Нельзя менять роль самому себе."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        error = role_change_error(request.user, role.name, target=user)
+        if error:
+            return Response({"error": error}, status=status.HTTP_403_FORBIDDEN)
+        user.role = role
+        user.save(update_fields=["role"])
+        return Response(UserSerializer(user).data)
 
 
 class Enable2FAView(APIView):
