@@ -168,3 +168,50 @@ def test_default_statuses_and_priorities_are_seeded():
     priority_names = set(TaskPriority.objects.values_list("name", flat=True))
     for name in ("Низкий", "Средний", "Высокий", "Критический"):
         assert name in priority_names
+
+
+def _client_with_task(suffix, project_status, task_status):
+    role = Role.objects.get_or_create(name="client")[0]
+    user = User.objects.create_user(
+        username=f"client-{suffix}@deo.test",
+        email=f"client-{suffix}@deo.test",
+        password="pass1234",
+        role=role,
+    )
+    client = Client.objects.create(
+        user=user, first_name="Клиент", last_name=suffix, phone="+79120000000", source="other"
+    )
+    project = Project.objects.create(name=f"Проект {suffix}", client=client, status=project_status)
+    task = Task.objects.create(title=f"Задача {suffix}", project=project, status=task_status)
+    return user, task
+
+
+@pytest.mark.django_db
+def test_client_sees_only_own_tasks(statuses):
+    project_status = ProjectStatus.objects.create(name="Клиентский")
+    alice, alice_task = _client_with_task("alice", project_status, statuses[0])
+    _, bob_task = _client_with_task("bob", project_status, statuses[0])
+
+    api = APIClient()
+    api.force_authenticate(alice)
+    resp = api.get(reverse("task-list"))
+    assert resp.status_code == 200
+    assert {item["id"] for item in resp.data["results"]} == {str(alice_task.id)}
+
+    # filters cannot widen the scope
+    resp = api.get(reverse("task-list"), {"project": str(bob_task.project_id)})
+    assert resp.data["results"] == []
+
+    assert api.get(reverse("task-detail", args=[alice_task.id])).status_code == 200
+    assert api.get(reverse("task-detail", args=[bob_task.id])).status_code == 404
+    assert api.delete(reverse("task-detail", args=[bob_task.id])).status_code == 404
+    assert Task.objects.filter(pk=bob_task.pk).exists()
+
+
+@pytest.mark.django_db
+def test_staff_sees_all_tasks(api, statuses):
+    project_status = ProjectStatus.objects.create(name="Клиентский")
+    _, alice_task = _client_with_task("alice", project_status, statuses[0])
+    _, bob_task = _client_with_task("bob", project_status, statuses[0])
+    ids = {item["id"] for item in api.get(reverse("task-list")).data["results"]}
+    assert {str(alice_task.id), str(bob_task.id)} <= ids

@@ -24,6 +24,11 @@ from .serializers import (
 from . import models as task_models
 
 
+def is_client(user):
+    """``user.role`` is a Role object (or None), never a plain string."""
+    return user.role is not None and user.role.name == "client"
+
+
 class TaskListCreateView(generics.ListCreateAPIView):
     """List or create tasks."""
     permission_classes = [IsAuthenticated]
@@ -50,7 +55,7 @@ class TaskListCreateView(generics.ListCreateAPIView):
         if client:
             qs = qs.filter(project__client_id=client)
         # Client sees only their project tasks
-        if self.request.user.role == "client":
+        if is_client(self.request.user):
             qs = qs.filter(project__client__user=self.request.user)
         return qs
 
@@ -65,6 +70,12 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
         "project", "assignee", "status", "priority"
     ).all()
     serializer_class = TaskDetailSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if is_client(self.request.user):
+            qs = qs.filter(project__client__user=self.request.user)
+        return qs
 
 
 class TaskChangeStatusView(views.APIView):

@@ -20,6 +20,11 @@ from .serializers import (
 )
 
 
+def is_client(user):
+    """``user.role`` is a Role object (or None), never a plain string."""
+    return user.role is not None and user.role.name == "client"
+
+
 class ProjectListCreateView(generics.ListCreateAPIView):
     """List or create projects."""
     permission_classes = [IsAuthenticated]
@@ -35,7 +40,7 @@ class ProjectListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         qs = Project.objects.select_related("client", "status").all()
         # Staff can see all, clients see only theirs
-        if self.request.user.role == "client":
+        if is_client(self.request.user):
             qs = qs.filter(client__user=self.request.user)
         # Filter by team member
         member = self.request.query_params.get("team_member")
@@ -64,6 +69,12 @@ class ProjectDetailView(generics.RetrieveUpdateDestroyAPIView):
         "client", "status", "service_type"
     ).all()
     serializer_class = ProjectDetailSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if is_client(self.request.user):
+            qs = qs.filter(client__user=self.request.user)
+        return qs
 
 
 class ProjectTeamView(generics.ListCreateAPIView):
