@@ -42,6 +42,25 @@ def role_change_error(actor, role_name, target=None):
     return None
 
 
+def profile_change_error(actor, target):
+    """Why ``actor`` may not edit ``target``'s profile, or ``None`` if allowed.
+
+    Same hierarchy as ``role_change_error``: owner/hr/superadmin profiles are
+    edited only by superadmin/owner, a superadmin profile only by a superadmin.
+    Login is by email, so editing it would let a PM lock the owner out.
+    Everyone edits their own profile via ``/auth/me/``.
+    """
+    if target.pk == actor.pk:
+        return None
+    actor_role = _role_name(actor)
+    target_role = _role_name(target)
+    if target_role in PRIVILEGED_ROLES and actor_role not in ROLE_GRANTERS:
+        return "Профиль этого пользователя могут менять только владелец и суперадмин."
+    if target_role == "superadmin" and actor_role != "superadmin":
+        return "Профиль суперадмина может изменить только суперадмин."
+    return None
+
+
 class UserSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
     role_name = serializers.CharField(source="role.name", read_only=True, allow_null=True)

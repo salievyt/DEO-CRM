@@ -12,7 +12,6 @@ import {
   Lock,
   LogIn,
   Mail,
-  UserPlus,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthLayout } from "@/features/auth/AuthLayout";
@@ -40,9 +39,7 @@ function LoginPageInner() {
   const [otpCode, setOtpCode] = useState("");
 
   useEffect(() => {
-    if (searchParams.get("registered") === "true") {
-      setSuccessMessage("Регистрация успешна! Теперь вы можете войти.");
-    } else if (searchParams.get("reset") === "true") {
+    if (searchParams.get("reset") === "true") {
       setSuccessMessage("Пароль успешно изменён. Войдите с новым паролем.");
     }
   }, [searchParams]);
@@ -195,26 +192,9 @@ function LoginPageInner() {
           </button>
 
           {!challenge && (
-            <>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-surface-200 dark:border-surface-700/70" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-3 text-surface-400 dark:bg-surface-900">
-                    Или
-                  </span>
-                </div>
-              </div>
-
-              <Link
-                href="/register"
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-surface-300 bg-white px-4 py-3 text-sm font-medium text-surface-700 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-surface-400 hover:bg-surface-50 hover:shadow-md dark:border-surface-600 dark:bg-surface-800 dark:text-surface-200 dark:hover:border-surface-500 dark:hover:bg-surface-700"
-              >
-                <UserPlus className="h-4 w-4" />
-                Создать аккаунт
-              </Link>
-            </>
+            <p className="text-center text-sm text-surface-500 dark:text-surface-400">
+              Нет доступа? Обратитесь к администратору.
+            </p>
           )}
 
           {challenge && (

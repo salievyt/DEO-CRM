@@ -212,3 +212,75 @@ class RoleEscalationTest(TestCase):
         self.assertIn(response.status_code, (200, 400))
         self.target.refresh_from_db()
         self.assertEqual(self.target.role.name, "developer")
+
+    def patch_user(self, actor, target, data=None):
+        return self.api_as(actor).patch(
+            f"/api/v1/auth/users/{target.pk}/",
+            data or {"email": f"hijack-{actor}@roles.test", "first_name": "X"},
+            format="json",
+        )
+
+    def test_pm_cannot_edit_privileged_profiles(self):
+        for name in ("owner", "hr", "superadmin"):
+            response = self.patch_user("project_manager", self.users[name])
+            self.assertEqual(response.status_code, 403, name)
+            self.users[name].refresh_from_db()
+            self.assertEqual(self.users[name].email, f"{name}@roles.test")
+
+    def test_owner_cannot_edit_superadmin_profile(self):
+        response = self.patch_user("owner", self.users["superadmin"])
+        self.assertEqual(response.status_code, 403)
+        self.users["superadmin"].refresh_from_db()
+        self.assertEqual(self.users["superadmin"].email, "superadmin@roles.test")
+        put = self.api_as("owner").put(
+            f"/api/v1/auth/users/{self.users['superadmin'].pk}/",
+            {"email": "x@roles.test", "first_name": "X", "last_name": "Y"},
+            format="json",
+        )
+        self.assertEqual(put.status_code, 403)
+
+    def test_owner_and_superadmin_can_edit_below(self):
+        response = self.patch_user("owner", self.users["project_manager"], {"first_name": "Пётр"})
+        self.assertEqual(response.status_code, 200, response.data)
+        self.users["project_manager"].refresh_from_db()
+        self.assertEqual(self.users["project_manager"].first_name, "Пётр")
+        self.assertEqual(
+            self.patch_user("owner", self.users["hr"], {"first_name": "Анна"}).status_code, 200
+        )
+        self.assertEqual(
+            self.patch_user("superadmin", self.users["owner"], {"first_name": "Олег"}).status_code,
+            200,
+        )
+
+    def test_pm_can_edit_regular_staff(self):
+        response = self.patch_user("project_manager", self.target, {"first_name": "Дмитрий"})
+        self.assertEqual(response.status_code, 200, response.data)
+
+    def test_user_detail_has_no_delete(self):
+        response = self.api_as("superadmin").delete(f"/api/v1/auth/users/{self.target.pk}/")
+        self.assertEqual(response.status_code, 405)
+        self.assertTrue(User.objects.filter(pk=self.target.pk).exists())
+
+    def test_assign_role_requires_string(self):
+        for value in (["owner"], {"name": "owner"}, 1, None, ""):
+            response = self.assign("superadmin", self.target, value)
+            self.assertEqual(response.status_code, 400, value)
+        self.target.refresh_from_db()
+        self.assertEqual(self.target.role.name, "developer")
+
+
+class RegistrationClosedTest(TestCase):
+    def test_public_registration_is_closed(self):
+        response = APIClient().post(
+            "/api/v1/auth/register/",
+            {
+                "email": "stranger@example.com",
+                "password": "StrongPass123!",
+                "first_name": "S",
+                "last_name": "S",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("detail", response.data)
+        self.assertFalse(User.objects.filter(email="stranger@example.com").exists())

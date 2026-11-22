@@ -1,4 +1,4 @@
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
 class IsAdmin(BasePermission):
@@ -91,3 +91,25 @@ class IsOwnerOrAdmin(BasePermission):
             request.user.role is not None
             and request.user.role.name in ("superadmin", "owner")
         ) or obj.created_by == request.user
+
+
+class HasRole(BasePermission):
+    """Authenticated and has a role. Users without a role are untrusted."""
+
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role is not None
+
+
+class IsStaffOrClientReadOnly(BasePermission):
+    """Staff: any method. Client: SAFE_METHODS only. No role: denied.
+
+    Object visibility for clients is enforced separately by the queryset
+    (``common.scoping``).
+    """
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated or request.user.role is None:
+            return False
+        if request.user.role.name == "client":
+            return request.method in SAFE_METHODS
+        return True

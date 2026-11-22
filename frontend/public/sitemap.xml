@@ -40,13 +40,6 @@
     <priority>0.7</priority>
   </url>
 
-  <url>
-    <loc>https://crm.deo-core.codes/register</loc>
-    <lastmod>2026-09-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-
   <!-- Дашборд (только для авторизованных) -->
   <url>
     <loc>https://crm.deo-core.codes/dashboard</loc>

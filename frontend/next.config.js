@@ -17,6 +17,13 @@ const nextConfig = {
       },
     ],
   },
+  // Публичная регистрация закрыта: доступ выдаёт администратор по приглашению.
+  // permanent: false — чтобы браузеры не кешировали редирект навсегда.
+  async redirects() {
+    return [
+      { source: "/register", destination: "/login", permanent: false },
+    ];
+  },
   async rewrites() {
     const backendUrl = process.env.BACKEND_INTERNAL_URL || "http://backend:8000";
 

@@ -1,15 +1,23 @@
 from django.contrib.auth import authenticate, get_user_model
 from django.core import signing
+from django.db import transaction
 from django.utils import timezone
 from django_otp.plugins.otp_totp.models import TOTPDevice
+from drf_spectacular.utils import extend_schema
 from rest_framework import generics, permissions, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from common.permissions import IsProjectManager
 
-from .serializers import InviteUserSerializer, RegisterSerializer, UserSerializer, role_change_error
+from .serializers import (
+    InviteUserSerializer,
+    UserSerializer,
+    profile_change_error,
+    role_change_error,
+)
 from .two_factor import (
     build_setup_payload,
     clear_rate_limit,
@@ -26,11 +34,23 @@ from .two_factor import (
 User = get_user_model()
 
 
-class RegisterView(generics.CreateAPIView):
-    """User registration."""
-    queryset = User.objects.all()
-    serializer_class = RegisterSerializer
+REGISTRATION_CLOSED = "Регистрация закрыта. Доступ выдаёт администратор по приглашению."
+
+
+class RegisterView(APIView):
+    """Public self-registration is closed.
+
+    Self-registered accounts had no role and were treated as staff by
+    endpoints that only checked authentication. Employees are created via
+    ``users/invite/``; client accounts are linked by an administrator.
+    """
+
     permission_classes = (permissions.AllowAny,)
+    authentication_classes = ()
+
+    @extend_schema(request=None, responses={403: None})
+    def post(self, request):
+        return Response({"detail": REGISTRATION_CLOSED}, status=status.HTTP_403_FORBIDDEN)
 
 
 class LoginView(APIView):
@@ -164,10 +184,20 @@ class UserListView(generics.ListAPIView):
 
 
 class UserDetailView(generics.RetrieveUpdateAPIView):
-    """User details (superadmin/owner/PM)."""
-    queryset = User.objects.all()
+    """User details (superadmin/owner/PM).
+
+    Editing follows the role hierarchy (``profile_change_error``): owner/hr/
+    superadmin profiles only by owner/superadmin, superadmin only by superadmin.
+    """
+    queryset = User.objects.select_related("role")
     serializer_class = UserSerializer
     permission_classes = (IsProjectManager,)
+
+    def perform_update(self, serializer):
+        error = profile_change_error(self.request.user, serializer.instance)
+        if error:
+            raise PermissionDenied(error)
+        serializer.save()
 
 
 class AssignRoleView(APIView):
@@ -180,21 +210,32 @@ class AssignRoleView(APIView):
 
     def post(self, request, pk):
         from .models import Role
-        try:
-            user = User.objects.select_related("role").get(pk=pk)
-            role = Role.objects.get(name=request.data.get("role"))
-        except (User.DoesNotExist, Role.DoesNotExist):
-            return Response({"error": "Пользователь или роль не найдены"}, status=404)
-        if user.pk == request.user.pk:
+
+        role_name = request.data.get("role") if hasattr(request.data, "get") else None
+        if not isinstance(role_name, str) or not role_name:
             return Response(
-                {"error": "Нельзя менять роль самому себе."},
+                {"error": "Поле role должно быть строкой."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        error = role_change_error(request.user, role.name, target=user)
-        if error:
-            return Response({"error": error}, status=status.HTTP_403_FORBIDDEN)
-        user.role = role
-        user.save(update_fields=["role"])
+        with transaction.atomic():
+            # Lock the target so the hierarchy check and the write see the same role.
+            try:
+                user = (
+                    User.objects.select_for_update(of=("self",)).select_related("role").get(pk=pk)
+                )
+                role = Role.objects.get(name=role_name)
+            except (User.DoesNotExist, Role.DoesNotExist):
+                return Response({"error": "Пользователь или роль не найдены"}, status=404)
+            if user.pk == request.user.pk:
+                return Response(
+                    {"error": "Нельзя менять роль самому себе."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            error = role_change_error(request.user, role.name, target=user)
+            if error:
+                return Response({"error": error}, status=status.HTTP_403_FORBIDDEN)
+            user.role = role
+            user.save(update_fields=["role"])
         return Response(UserSerializer(user).data)
 
 

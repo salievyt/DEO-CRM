@@ -23,7 +23,6 @@ interface AuthState {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<{ requires2FA: boolean; challenge?: string }>;
   verifyLogin2FA: (challenge: string, code: string) => Promise<void>;
-  register: (data: { email: string; password: string; first_name: string; last_name: string }) => Promise<void>;
   logout: () => void;
   fetchUser: () => Promise<void>;
 }
@@ -56,10 +55,6 @@ export const useAuth = create<AuthState>((set) => ({
     localStorage.setItem("refresh_token", refresh);
     const userResponse = await authApi.me();
     set({ user: userResponse.data, isAuthenticated: true, isLoading: false });
-  },
-
-  register: async (data) => {
-    await authApi.register(data);
   },
 
   logout: () => {

@@ -99,7 +99,6 @@ export default function RootPage() {
             <nav aria-label="Навигация по сайту">
               <Link href="/crm" title="DEO CRM панель">CRM Панель</Link>
               <Link href="/login" title="Вход в DEO CRM">Вход в систему</Link>
-              <Link href="/register" title="Регистрация в DEO CRM">Регистрация</Link>
               <Link href="/dashboard" title="Дашборд DEO CRM">Дашборд</Link>
               <Link href="/dashboard/projects" title="Проекты в DEO CRM">Проекты</Link>
               <Link href="/dashboard/clients" title="Клиенты в DEO CRM">Клиенты</Link>

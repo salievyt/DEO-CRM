@@ -76,8 +76,6 @@ export const authApi = {
   login: (email: string, password: string) => api.post("/auth/login/", { email, password }),
   verifyLogin2FA: (challenge: string, code: string) =>
     api.post("/auth/login/2fa/", { challenge, code }),
-  register: (data: { email: string; password: string; first_name: string; last_name: string }) =>
-    api.post("/auth/register/", data),
   me: () => api.get("/auth/me/"),
   updateProfile: (data: Record<string, unknown>) => api.patch("/auth/me/", data),
   changePassword: (oldPassword: string, newPassword: string) =>

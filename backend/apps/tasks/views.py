@@ -1,16 +1,21 @@
-from django.db import transaction
-from django.contrib.auth import get_user_model
 import uuid
 from datetime import datetime, timedelta
 
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Count, Sum
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, status, views
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from common.permissions import IsAdmin, IsProjectManager
+from common.permissions import HasRole, IsProjectManager, IsStaff, IsStaffOrClientReadOnly
+from common.scoping import scope_tasks
 
+from . import models as task_models
 from .models import Task, TaskComment, TaskPriority, TaskStatus, TaskTimer
 from .serializers import (
     TaskCommentSerializer,
@@ -21,17 +26,11 @@ from .serializers import (
     TaskStatusSerializer,
     TaskTimerSerializer,
 )
-from . import models as task_models
-
-
-def is_client(user):
-    """``user.role`` is a Role object (or None), never a plain string."""
-    return user.role is not None and user.role.name == "client"
 
 
 class TaskListCreateView(generics.ListCreateAPIView):
-    """List or create tasks."""
-    permission_classes = [IsAuthenticated]
+    """List or create tasks (clients: read-only, own projects only)."""
+    permission_classes = [IsAuthenticated, IsStaffOrClientReadOnly]
     search_fields = ["title", "description"]
     ordering_fields = ["created_at", "deadline", "priority__level"]
     filterset_fields = ["status", "priority"]
@@ -54,39 +53,37 @@ class TaskListCreateView(generics.ListCreateAPIView):
             qs = qs.filter(assignee_id=assignee)
         if client:
             qs = qs.filter(project__client_id=client)
-        # Client sees only their project tasks
-        if is_client(self.request.user):
-            qs = qs.filter(project__client__user=self.request.user)
-        return qs
+        return scope_tasks(self.request.user, qs)
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
 
 
 class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """Retrieve, update or delete a task."""
-    permission_classes = [IsAuthenticated]
+    """Retrieve, update or delete a task (clients: read-only, own projects only)."""
+    permission_classes = [IsAuthenticated, IsStaffOrClientReadOnly]
     queryset = Task.objects.select_related(
         "project", "assignee", "status", "priority"
     ).all()
     serializer_class = TaskDetailSerializer
 
     def get_queryset(self):
-        qs = super().get_queryset()
-        if is_client(self.request.user):
-            qs = qs.filter(project__client__user=self.request.user)
-        return qs
+        return scope_tasks(self.request.user, super().get_queryset())
 
 
 class TaskChangeStatusView(views.APIView):
-    """Change task status."""
-    permission_classes = [IsAuthenticated]
+    """Change task status (staff only; the client cabinet does not use it)."""
+    permission_classes = [IsAuthenticated, IsStaff]
 
     def post(self, request, pk):
+        task = get_object_or_404(scope_tasks(request.user), pk=pk)
+        status_id = request.data.get("status_id") if hasattr(request.data, "get") else None
+        # Web sends the id as a string, the mobile app as an integer.
+        if isinstance(status_id, bool) or not isinstance(status_id, (str, int)) or status_id == "":
+            return Response({"error": "Укажите status_id"}, status=400)
         try:
-            task = Task.objects.get(pk=pk)
-            new_status = TaskStatus.objects.get(pk=request.data["status_id"])
-        except (Task.DoesNotExist, TaskStatus.DoesNotExist):
+            new_status = TaskStatus.objects.get(pk=status_id)
+        except (TaskStatus.DoesNotExist, ValidationError, ValueError):
             return Response({"error": "Задача или статус не найдены"}, status=404)
 
         old_status = task.status
@@ -130,25 +127,37 @@ class TaskAssignView(views.APIView):
 
 
 class TaskCommentListView(generics.ListCreateAPIView):
-    """List or add comments to a task."""
-    permission_classes = [IsAuthenticated]
+    """List or add comments to a task visible to the user (clients: own tasks)."""
+    permission_classes = [IsAuthenticated, HasRole]
     serializer_class = TaskCommentSerializer
 
+    def get_task(self):
+        if not hasattr(self, "_task"):
+            self._task = get_object_or_404(
+                scope_tasks(self.request.user), pk=self.kwargs["task_pk"]
+            )
+        return self._task
+
     def get_queryset(self):
-        return TaskComment.objects.filter(
-            task_id=self.kwargs["task_pk"]
-        ).select_related("user").order_by("created_at")
+        if getattr(self, "swagger_fake_view", False):
+            return TaskComment.objects.none()
+        return (
+            TaskComment.objects.filter(task=self.get_task())
+            .select_related("user")
+            .order_by("created_at")
+        )
 
     def perform_create(self, serializer):
-        serializer.save(
-            task_id=self.kwargs["task_pk"],
-            user=self.request.user,
-        )
+        task = self.get_task()
+        parent = serializer.validated_data.get("parent_comment")
+        if parent is not None and parent.task_id != task.pk:
+            raise DRFValidationError({"parent_comment": "Комментарий относится к другой задаче."})
+        serializer.save(task=task, user=self.request.user)
 
 
 class TaskTimerStartView(views.APIView):
-    """Start timer for a task."""
-    permission_classes = [IsAuthenticated]
+    """Start timer for a task (staff only)."""
+    permission_classes = [IsAuthenticated, IsStaff]
 
     @transaction.atomic
     def post(self, request, pk):
@@ -171,8 +180,8 @@ class TaskTimerStartView(views.APIView):
 
 
 class TaskTimerStopView(views.APIView):
-    """Stop running timer for a task."""
-    permission_classes = [IsAuthenticated]
+    """Stop running timer for a task (staff only)."""
+    permission_classes = [IsAuthenticated, IsStaff]
 
     @transaction.atomic
     def post(self, request, pk):
@@ -197,16 +206,15 @@ class TaskTimerStopView(views.APIView):
 
 
 class TaskKanbanView(views.APIView):
-    """Get tasks grouped by status for Kanban."""
-    permission_classes = [IsAuthenticated]
+    """Get tasks grouped by status for Kanban (clients: own projects only)."""
+    permission_classes = [IsAuthenticated, HasRole]
 
     def get(self, request):
         statuses = TaskStatus.objects.all().order_by("order")
+        visible = scope_tasks(request.user)
         columns = []
         for status in statuses:
-            tasks = Task.objects.filter(
-                status=status
-            ).select_related("assignee", "priority")
+            tasks = visible.filter(status=status).select_related("assignee", "priority")
             project = request.query_params.get("project")
             if project:
                 tasks = tasks.filter(project_id=project)

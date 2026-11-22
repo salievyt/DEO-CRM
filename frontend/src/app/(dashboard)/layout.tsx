@@ -69,6 +69,7 @@ const NAV_CATEGORIES = [
     name: "Продажи",
     icon: DollarSign,
     items: [
+      { name: "D2C · Обзвон", href: "/outreach", icon: PhoneCall, roles: ["superadmin", "owner", "project_manager", "marketer", "developer", "designer", "hr"], matchSubRoutes: true },
       { name: "Клиенты", href: "/clients", icon: Users, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
       { name: "Партнёры", href: "/partners", icon: Handshake, roles: ["superadmin", "owner"], matchSubRoutes: true },
       { name: "Проекты", href: "/projects", icon: FolderKanban, roles: ["superadmin", "owner", "project_manager", "developer", "designer"], matchSubRoutes: true },

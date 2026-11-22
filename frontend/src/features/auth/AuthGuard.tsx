@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { LoadingSpinner } from "@/shared/ui/LoadingSpinner";
 
-const PUBLIC_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
+const PUBLIC_ROUTES = ["/login", "/forgot-password", "/reset-password"];
 
 const isPublicRoute = (path: string): boolean =>
   PUBLIC_ROUTES.some((route) => path.startsWith(route));

@@ -6,7 +6,7 @@ from rest_framework import generics, status, views
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from common.permissions import IsAdmin, IsOwner
+from common.permissions import IsOwner, IsProjectManager
 
 from .models import (
     Expense, ExpenseCategory, Income, Invoice, Payment, Product, Salary
@@ -26,7 +26,7 @@ from .serializers import (
 
 class ProductListCreateView(generics.ListCreateAPIView):
     """List or create catalog products."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsProjectManager]
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     filterset_fields = ["is_active"]
@@ -38,14 +38,14 @@ class ProductListCreateView(generics.ListCreateAPIView):
 
 class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update or delete a catalog product."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsProjectManager]
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
 
 
 class InvoiceListCreateView(generics.ListCreateAPIView):
     """List or create invoices."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsProjectManager]
     filterset_fields = ["status"]
 
     def get_serializer_class(self):
@@ -66,7 +66,7 @@ class InvoiceListCreateView(generics.ListCreateAPIView):
 
 class InvoiceDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update or delete an invoice."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsProjectManager]
     queryset = Invoice.objects.prefetch_related("items", "payments").all()
     serializer_class = InvoiceDetailSerializer
 
@@ -147,7 +147,7 @@ class ExpenseListCreateView(generics.ListCreateAPIView):
 
 class ExpenseCategoryListView(generics.ListCreateAPIView):
     """List or create expense categories."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsProjectManager]
     queryset = ExpenseCategory.objects.all().order_by("name")
     serializer_class = ExpenseCategorySerializer
 

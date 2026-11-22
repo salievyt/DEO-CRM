@@ -84,13 +84,16 @@ class ClientProjectScopeTest(TestCase):
         api = self.api_as(self.alice)
         self.assertEqual(api.get(f"/api/v1/projects/{self.alice_project.id}/").status_code, 200)
         self.assertEqual(api.get(f"/api/v1/projects/{self.bob_project.id}/").status_code, 404)
-        self.assertEqual(
+        # clients are read-only on projects: 403 before the object is looked up
+        self.assertIn(
             api.patch(
                 f"/api/v1/projects/{self.bob_project.id}/", {"name": "x"}, format="json"
             ).status_code,
-            404,
+            (403, 404),
         )
-        self.assertEqual(api.delete(f"/api/v1/projects/{self.bob_project.id}/").status_code, 404)
+        self.assertIn(
+            api.delete(f"/api/v1/projects/{self.bob_project.id}/").status_code, (403, 404)
+        )
         self.assertTrue(Project.objects.filter(pk=self.bob_project.pk, name="Проект bob").exists())
 
     def test_staff_still_sees_all(self):
@@ -104,8 +107,94 @@ class ClientProjectScopeTest(TestCase):
         ids = {item["id"] for item in response.data["results"]}
         self.assertTrue({str(self.alice_project.id), str(self.bob_project.id)} <= ids)
 
-    def test_user_without_role_is_not_treated_as_client(self):
+    def test_user_without_role_sees_nothing(self):
         nobody = User.objects.create_user(
             username="norole@deo.test", email="norole@deo.test", password="pass1234"
         )
-        self.assertEqual(self.api_as(nobody).get("/api/v1/projects/").status_code, 200)
+        api = self.api_as(nobody)
+        self.assertEqual(api.get("/api/v1/projects/").status_code, 403)
+        self.assertEqual(api.get(f"/api/v1/projects/{self.alice_project.id}/").status_code, 403)
+        self.assertEqual(api.get("/api/v1/projects/health/").status_code, 403)
+        self.assertEqual(
+            api.get(f"/api/v1/projects/{self.alice_project.id}/timesheet/").status_code, 403
+        )
+
+
+class ClientProjectWriteAndTimesheetTest(TestCase):
+    def setUp(self):
+        status = ProjectStatus.objects.first()
+        self.alice, self.alice_project = make_client_with_project("alice", status)
+        self.bob, self.bob_project = make_client_with_project("bob", status)
+        self.pm = User.objects.create_user(
+            username="pm@deo.test",
+            email="pm@deo.test",
+            password="pass1234",
+            role=Role.objects.get_or_create(name="project_manager")[0],
+        )
+
+    def api_as(self, user):
+        api = APIClient()
+        api.force_authenticate(user)
+        return api
+
+    def test_client_cannot_write_own_project(self):
+        api = self.api_as(self.alice)
+        url = f"/api/v1/projects/{self.alice_project.id}/"
+        self.assertEqual(api.patch(url, {"name": "x"}, format="json").status_code, 403)
+        self.assertEqual(
+            api.put(
+                url, {"name": "x", "client": str(self.alice_project.client_id)}, format="json"
+            ).status_code,
+            403,
+        )
+        self.assertEqual(api.delete(url).status_code, 403)
+        self.alice_project.refresh_from_db()
+        self.assertEqual(self.alice_project.name, "Проект alice")
+
+    def test_client_cannot_create_project_or_service_type(self):
+        api = self.api_as(self.alice)
+        self.assertEqual(
+            api.post(
+                "/api/v1/projects/",
+                {"name": "Чужой", "client": str(self.bob_project.client_id)},
+                format="json",
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
+            api.post("/api/v1/projects/service-types/", {"name": "x"}, format="json").status_code,
+            403,
+        )
+        self.assertEqual(api.get("/api/v1/projects/service-types/").status_code, 200)
+
+    def test_client_cannot_read_timesheet(self):
+        api = self.api_as(self.alice)
+        for project in (self.alice_project, self.bob_project):
+            self.assertEqual(api.get(f"/api/v1/projects/{project.id}/timesheet/").status_code, 403)
+
+    def test_client_health_is_scoped(self):
+        api = self.api_as(self.alice)
+        ids = {row["id"] for row in api.get("/api/v1/projects/health/").data}
+        self.assertEqual(ids, {str(self.alice_project.id)})
+        self.assertEqual(
+            api.get(f"/api/v1/projects/{self.alice_project.id}/health/").status_code, 200
+        )
+        self.assertEqual(
+            api.get(f"/api/v1/projects/{self.bob_project.id}/health/").status_code, 404
+        )
+
+    def test_staff_keeps_working(self):
+        api = self.api_as(self.pm)
+        self.assertEqual(
+            api.get(f"/api/v1/projects/{self.bob_project.id}/timesheet/").status_code, 200
+        )
+        response = api.patch(
+            f"/api/v1/projects/{self.bob_project.id}/", {"name": "Новое"}, format="json"
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(
+            api.post(
+                "/api/v1/projects/service-types/", {"name": "Новый тип"}, format="json"
+            ).status_code,
+            201,
+        )

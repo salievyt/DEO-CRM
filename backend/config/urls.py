@@ -32,6 +32,7 @@ api_patterns = [
     path("webhooks/", include("apps.messaging.webhooks.urls")),
     path("mentorship/", include("apps.mentorship.urls")),
     path("structure/", include("apps.structure.urls")),
+    path("outreach/", include("apps.outreach.urls")),
     path("calls/", include("apps.calls.urls")),
     path("scenarios/", include("apps.scenarios.urls")),
     path("learning/", include("apps.learning.urls")),

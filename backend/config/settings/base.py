@@ -61,6 +61,7 @@ LOCAL_APPS = [
     "apps.mentorship",
     "apps.structure",
     "apps.calls",
+    "apps.outreach",
     "apps.scenarios",
     "apps.learning",
     "apps.forms",

@@ -7,7 +7,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from common.permissions import IsAdmin, IsProjectManager
+from common.permissions import HasRole, IsAdmin, IsProjectManager, IsStaff, IsStaffOrClientReadOnly
+from common.scoping import scope_projects
 
 from .models import Project, ProjectStatus, ProjectTeamMember, ServiceType
 from .serializers import (
@@ -20,14 +21,9 @@ from .serializers import (
 )
 
 
-def is_client(user):
-    """``user.role`` is a Role object (or None), never a plain string."""
-    return user.role is not None and user.role.name == "client"
-
-
 class ProjectListCreateView(generics.ListCreateAPIView):
-    """List or create projects."""
-    permission_classes = [IsAuthenticated]
+    """List or create projects (clients: read-only, own projects only)."""
+    permission_classes = [IsAuthenticated, IsStaffOrClientReadOnly]
     search_fields = ["name", "client__first_name", "client__last_name"]
     ordering_fields = ["created_at", "deadline", "budget"]
     filterset_fields = ["status"]
@@ -38,10 +34,8 @@ class ProjectListCreateView(generics.ListCreateAPIView):
         return ProjectListSerializer
 
     def get_queryset(self):
-        qs = Project.objects.select_related("client", "status").all()
-        # Staff can see all, clients see only theirs
-        if is_client(self.request.user):
-            qs = qs.filter(client__user=self.request.user)
+        # Staff see all, clients only theirs, users without a role nothing
+        qs = scope_projects(self.request.user, Project.objects.select_related("client", "status"))
         # Filter by team member
         member = self.request.query_params.get("team_member")
         if member:
@@ -63,18 +57,15 @@ class ProjectListCreateView(generics.ListCreateAPIView):
 
 
 class ProjectDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """Retrieve, update or delete a project."""
-    permission_classes = [IsAuthenticated]
+    """Retrieve, update or delete a project (clients: read-only, own projects only)."""
+    permission_classes = [IsAuthenticated, IsStaffOrClientReadOnly]
     queryset = Project.objects.select_related(
         "client", "status", "service_type"
     ).all()
     serializer_class = ProjectDetailSerializer
 
     def get_queryset(self):
-        qs = super().get_queryset()
-        if is_client(self.request.user):
-            qs = qs.filter(client__user=self.request.user)
-        return qs
+        return scope_projects(self.request.user, super().get_queryset())
 
 
 class ProjectTeamView(generics.ListCreateAPIView):
@@ -106,16 +97,21 @@ class ProjectTeamDeleteView(APIView):
 
 class ProjectStatusListView(generics.ListAPIView):
     """List all project statuses."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasRole]
     queryset = ProjectStatus.objects.all().order_by("order")
     serializer_class = ProjectStatusSerializer
 
 
 class ServiceTypeListView(generics.ListCreateAPIView):
-    """List or create service types."""
-    permission_classes = [IsAuthenticated]
+    """List service types (any role) or create one (PM and above)."""
+    permission_classes = [IsAuthenticated, HasRole]
     queryset = ServiceType.objects.all()
     serializer_class = ServiceTypeSerializer
+
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [IsAuthenticated(), IsProjectManager()]
+        return super().get_permissions()
 
 
 class ProjectStatsView(APIView):
@@ -137,10 +133,11 @@ class ProjectTimesheetView(APIView):
     """Aggregated time report for a project (per user and per task).
 
     Also syncs the denormalized ``tracked_hours`` cache on the project so
-    list/detail endpoints reflect the real time spent.
+    list/detail endpoints reflect the real time spent. Staff only: exposes
+    rates, budgets and employee names.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsStaff]
 
     def get(self, request, pk):
         from apps.tasks.models import TaskTimer
@@ -225,21 +222,29 @@ class ProjectTimesheetView(APIView):
 
 class ProjectHealthList(APIView):
     """Explainable risk summary for the user's project set."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasRole]
 
     def get(self, request):
         from .health import project_health
-        qs = Project.objects.select_related("client", "status").prefetch_related("tasks__status", "expenses")
-        if request.user.role and request.user.role.name == "client":
-            qs = qs.filter(client__user=request.user)
+        qs = scope_projects(
+            request.user,
+            Project.objects.select_related("client", "status").prefetch_related(
+                "tasks__status", "expenses"
+            ),
+        )
         return Response([{"id": str(p.pk), "name": p.name, "health": project_health(p)} for p in qs])
 
 
 class ProjectHealthDetail(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasRole]
+
     def get(self, request, pk):
         from .health import project_health
-        project = get_object_or_404(Project.objects.prefetch_related("tasks__status", "expenses"), pk=pk)
-        if request.user.role and request.user.role.name == "client" and project.client.user_id != request.user.pk:
-            return Response({"detail": "Not found."}, status=404)
+
+        project = get_object_or_404(
+            scope_projects(
+                request.user, Project.objects.prefetch_related("tasks__status", "expenses")
+            ),
+            pk=pk,
+        )
         return Response(project_health(project))
