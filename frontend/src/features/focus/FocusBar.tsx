@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FocusLogo } from "./FocusLogo";
 import { focusApi, remaining, timeLabel, phaseLabels } from "./api";
+import { usePollInterval } from "@/shared/lib/usePollInterval";
 export function FocusBar() {
   const { data, dataUpdatedAt } = useQuery({
     queryKey: ["focus", "state"],
     queryFn: focusApi.state,
-    refetchInterval: 10000,
+    // The countdown runs locally; the server is only asked for changes.
+    refetchInterval: usePollInterval(60000),
     retry: false,
   });
   const [now, setNow] = useState(Date.now());

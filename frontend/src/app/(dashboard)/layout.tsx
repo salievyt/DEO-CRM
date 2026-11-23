@@ -54,6 +54,7 @@ import {
 import type { Notification } from "@/entities/notification/types";
 import { FocusBar } from "@/features/focus/FocusBar";
 import type { Task } from "@/entities/task/types";
+import { usePollInterval } from "@/shared/lib/usePollInterval";
 
 const NAV_CATEGORIES = [
   {
@@ -197,11 +198,12 @@ export default function DashboardLayout({
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
+  const poll = usePollInterval(60000);
   const { data: unreadData } = useQuery({
     queryKey: [QUERY_KEYS.UNREAD_NOTIFICATIONS],
     queryFn: () => notificationsApi.unreadCount(),
     select: (res) => (res.data as { count: number })?.count || 0,
-    refetchInterval: 30000,
+    refetchInterval: poll,
   });
 
   const { data: notifList } = useQuery({
@@ -221,14 +223,14 @@ export default function DashboardLayout({
       const tasks = res.data?.results || (res.data as Task[]) || [];
       return tasks.length;
     },
-    refetchInterval: 60000,
+    refetchInterval: poll && 5 * 60000,
   });
 
   const { data: messengerUnread } = useQuery({
     queryKey: [QUERY_KEYS.UNREAD_COUNT],
     queryFn: () => messengerApi.unread(),
     select: (res): number => (res.data as { total_unread: number })?.total_unread || 0,
-    refetchInterval: 30000,
+    refetchInterval: poll,
   });
 
   const badgeCounts: Record<string, number> = {

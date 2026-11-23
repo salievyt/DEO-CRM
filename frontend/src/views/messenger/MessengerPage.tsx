@@ -27,6 +27,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { NewChatModal } from "@/features/messenger/NewChatModal";
 import { AddParticipantsModal } from "@/features/messenger/AddParticipantsModal";
 import type { Chat, Message } from "@/entities/chat/types";
+import { usePollInterval } from "@/shared/lib/usePollInterval";
 
 const MANAGER_ROLES = ["superadmin", "owner", "project_manager"];
 
@@ -51,7 +52,7 @@ export function MessengerPage() {
     queryKey: [QUERY_KEYS.CHATS],
     queryFn: () => messengerApi.chats.list(),
     select: (res): Chat[] => res.data?.results || (res.data as Chat[]),
-    refetchInterval: 30000,
+    refetchInterval: usePollInterval(60000),
   });
 
   const { data: messages } = useQuery({
@@ -59,7 +60,7 @@ export function MessengerPage() {
     queryFn: () => messengerApi.messages.list(selectedChat!),
     select: (res): Message[] => res.data?.results || (res.data as Message[]),
     enabled: !!selectedChat,
-    refetchInterval: 15000,
+    refetchInterval: usePollInterval(15000),
   });
 
   const selectedChatData = chats?.find((c) => c.id === selectedChat);

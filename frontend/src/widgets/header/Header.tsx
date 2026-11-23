@@ -9,6 +9,7 @@ import { SearchInput } from "@/shared/ui/SearchInput";
 import { cn } from "@/shared/utils/cn";
 import { Bell, Menu } from "lucide-react";
 import { useState } from "react";
+import { usePollInterval } from "@/shared/lib/usePollInterval";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -23,7 +24,8 @@ export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
     queryKey: [QUERY_KEYS.UNREAD_COUNT],
     queryFn: () => messengerApi.unread(),
     select: (res) => res.data?.count || 0,
-    refetchInterval: 30000,
+    // Same query as the sidebar badge: one request serves both.
+    refetchInterval: usePollInterval(60000),
   });
 
   return (

@@ -43,6 +43,7 @@ import type {
   WhatsAppTemplate,
   SendResult,
 } from "@/entities/inbox/types";
+import { usePollInterval } from "@/shared/lib/usePollInterval";
 
 type FilterKey = "all" | "unread" | "mine" | "whatsapp" | "closed";
 
@@ -95,7 +96,7 @@ export function InboxPage() {
     queryFn: () => messagingApi.conversations.list(listParams),
     select: (res): InboxConversation[] =>
       res.data?.results || (res.data as InboxConversation[]) || [],
-    refetchInterval: 30000,
+    refetchInterval: usePollInterval(60000),
   });
 
   const selected = conversations?.find((c) => c.id === selectedId) ?? null;
@@ -365,7 +366,7 @@ function ChatPane({
     queryFn: () => messagingApi.messages.list(conversation.id, { page_size: 100 }),
     select: (res): InboxMessage[] =>
       res.data?.results || (res.data as InboxMessage[]) || [],
-    refetchInterval: 15000,
+    refetchInterval: usePollInterval(15000),
   });
 
   // Pagination: "load earlier" uses the `before` cursor.

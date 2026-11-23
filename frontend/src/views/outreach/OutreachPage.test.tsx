@@ -9,9 +9,11 @@ const mocked = api as jest.Mocked<typeof api>;
 const contact = { id: "contact-1", company: "Тестовая компания", phone: "+996700123456", industry: "Торговля", offer: "CRM", usp: "Меньше ручной работы", script: "Добрый день", objections: "Ответы", assigned_to: "manager", assigned_name: "Менеджер", status: "new", next_call_at: null, missed_attempts: 0, lead: null, calls: [] };
 const settings = { is_supervisor: false, is_admin: false, supervisor: "boss", owner_is_head: true, head: { id: "boss", name: "Руководитель" }, daily_limit: 25, members: [], users: [] };
 
+const queue = { results: [contact], count: 1, working: true, unassigned: 0 };
+
 function mount(supervisor = false) {
-  mocked.get.mockImplementation(async (url) => ({ data: String(url).endsWith("settings/") ? { ...settings, is_supervisor: supervisor, is_admin: supervisor } : contact }));
-  mocked.post.mockImplementation(async (url) => ({ data: String(url).endsWith("queue/") ? { results: [contact], count: 1, working: true, unassigned: 0 } : {} }));
+  mocked.get.mockImplementation(async (url) => ({ data: String(url).endsWith("settings/") ? { ...settings, is_supervisor: supervisor, is_admin: supervisor } : String(url).endsWith("queue/") ? queue : contact }));
+  mocked.post.mockImplementation(async (url) => ({ data: String(url).endsWith("queue/") ? queue : {} }));
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return render(<QueryClientProvider client={client}><OutreachPage /></QueryClientProvider>);
 }
@@ -62,4 +64,12 @@ test("owner can switch off acting as the sales head", async () => {
   expect(toggle).toBeChecked();
   fireEvent.click(toggle);
   await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith("/outreach/settings/", { owner_is_head: false }));
+});
+
+test("refreshes after a result only read the queue; contacts are handed out on open", async () => {
+  mount();
+  fireEvent.click(await screen.findByRole("button", { name: /Тестовая компания/ }));
+  fireEvent.click(await screen.findByRole("button", { name: "Сохранить результат" }));
+  await waitFor(() => expect(mocked.get).toHaveBeenCalledWith("/outreach/queue/", expect.anything()));
+  expect(mocked.post.mock.calls.filter(([url]) => url === "/outreach/queue/")).toHaveLength(1);
 });

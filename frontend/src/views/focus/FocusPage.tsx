@@ -35,6 +35,7 @@ import {
 } from "@/features/focus/api";
 import { FocusLogo } from "@/features/focus/FocusLogo";
 import "./focus.css";
+import { usePollInterval } from "@/shared/lib/usePollInterval";
 
 const PHASE_TONE: Record<Phase, { text: string; orb: string; stroke: string }> = {
   work: {
@@ -86,14 +87,15 @@ export function FocusPage() {
   const state = useQuery({
     queryKey: ["focus", "state"],
     queryFn: focusApi.state,
-    refetchInterval: 5000,
+    // The countdown runs locally; a finished phase triggers its own refetch below.
+    refetchInterval: usePollInterval(30000),
     retry: false,
   });
   const settings = useQuery({ queryKey: ["focus", "settings"], queryFn: focusApi.settings });
   const stats = useQuery({
     queryKey: ["focus", "stats"],
     queryFn: focusApi.stats,
-    refetchInterval: 30000,
+    refetchInterval: usePollInterval(5 * 60000),
   });
   const notes = useQuery({ queryKey: ["focus", "notes"], queryFn: focusApi.notes });
   const history = useQuery({
@@ -145,6 +147,11 @@ export function FocusPage() {
       )
     : duration * 60;
   const percent = active ? 1 - seconds / active.planned_seconds : 0;
+  const finished = active?.status === "running" && seconds <= 0;
+  const refetchState = state.refetch;
+  useEffect(() => {
+    if (finished) {void refetchState();}
+  }, [finished, refetchState]);
   const refresh = useCallback(async () => {
     await client.invalidateQueries({ queryKey: ["focus"] });
     client.invalidateQueries({ queryKey: ["tasks"] });

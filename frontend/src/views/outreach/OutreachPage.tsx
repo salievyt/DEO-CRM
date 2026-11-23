@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { PhoneCall, Upload, Users, RefreshCw, ArrowRight, CheckCircle2 } from "lucide-react";
 import { api } from "@/shared/api/base";
 import { useAuth } from "@/hooks/useAuth";
+import { usePollInterval } from "@/shared/lib/usePollInterval";
 
 const base = "/outreach";
+const ALLOCATE_EVERY_MS = 10 * 60 * 1000;
 const labels: Record<string, string> = {
   new: "Новый",
   no_answer: "Не ответил",
@@ -113,12 +115,21 @@ export default function OutreachPage() {
     retry: false,
     enabled: !!userId,
   });
+  // Handing out contacts (POST) is the expensive call: do it on open, on
+  // «Обновить» and at most every 10 minutes; other refreshes only read (GET).
+  const allocatedAt = useRef(0);
   const queue = useQuery({
     queryKey: ["outreach", userId, "queue", mode, search, user, page],
-    queryFn: async () =>
-      (await api.post<Queue>(`${base}/queue/`, {}, { params: { mode, search, user, page } })).data,
+    queryFn: async () => {
+      const params = { mode, search, user, page };
+      if (Date.now() - allocatedAt.current >= ALLOCATE_EVERY_MS) {
+        allocatedAt.current = Date.now();
+        return (await api.post<Queue>(`${base}/queue/`, {}, { params })).data;
+      }
+      return (await api.get<Queue>(`${base}/queue/`, { params })).data;
+    },
     enabled: !!settings.data,
-    refetchInterval: 60000,
+    refetchInterval: usePollInterval(2 * 60000),
   });
   const detail = useQuery({
     queryKey: ["outreach", userId, "contact", selected],
@@ -129,6 +140,10 @@ export default function OutreachPage() {
     setSelected(new URLSearchParams(window.location.search).get("contact"));
   }, []);
   const refresh = () => client.invalidateQueries({ queryKey: ["outreach"] });
+  const refreshAndAllocate = () => {
+    allocatedAt.current = 0;
+    return refresh();
+  };
   if (settings.isPending) {return <p className="p-8">Загружаем отдел продаж…</p>;}
   if (settings.error || !settings.data)
     {return (
@@ -157,7 +172,7 @@ export default function OutreachPage() {
             Пн–пт · 09:00–19:00 · Бишкек. Перезвоны — первыми и сверх дневной нормы.
           </p>
         </div>
-        <button className={button} onClick={() => refresh()} disabled={queue.isFetching}>
+        <button className={button} onClick={() => refreshAndAllocate()} disabled={queue.isFetching}>
           <RefreshCw size={16} /> Обновить
         </button>
       </header>

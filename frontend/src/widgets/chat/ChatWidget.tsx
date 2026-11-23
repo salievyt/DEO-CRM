@@ -11,6 +11,7 @@ import { cn, formatDateTime, timeAgo } from "@/shared/utils/formatters";
 import { MessageSquare, Send, Search, Paperclip } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import type { Chat, Message } from "@/entities/chat/types";
+import { usePollInterval } from "@/shared/lib/usePollInterval";
 
 interface ChatWidgetProps {
   compact?: boolean;
@@ -34,7 +35,7 @@ export function ChatWidget({ compact = false }: ChatWidgetProps) {
     queryFn: () => messengerApi.messages.list(selectedChat!),
     select: (res): Message[] => res.data?.results || (res.data as Message[]),
     enabled: !!selectedChat,
-    refetchInterval: 10000,
+    refetchInterval: usePollInterval(15000),
   });
 
   const sendMutation = useMutation({

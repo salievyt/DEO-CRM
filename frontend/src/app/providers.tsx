@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { isPublicPagePath } from "@/shared/api/base";
 import { ToastContainer } from "@/shared/ui/Toast";
+import { onWake } from "@/shared/lib/usePollInterval";
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   const fetchUser = useAuth((state) => state.fetchUser);
@@ -38,6 +39,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
           },
         },
       })
+  );
+
+  // Polling pauses while the user is idle; catch up once when they return.
+  useEffect(
+    () => onWake(() => void queryClient.refetchQueries({ type: "active", stale: true })),
+    [queryClient]
   );
 
   return (
