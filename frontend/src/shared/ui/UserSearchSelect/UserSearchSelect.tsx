@@ -32,6 +32,8 @@ const roleLabels: Record<string, string> = {
   designer: "Дизайнер",
   marketer: "Маркетолог",
   hr: "HR-менеджер",
+  sales_head: "Управляющий менеджер",
+  sales_manager: "Менеджер по продажам",
 };
 
 export function UserSearchSelect({

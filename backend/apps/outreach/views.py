@@ -24,13 +24,16 @@ from .models import (
 from .serializers import ContactSerializer, OutcomeSerializer
 from .services import (
     BISHKEK,
+    HEAD_ROLES,
     admin,
     allocate,
+    head,
     local_now,
     member,
     next_workday,
     parse_batch,
     supervisor,
+    sync_members,
     working,
 )
 
@@ -45,7 +48,7 @@ class SalesAccess(permissions.BasePermission):
             and u.is_active
             and bool(u.role_id)
             and u.role.name != "client"
-            and (supervisor(u) or member(u))
+            and (admin(u) or supervisor(u) or member(u))
         )
 
 
@@ -67,12 +70,22 @@ class BootstrapView(SalesView):
     def get(self, request):
         settings, _ = SalesSettings.objects.get_or_create(pk=1)
         own = SalesMember.objects.filter(user=request.user).first()
-        boss = supervisor(request.user)
+        boss = supervisor(request.user, settings)
+        manage = boss or admin(request.user)
+        if manage:
+            sync_members()
+        lead_head = head(settings)
         return Response(
             {
                 "is_supervisor": boss,
-                "is_admin": bool(admin(request.user)),
+                "is_admin": admin(request.user),
                 "supervisor": settings.supervisor_id,
+                "owner_is_head": settings.owner_is_head,
+                "head": (
+                    {"id": lead_head.id, "name": lead_head.get_full_name() or lead_head.email}
+                    if lead_head
+                    else None
+                ),
                 "daily_limit": own.daily_limit if own else None,
                 "members": (
                     [
@@ -84,7 +97,7 @@ class BootstrapView(SalesView):
                         }
                         for m in SalesMember.objects.select_related("user").all()
                     ]
-                    if boss
+                    if manage
                     else []
                 ),
                 "users": (
@@ -92,14 +105,13 @@ class BootstrapView(SalesView):
                         {
                             "id": u.id,
                             "name": u.get_full_name() or u.email,
-                            "can_supervise": u.role.name
-                            in ("owner", "superadmin", "project_manager"),
+                            "can_supervise": u.role.name in HEAD_ROLES,
                         }
                         for u in User.objects.filter(is_active=True, role__isnull=False)
                         .exclude(role__name="client")
                         .select_related("role")
                     ]
-                    if boss
+                    if manage
                     else []
                 ),
             }
@@ -109,22 +121,29 @@ class BootstrapView(SalesView):
     def patch(self, request):
         settings, _ = SalesSettings.objects.get_or_create(pk=1)
         settings = SalesSettings.objects.select_for_update().get(pk=1)
+        if "owner_is_head" in request.data:
+            if not admin(request.user):
+                raise PermissionDenied("Эту настройку меняет владелец или администратор.")
+            settings.owner_is_head = serializers.BooleanField().run_validation(
+                request.data["owner_is_head"]
+            )
+            settings.save()
         if "supervisor" in request.data:
             if not admin(request.user):
                 raise PermissionDenied("Назначить руководителя может владелец или администратор.")
-            uid = serializers.UUIDField().run_validation(request.data["supervisor"])
-            settings.supervisor = get_object_or_404(
-                User,
-                pk=uid,
-                is_active=True,
-                role__name__in=["owner", "superadmin", "project_manager"],
-            )
+            if request.data["supervisor"] in (None, ""):
+                settings.supervisor = None
+            else:
+                uid = serializers.UUIDField().run_validation(request.data["supervisor"])
+                settings.supervisor = get_object_or_404(
+                    User, pk=uid, is_active=True, role__name__in=HEAD_ROLES
+                )
             settings.save()
         if "daily_limit" in request.data:
             uid = serializers.UUIDField().run_validation(
                 request.data.get("user", str(request.user.id))
             )
-            boss = supervisor(request.user)
+            boss = supervisor(request.user, settings) or admin(request.user)
             if str(uid) != str(request.user.id) and not boss:
                 raise PermissionDenied()
             limit = serializers.IntegerField(
@@ -138,7 +157,8 @@ class BootstrapView(SalesView):
             m, _ = SalesMember.objects.get_or_create(user=target)
             m.daily_limit = limit
             if "active" in request.data:
-                self.require_supervisor()
+                if not boss:
+                    raise PermissionDenied("Действие доступно руководителю.")
                 m.active = serializers.BooleanField().run_validation(request.data["active"])
             m.save()
         return self.get(request)
@@ -259,13 +279,8 @@ class OutcomeView(SalesView):
             c.status = "exhausted" if c.missed_attempts >= 3 else "no_answer"
             c.next_call_at = None if c.missed_attempts >= 3 else next_workday(now)
         if outcome == "interested":
-            boss = settings.supervisor
-            if (
-                not boss
-                or not boss.is_active
-                or not boss.role_id
-                or boss.role.name not in ("owner", "superadmin", "project_manager")
-            ):
+            boss = head(settings)
+            if boss is None:
                 raise ValidationError("Сначала назначьте действующего руководителя отдела.")
             stage = LeadStage.objects.filter(name="Заинтересован").first()
             if not stage:

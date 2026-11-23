@@ -5,8 +5,9 @@ from rest_framework import serializers
 
 from .models import Role, User
 
-# Roles that grant access to company-wide data (finance, analytics, HR surveys).
-PRIVILEGED_ROLES = ("superadmin", "owner", "hr")
+# Roles that grant access to company-wide data (finance, analytics, HR surveys)
+# or lead a whole department (sales head): granted only by owner/superadmin.
+PRIVILEGED_ROLES = ("superadmin", "owner", "hr", "sales_head")
 ROLE_GRANTERS = ("superadmin", "owner")
 
 
@@ -18,7 +19,7 @@ def _role_name(user):
 def role_change_error(actor, role_name, target=None):
     """Why ``actor`` may not give ``role_name`` (to ``target``), or ``None`` if allowed.
 
-    * owner, hr, superadmin: only superadmin and owner may grant;
+    * owner, hr, sales_head, superadmin: only superadmin and owner may grant;
     * superadmin: only another superadmin (owner is below superadmin, e.g.
       ``IsAdmin`` is superadmin-only, so an owner must not mint one);
     * a user who already has a privileged role can only be changed by
@@ -106,8 +107,11 @@ class InviteUserSerializer(serializers.ModelSerializer):
     """Admin creates an employee account and receives temporary credentials."""
 
     # Roles an admin may invite. Superadmin and client are intentionally excluded.
-    # owner and hr additionally require an owner/superadmin (see role_change_error).
-    INVITABLE_ROLES = ("owner", "project_manager", "developer", "designer", "marketer", "hr")
+    # owner, hr and sales_head additionally require an owner/superadmin (see role_change_error).
+    INVITABLE_ROLES = (
+        "owner", "project_manager", "developer", "designer", "marketer", "hr",
+        "sales_head", "sales_manager",
+    )
 
     role_name = serializers.CharField(write_only=True)
     temporary_password = serializers.CharField(read_only=True)

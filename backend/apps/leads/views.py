@@ -5,7 +5,7 @@ from apps.messaging.models import Message
 from rest_framework import generics, permissions, serializers, status, views
 from rest_framework.response import Response
 
-from common.permissions import IsAdmin, IsProjectManager
+from common.permissions import IsAdmin, IsSalesStaff
 
 from .defaults import ensure_default_stages
 from .models import Lead, LeadHistory, LeadStage
@@ -107,7 +107,7 @@ class LeadStageDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class LeadListCreateView(generics.ListCreateAPIView):
     """List or create leads."""
-    permission_classes = [permissions.IsAuthenticated, IsProjectManager]
+    permission_classes = [permissions.IsAuthenticated, IsSalesStaff]
     search_fields = ["contact_name", "company_name", "phone", "email"]
     ordering_fields = ["created_at", "budget"]
     filterset_fields = ["source", "is_active"]
@@ -150,7 +150,7 @@ class LeadListCreateView(generics.ListCreateAPIView):
 
 class LeadDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update or delete a lead."""
-    permission_classes = [permissions.IsAuthenticated, IsProjectManager]
+    permission_classes = [permissions.IsAuthenticated, IsSalesStaff]
     queryset = Lead.objects.select_related(
         "current_stage", "assigned_to", "created_by"
     ).all()
@@ -159,7 +159,7 @@ class LeadDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class LeadKanbanView(views.APIView):
     """Get leads grouped by stage for Kanban board."""
-    permission_classes = [permissions.IsAuthenticated, IsProjectManager]
+    permission_classes = [permissions.IsAuthenticated, IsSalesStaff]
 
     def get(self, request):
         stages = LeadStage.objects.all().order_by("order")
@@ -183,7 +183,7 @@ class LeadKanbanView(views.APIView):
 
 class LeadMoveView(views.APIView):
     """Move lead to a different stage."""
-    permission_classes = [permissions.IsAuthenticated, IsProjectManager]
+    permission_classes = [permissions.IsAuthenticated, IsSalesStaff]
 
     def post(self, request, pk):
         serializer = LeadMoveSerializer(data=request.data)

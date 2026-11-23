@@ -7,7 +7,7 @@ jest.mock("@/hooks/useAuth", () => ({ useAuth: (selector: (state: { user: { id: 
 jest.mock("@/shared/api/base", () => ({ api: { get: jest.fn(), post: jest.fn(), patch: jest.fn(), put: jest.fn() } }));
 const mocked = api as jest.Mocked<typeof api>;
 const contact = { id: "contact-1", company: "Тестовая компания", phone: "+996700123456", industry: "Торговля", offer: "CRM", usp: "Меньше ручной работы", script: "Добрый день", objections: "Ответы", assigned_to: "manager", assigned_name: "Менеджер", status: "new", next_call_at: null, missed_attempts: 0, lead: null, calls: [] };
-const settings = { is_supervisor: false, is_admin: false, supervisor: "boss", daily_limit: 25, members: [], users: [] };
+const settings = { is_supervisor: false, is_admin: false, supervisor: "boss", owner_is_head: true, head: { id: "boss", name: "Руководитель" }, daily_limit: 25, members: [], users: [] };
 
 function mount(supervisor = false) {
   mocked.get.mockImplementation(async (url) => ({ data: String(url).endsWith("settings/") ? { ...settings, is_supervisor: supervisor, is_admin: supervisor } : contact }));
@@ -52,4 +52,14 @@ test("import requires preview and changing source invalidates it", async () => {
   expect(mocked.post).toHaveBeenCalledWith("/outreach/import/", { text: "Компания: A", commit: false });
   fireEvent.change(text, { target: { value: "Компания: B" } });
   expect(screen.queryByRole("button", { name: "Добавить 1 контактов" })).not.toBeInTheDocument();
+});
+
+test("owner can switch off acting as the sales head", async () => {
+  mount(true);
+  mocked.patch.mockResolvedValue({ data: {} });
+  fireEvent.click(await screen.findByRole("button", { name: "Команда" }));
+  const toggle = screen.getByLabelText("Владелец выполняет роль управляющего менеджера");
+  expect(toggle).toBeChecked();
+  fireEvent.click(toggle);
+  await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith("/outreach/settings/", { owner_is_head: false }));
 });

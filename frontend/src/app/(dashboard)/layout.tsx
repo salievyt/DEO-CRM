@@ -60,21 +60,21 @@ const NAV_CATEGORIES = [
     name: "Воронки",
     icon: Filter,
     items: [
-      { name: "Дашборд", href: "/dashboard", icon: LayoutDashboard, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer"] },
-      { name: "Лиды", href: "/leads", icon: TrendingUp, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
-      { name: "Сделки", href: "/deals", icon: Handshake, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
+      { name: "Дашборд", href: "/dashboard", icon: LayoutDashboard, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "sales_head", "sales_manager"] },
+      { name: "Лиды", href: "/leads", icon: TrendingUp, roles: ["superadmin", "owner", "project_manager", "marketer", "sales_head", "sales_manager"], matchSubRoutes: true },
+      { name: "Сделки", href: "/deals", icon: Handshake, roles: ["superadmin", "owner", "project_manager", "marketer", "sales_head", "sales_manager"], matchSubRoutes: true },
     ],
   },
   {
     name: "Продажи",
     icon: DollarSign,
     items: [
-      { name: "D2C · Обзвон", href: "/outreach", icon: PhoneCall, roles: ["superadmin", "owner", "project_manager", "marketer", "developer", "designer", "hr"], matchSubRoutes: true },
+      { name: "D2C · Обзвон", href: "/outreach", icon: PhoneCall, roles: ["superadmin", "owner", "project_manager", "marketer", "developer", "designer", "hr", "sales_head", "sales_manager"], matchSubRoutes: true },
       { name: "Клиенты", href: "/clients", icon: Users, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
       { name: "Партнёры", href: "/partners", icon: Handshake, roles: ["superadmin", "owner"], matchSubRoutes: true },
       { name: "Проекты", href: "/projects", icon: FolderKanban, roles: ["superadmin", "owner", "project_manager", "developer", "designer"], matchSubRoutes: true },
-      { name: "DEO Focus", href: "/focus", icon: Timer, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer"] },
-      { name: "Задачи", href: "/tasks", icon: CheckSquare, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer"], countKey: "tasks" as const, matchSubRoutes: true },
+      { name: "DEO Focus", href: "/focus", icon: Timer, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "sales_head", "sales_manager"] },
+      { name: "Задачи", href: "/tasks", icon: CheckSquare, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "sales_head", "sales_manager"], countKey: "tasks" as const, matchSubRoutes: true },
       { name: "Каталог", href: "/catalog", icon: Package, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
       { name: "Финансы", href: "/finance", icon: DollarSign, roles: ["superadmin", "owner", "project_manager"], matchSubRoutes: true },
       { name: "Документы", href: "/documents", icon: FileText, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "client"], matchSubRoutes: true },
@@ -85,7 +85,7 @@ const NAV_CATEGORIES = [
     icon: MessageCircle,
     items: [
       { name: "Inbox", href: "/inbox", icon: MessageSquare, roles: ["superadmin", "owner", "project_manager", "marketer"], countKey: "messenger" as const, matchSubRoutes: true },
-      { name: "Follow-up", href: "/leads/follow-up", icon: CheckSquare, roles: ["superadmin", "owner", "project_manager", "marketer"], matchSubRoutes: true },
+      { name: "Follow-up", href: "/leads/follow-up", icon: CheckSquare, roles: ["superadmin", "owner", "project_manager", "marketer", "sales_head", "sales_manager"], matchSubRoutes: true },
       { name: "Звонки", href: "/calls", icon: PhoneCall, roles: ["superadmin", "owner", "project_manager"], matchSubRoutes: true },
       { name: "WhatsApp", href: "/integrations/whatsapp", icon: Phone, roles: ["superadmin", "owner"], matchSubRoutes: true },
       { name: "Telegram", href: "/integrations/telegram", icon: Send, roles: ["superadmin", "owner"], matchSubRoutes: true },
@@ -108,8 +108,8 @@ const NAV_CATEGORIES = [
     icon: Users,
     items: [
       { name: "Сотрудники", href: "/employees", icon: UserCheck, roles: ["superadmin", "owner", "project_manager"], matchSubRoutes: true },
-      { name: "Календарь", href: "/calendar", icon: CalendarDays, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "hr", "client"], matchSubRoutes: true },
-      { name: "Кабинет", href: "/cabinet", icon: UserCircle, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "hr", "client"], matchSubRoutes: true },
+      { name: "Календарь", href: "/calendar", icon: CalendarDays, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "hr", "sales_head", "sales_manager", "client"], matchSubRoutes: true },
+      { name: "Кабинет", href: "/cabinet", icon: UserCircle, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "hr", "sales_head", "sales_manager", "client"], matchSubRoutes: true },
     ],
   },
   {
@@ -123,14 +123,14 @@ const NAV_CATEGORIES = [
     name: "Справка",
     icon: GraduationCap,
     items: [
-      { name: "Обучение", href: "/learning", icon: BookOpen, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "hr", "client"], matchSubRoutes: true },
+      { name: "Обучение", href: "/learning", icon: BookOpen, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "hr", "sales_head", "sales_manager", "client"], matchSubRoutes: true },
     ],
   },
   {
     name: "Настройки",
     icon: Settings,
     items: [
-      { name: "Настройки", href: "/settings", icon: Settings, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "hr", "client"], matchSubRoutes: true },
+      { name: "Настройки", href: "/settings", icon: Settings, roles: ["superadmin", "owner", "project_manager", "developer", "designer", "marketer", "hr", "sales_head", "sales_manager", "client"], matchSubRoutes: true },
       { name: "Админ", href: "/admin", icon: ShieldCheck, roles: ["superadmin", "owner"] },
       { name: "Статьи", href: "/admin/learning", icon: FileEdit, roles: ["superadmin", "owner"], matchSubRoutes: true },
       { name: "Анкеты", href: "/admin/forms", icon: ClipboardList, roles: ["superadmin", "owner"], matchSubRoutes: true },

@@ -17,6 +17,8 @@ const ROLE_OPTIONS = [
   { value: "designer", label: "Дизайнер" },
   { value: "marketer", label: "Маркетолог" },
   { value: "hr", label: "HR-менеджер" },
+  { value: "sales_manager", label: "Менеджер по продажам" },
+  { value: "sales_head", label: "Управляющий менеджер (отдел продаж)" },
   { value: "owner", label: "Владелец компании" },
 ];
 

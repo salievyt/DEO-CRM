@@ -8,6 +8,9 @@ class SalesSettings(models.Model):
     supervisor = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL
     )
+    # By default the owner acts as the sales head (sees the whole department and
+    # receives interested leads). The owner can turn this off and delegate.
+    owner_is_head = models.BooleanField(default=True)
 
 
 class SalesMember(models.Model):

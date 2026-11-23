@@ -72,6 +72,7 @@ export function EmployeesPage() {
     if (["developer", "designer"].includes(r)) return "success" as const;
     if (["marketer"].includes(r)) return "warning" as const;
     if (["hr"].includes(r)) return "info" as const;
+    if (["sales_head", "sales_manager"].includes(r)) return "warning" as const;
     return "default" as const;
   };
 
@@ -83,6 +84,8 @@ export function EmployeesPage() {
     designer: "Дизайнер",
     marketer: "Маркетолог",
     hr: "HR-менеджер",
+    sales_head: "Управляющий менеджер",
+    sales_manager: "Менеджер по продажам",
     client: "Клиент",
   };
 

@@ -32,6 +32,8 @@ type Settings = {
   is_supervisor: boolean;
   is_admin: boolean;
   supervisor: string | null;
+  owner_is_head: boolean;
+  head: { id: string; name: string } | null;
   daily_limit: number | null;
   members: Member[];
   users: { id: string; name: string; can_supervise: boolean }[];
@@ -159,21 +161,17 @@ export default function OutreachPage() {
           <RefreshCw size={16} /> Обновить
         </button>
       </header>
-      {!s.supervisor && (
+      {!s.head && (
         <p role="status" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
-          Назначьте руководителя во вкладке «Команда», чтобы заинтересованные контакты можно было
-          передавать в лиды.
+          Назначьте управляющего менеджера во вкладке «Команда», чтобы заинтересованные контакты
+          можно было передавать в лиды.
         </p>
       )}
       <nav aria-label="Разделы D2C" className="flex flex-wrap gap-2">
         {[
           ["queue", "Очередь звонков", PhoneCall],
-          ...(s.is_supervisor
-            ? [
-                ["import", "Импорт D2C", Upload],
-                ["team", "Команда", Users],
-              ]
-            : []),
+          ...(s.is_supervisor ? [["import", "Импорт D2C", Upload]] : []),
+          ...(s.is_supervisor || s.is_admin ? [["team", "Команда", Users]] : []),
         ].map(([id, name, Icon]) => {
           const I = Icon as typeof PhoneCall;
           return (
@@ -520,11 +518,33 @@ function TeamPanel({
   });
   return (
     <div className="space-y-5">
+      {s.is_admin && (
+        <section className={`${panel} space-y-3`}>
+          <h2 className="text-lg font-semibold">Владелец — управляющий менеджер</h2>
+          <p className="text-sm text-surface-500">
+            По умолчанию владелец сам руководит отделом продаж: видит весь отдел, импортирует
+            контакты и получает заинтересованные лиды. Отключите, чтобы передать это сотруднику с
+            ролью «Управляющий менеджер». Настройки отдела остаются у владельца в любом случае.
+          </p>
+          <label className="flex items-center gap-3 text-sm font-medium">
+            <input
+              type="checkbox"
+              className="h-4 w-4"
+              checked={s.owner_is_head}
+              disabled={update.isPending}
+              onChange={(e) => update.mutate({ owner_is_head: e.target.checked })}
+            />
+            Владелец выполняет роль управляющего менеджера
+          </label>
+        </section>
+      )}
       <section className={`${panel} space-y-3`}>
-        <h2 className="text-lg font-semibold">Руководитель отдела</h2>
+        <h2 className="text-lg font-semibold">Управляющий менеджер</h2>
         <p className="text-sm text-surface-500">
-          Все заинтересованные лиды передаются этому сотруднику. Руководитель должен иметь доступ к
-          лидам: владелец, администратор или менеджер проекта.
+          Все заинтересованные лиды передаются этому сотруднику. Сейчас:{" "}
+          <strong>{s.head?.name ?? "не назначен"}</strong>. Если не выбрать вручную, лиды получает
+          владелец (когда настройка выше включена), иначе — сотрудник с ролью «Управляющий
+          менеджер».
         </p>
         <select
           aria-label="Руководитель отдела"
@@ -533,7 +553,7 @@ function TeamPanel({
           onChange={(e) => setBoss(e.target.value)}
           disabled={!s.is_admin}
         >
-          <option value="">Выберите руководителя</option>
+          <option value="">Автоматически</option>
           {s.users
             .filter((u) => u.can_supervise)
             .map((u) => (
@@ -545,10 +565,10 @@ function TeamPanel({
         {s.is_admin && (
           <button
             className={button}
-            disabled={!boss || update.isPending}
-            onClick={() => update.mutate({ supervisor: boss })}
+            disabled={boss === (s.supervisor ?? "") || update.isPending}
+            onClick={() => update.mutate({ supervisor: boss || null })}
           >
-            Назначить руководителя
+            Сохранить
           </button>
         )}
       </section>
@@ -830,7 +850,7 @@ function ContactPanel({
             </label>
             <button
               className={`${button} w-full`}
-              disabled={save.isPending || (outcome === "interested" && !s.supervisor)}
+              disabled={save.isPending || (outcome === "interested" && !s.head)}
             >
               {save.isPending
                 ? "Сохраняем…"

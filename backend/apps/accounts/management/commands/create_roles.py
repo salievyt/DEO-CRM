@@ -18,6 +18,8 @@ class Command(BaseCommand):
             RoleChoices.DESIGNER: "Работа с дизайн-задачами и макетами",
             RoleChoices.MARKETER: "Маркетинговые проекты и аналитика",
             RoleChoices.HR: "Опросы сотрудников: создание, результаты, экспорт",
+            RoleChoices.SALES_HEAD: "Руководитель отдела продаж: команда, лиды, сделки, D2C",
+            RoleChoices.SALES_MANAGER: "Отдел продаж: обзвон D2C, лиды и сделки",
             RoleChoices.CLIENT: "Доступ к своим проектам, документам и счетам",
         }
 

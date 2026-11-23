@@ -35,22 +35,79 @@ def next_workday(now):
     return datetime.combine(day, time(9), BISHKEK)
 
 
+ADMIN_ROLES = ("owner", "superadmin")
+# Roles that may be named head of the department and receive interested leads.
+HEAD_ROLES = ("owner", "superadmin", "project_manager", "sales_head")
+
+
 def admin(user):
-    return user.is_authenticated and user.role_id and user.role.name in ("owner", "superadmin")
+    """Owner/superadmin: configures the department whether or not they lead it."""
+    return bool(
+        user.is_authenticated and user.is_active and user.role_id and user.role.name in ADMIN_ROLES
+    )
 
 
-def supervisor(user):
-    return bool(admin(user) or SalesSettings.objects.filter(pk=1, supervisor=user).exists())
+def sales_settings():
+    return SalesSettings.objects.get_or_create(pk=1)[0]
+
+
+def supervisor(user, settings=None):
+    """Sees the whole department, imports, sets limits, reassigns contacts."""
+    if not (user.is_authenticated and user.is_active and user.role_id):
+        return False
+    if user.role.name == "sales_head":
+        return True
+    settings = settings or sales_settings()
+    if settings.supervisor_id == user.id and user.role.name in HEAD_ROLES:
+        return True
+    return admin(user) and settings.owner_is_head
+
+
+def head(settings=None):
+    """Who receives interested leads, or ``None``.
+
+    An explicitly named head wins; otherwise the owner while ``owner_is_head``
+    is on, otherwise the longest-serving active sales head.
+    """
+    from apps.accounts.models import User
+
+    settings = settings or sales_settings()
+    boss = settings.supervisor
+    if boss and boss.is_active and boss.role_id and boss.role.name in HEAD_ROLES:
+        return boss
+    active = User.objects.filter(is_active=True).order_by("date_joined", "id")
+    if settings.owner_is_head:
+        found = (
+            active.filter(role__name="owner").first()
+            or active.filter(role__name="superadmin").first()
+        )
+        if found:
+            return found
+    return active.filter(role__name="sales_head").first()
+
+
+def sync_members():
+    """Every active sales manager joins the call rotation automatically.
+
+    Only missing rows are created, so a paused manager stays paused.
+    """
+    from apps.accounts.models import User
+
+    for uid in User.objects.filter(
+        is_active=True, role__name="sales_manager", salesmember__isnull=True
+    ).values_list("id", flat=True):
+        SalesMember.objects.get_or_create(user_id=uid)
 
 
 def member(user):
-    return (
-        user.is_authenticated
-        and user.is_active
-        and user.role_id
-        and user.role.name != "client"
-        and SalesMember.objects.filter(user=user, active=True).exists()
-    )
+    if not (
+        user.is_authenticated and user.is_active and user.role_id and user.role.name != "client"
+    ):
+        return False
+    row = SalesMember.objects.filter(user=user).first()
+    if row is None:
+        return user.role.name == "sales_manager"
+    return row.active
 
 
 def parse_batch(raw):
@@ -116,6 +173,7 @@ def allocate():
         return
     SalesSettings.objects.get_or_create(pk=1)
     SalesSettings.objects.select_for_update().get(pk=1)
+    sync_members()
     members = list(
         SalesMember.objects.filter(active=True, user__is_active=True, user__role__isnull=False)
         .exclude(user__role__name="client")

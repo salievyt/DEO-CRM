@@ -2,8 +2,10 @@
 
 from rest_framework.permissions import BasePermission
 
-_EDIT_ROLES = ("superadmin", "owner", "project_manager", "marketer")
-_DELETE_ROLES = ("superadmin", "owner", "project_manager")
+_EDIT_ROLES = (
+    "superadmin", "owner", "project_manager", "marketer", "sales_head", "sales_manager",
+)
+_DELETE_ROLES = ("superadmin", "owner", "project_manager", "sales_head")
 
 
 def _is_staff(user):

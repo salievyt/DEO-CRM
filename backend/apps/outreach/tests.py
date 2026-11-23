@@ -154,7 +154,7 @@ def test_interested_creates_one_lead_for_boss_and_preserves_d2c(team):
 
 
 def test_no_supervisor_rolls_back(team):
-    SalesSettings.objects.update(supervisor=None)
+    SalesSettings.objects.update(supervisor=None, owner_is_head=False)
     c = contact(team[1])
     r = recording(team[1])
     assert result(team[1], c, "interested", recording=str(r.pk)).status_code == 400
@@ -337,3 +337,93 @@ def test_large_carryover_is_capped_and_preserved(team):
     with patch("apps.outreach.views.local_now", return_value=MONDAY):
         response = api(team[1]).get("/api/v1/outreach/queue/")
     assert response.data["count"] == 25
+
+
+def role_user(name, email):
+    role, _ = Role.objects.get_or_create(name=name)
+    return User.objects.create_user(
+        username=str(uuid.uuid4()), email=email, password="test", role=role
+    )
+
+
+def test_owner_is_head_by_default_and_receives_leads(team):
+    owner, a, _ = team
+    SalesSettings.objects.update(supervisor=None)
+    settings = api(owner).get("/api/v1/outreach/settings/").json()
+    assert settings["owner_is_head"] is True and settings["is_supervisor"] is True
+    assert settings["head"]["id"] == str(owner.pk)
+    c = contact(a)
+    assert result(a, c, "interested", recording=str(recording(a).pk)).status_code == 200
+    assert Lead.objects.get().assigned_to == owner
+
+
+def test_owner_can_turn_off_being_head(team):
+    owner, a, _ = team
+    SalesSettings.objects.update(supervisor=None)
+    head = role_user("sales_head", "head@d2c.test")
+    client = api(owner)
+    r = client.patch("/api/v1/outreach/settings/", {"owner_is_head": False}, format="json")
+    assert r.status_code == 200
+    data = r.json()
+    # Still configures the department, but no longer leads it.
+    assert data["is_admin"] is True and data["is_supervisor"] is False
+    assert data["head"]["id"] == str(head.pk) and len(data["members"]) == 2
+    assert client.post("/api/v1/outreach/import/", {"text": "x"}, format="json").status_code == 403
+    c = contact(a)
+    assert result(a, c, "interested", recording=str(recording(a).pk)).status_code == 200
+    assert Lead.objects.get().assigned_to == head
+    r = client.patch("/api/v1/outreach/settings/", {"owner_is_head": True}, format="json")
+    assert r.json()["is_supervisor"] is True
+
+
+def test_only_admin_toggles_owner_is_head(team):
+    head = role_user("sales_head", "head@d2c.test")
+    r = api(head).patch("/api/v1/outreach/settings/", {"owner_is_head": False}, format="json")
+    assert r.status_code == 403
+    assert SalesSettings.objects.get(pk=1).owner_is_head is True
+
+
+def test_sales_head_role_supervises_department(team):
+    head = role_user("sales_head", "head@d2c.test")
+    c = contact(team[2])
+    client = api(head)
+    data = client.get("/api/v1/outreach/settings/").json()
+    assert data["is_supervisor"] is True and data["is_admin"] is False
+    assert client.get(f"/api/v1/outreach/contacts/{c.pk}/").status_code == 200
+    r = client.patch(
+        f"/api/v1/outreach/contacts/{c.pk}/", {"assigned_to": str(team[1].pk)}, format="json"
+    )
+    assert r.status_code == 200
+    # Can be named the head explicitly.
+    r = api(team[0]).patch(
+        "/api/v1/outreach/settings/", {"supervisor": str(head.pk)}, format="json"
+    )
+    assert r.status_code == 200 and r.json()["head"]["id"] == str(head.pk)
+
+
+def test_explicit_head_can_be_cleared(team):
+    r = api(team[0]).patch("/api/v1/outreach/settings/", {"supervisor": None}, format="json")
+    assert r.status_code == 200
+    assert r.json()["supervisor"] is None and r.json()["head"]["id"] == str(team[0].pk)
+
+
+def test_sales_manager_joins_rotation_automatically(team):
+    seller = role_user("sales_manager", "seller@d2c.test")
+    assert api(seller).get("/api/v1/outreach/settings/").status_code == 200
+    for _ in range(3):
+        contact()
+    with patch("apps.outreach.services.local_now", return_value=MONDAY):
+        allocate()
+    assert Contact.objects.filter(assigned_to=seller).exists()
+    SalesMember.objects.filter(user=seller).update(active=False)
+    with patch("apps.outreach.services.local_now", return_value=MONDAY):
+        allocate()
+    assert SalesMember.objects.get(user=seller).active is False
+    assert api(seller).get("/api/v1/outreach/settings/").status_code == 403
+
+
+def test_sales_roles_work_with_leads(team):
+    seller = role_user("sales_manager", "seller@d2c.test")
+    assert api(seller).get("/api/v1/leads/").status_code == 200
+    developer = role_user("developer", "dev@d2c.test")
+    assert api(developer).get("/api/v1/leads/").status_code == 403

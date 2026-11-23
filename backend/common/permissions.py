@@ -36,6 +36,20 @@ class IsProjectManager(BasePermission):
         )
 
 
+SALES_ROLES = ("superadmin", "owner", "project_manager", "sales_head", "sales_manager")
+
+
+class IsSalesStaff(BasePermission):
+    """PM and above, plus the sales department (head and managers): leads."""
+
+    def has_permission(self, request, view):
+        return (
+            request.user.is_authenticated
+            and request.user.role is not None
+            and request.user.role.name in SALES_ROLES
+        )
+
+
 class IsClient(BasePermission):
     """Client role only."""
 
